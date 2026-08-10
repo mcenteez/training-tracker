@@ -192,6 +192,41 @@ export async function removeOrganizationMember(
   });
 }
 
+export async function updateOrganizationMembershipRole(
+  unitOfWork: OrganizationUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    targetUserId: string;
+    role: Exclude<OrganizationRole, "owner">;
+  },
+): Promise<void> {
+  await unitOfWork.transaction(async (transaction) => {
+    const actorRole = await transaction.findMembershipRole(
+      input.organizationId,
+      input.actorUserId,
+    );
+    const targetRole = await transaction.findMembershipRole(
+      input.organizationId,
+      input.targetUserId,
+    );
+
+    if (
+      actorRole === null ||
+      targetRole === null ||
+      !canManageOrganizationMember(actorRole, targetRole)
+    ) {
+      throw new AuthorizationError();
+    }
+
+    await transaction.updateMembershipRole(
+      input.organizationId,
+      input.targetUserId,
+      input.role,
+    );
+  });
+}
+
 export async function createOrganizationInvitation(
   unitOfWork: OrganizationUnitOfWork,
   input: {

@@ -13,7 +13,10 @@ import {
 } from "@/modules/access-control/errors";
 import {
   createOrganizationInvitation,
+  removeOrganizationMember,
   revokeOrganizationInvitation,
+  transferOrganizationOwnership,
+  updateOrganizationMembershipRole,
 } from "@/modules/organizations/application/organization-service";
 import { createOrganizationUnitOfWork } from "@/modules/organizations/db/unit-of-work";
 import {
@@ -51,6 +54,20 @@ const inviteOrganizationMemberInputSchema = z.object({
 
 const revokeInvitationInputSchema = z.object({
   invitationId: z.uuid(),
+});
+
+const updateOrganizationMemberRoleInputSchema = z.object({
+  userId: z.uuid(),
+  role: z.enum(["manager", "viewer", "athlete"]),
+});
+
+const removeOrganizationMemberInputSchema = z.object({
+  userId: z.uuid(),
+});
+
+const transferOwnershipInputSchema = z.object({
+  newOwnerUserId: z.uuid(),
+  previousOwnerRole: z.enum(["manager", "viewer", "athlete"]),
 });
 
 function getPrimaryEmailAddress(
@@ -329,4 +346,131 @@ export async function revokeOrganizationInvitationAction(
   }
 
   redirect("/app?inviteRevoked=1");
+}
+
+export async function updateOrganizationMemberRoleAction(
+  formData: FormData,
+): Promise<void> {
+  const actor = await loadActorContext();
+
+  const parsedInput = updateOrganizationMemberRoleInputSchema.safeParse({
+    userId: formData.get("userId"),
+    role: formData.get("role"),
+  });
+
+  if (!parsedInput.success) {
+    redirect("/app?error=invalid_org_member_input");
+  }
+
+  try {
+    await withDatabase(async (database) => {
+      const userContext = await getAuthenticatedUserContext(database, {
+        clerkUserId: actor.userId,
+        email: actor.email,
+      });
+
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
+
+      await updateOrganizationMembershipRole(
+        createOrganizationUnitOfWork(database),
+        {
+          organizationId,
+          actorUserId: userContext.id,
+          targetUserId: parsedInput.data.userId,
+          role: parsedInput.data.role,
+        },
+      );
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app?error=forbidden_org_member_manage");
+    }
+
+    throw error;
+  }
+
+  redirect("/app?orgMemberUpdated=1");
+}
+
+export async function removeOrganizationMemberAction(
+  formData: FormData,
+): Promise<void> {
+  const actor = await loadActorContext();
+
+  const parsedInput = removeOrganizationMemberInputSchema.safeParse({
+    userId: formData.get("userId"),
+  });
+
+  if (!parsedInput.success) {
+    redirect("/app?error=invalid_org_member_input");
+  }
+
+  try {
+    await withDatabase(async (database) => {
+      const userContext = await getAuthenticatedUserContext(database, {
+        clerkUserId: actor.userId,
+        email: actor.email,
+      });
+
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
+
+      await removeOrganizationMember(createOrganizationUnitOfWork(database), {
+        organizationId,
+        actorUserId: userContext.id,
+        targetUserId: parsedInput.data.userId,
+      });
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app?error=forbidden_org_member_manage");
+    }
+
+    throw error;
+  }
+
+  redirect("/app?orgMemberRemoved=1");
+}
+
+export async function transferOrganizationOwnershipAction(
+  formData: FormData,
+): Promise<void> {
+  const actor = await loadActorContext();
+
+  const parsedInput = transferOwnershipInputSchema.safeParse({
+    newOwnerUserId: formData.get("newOwnerUserId"),
+    previousOwnerRole: formData.get("previousOwnerRole"),
+  });
+
+  if (!parsedInput.success) {
+    redirect("/app?error=invalid_org_member_input");
+  }
+
+  try {
+    await withDatabase(async (database) => {
+      const userContext = await getAuthenticatedUserContext(database, {
+        clerkUserId: actor.userId,
+        email: actor.email,
+      });
+
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
+
+      await transferOrganizationOwnership(
+        createOrganizationUnitOfWork(database),
+        {
+          organizationId,
+          actorUserId: userContext.id,
+          newOwnerUserId: parsedInput.data.newOwnerUserId,
+          previousOwnerRole: parsedInput.data.previousOwnerRole,
+        },
+      );
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app?error=forbidden_org_member_manage");
+    }
+
+    throw error;
+  }
+
+  redirect("/app?ownershipTransferred=1");
 }

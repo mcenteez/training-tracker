@@ -13,6 +13,7 @@ import {
   removeOrganizationMember,
   revokeOrganizationInvitation,
   transferOrganizationOwnership,
+  updateOrganizationMembershipRole,
   type OrganizationInvitationRecord,
   type OrganizationTransaction,
   type OrganizationUnitOfWork,
@@ -239,6 +240,43 @@ describe("organization service", () => {
         organizationId: "organization-1",
         actorUserId: "manager-1",
         targetUserId: "owner-1",
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("allows Managers to update roles for non-owner members", async () => {
+    const testContext = createTestUnitOfWork(
+      new Map([
+        ["manager-1", "manager"],
+        ["athlete-1", "athlete"],
+      ]),
+    );
+
+    await updateOrganizationMembershipRole(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "manager-1",
+      targetUserId: "athlete-1",
+      role: "viewer",
+    });
+
+    expect(testContext.roles.get("athlete-1")).toBe("viewer");
+    expect(testContext.operations).toContain("update:athlete-1:viewer");
+  });
+
+  it("prevents role updates targeting the Owner", async () => {
+    const testContext = createTestUnitOfWork(
+      new Map([
+        ["manager-1", "manager"],
+        ["owner-1", "owner"],
+      ]),
+    );
+
+    await expect(
+      updateOrganizationMembershipRole(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "manager-1",
+        targetUserId: "owner-1",
+        role: "viewer",
       }),
     ).rejects.toBeInstanceOf(AuthorizationError);
   });

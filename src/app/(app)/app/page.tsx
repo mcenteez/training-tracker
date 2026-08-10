@@ -32,8 +32,11 @@ import {
   addOrUpdateTeamMemberAction,
   createTeamAction,
   inviteOrganizationMemberAction,
+  removeOrganizationMemberAction,
   revokeOrganizationInvitationAction,
   removeTeamMemberAction,
+  transferOrganizationOwnershipAction,
+  updateOrganizationMemberRoleAction,
 } from "./actions";
 
 type AppHomePageProps = {
@@ -83,6 +86,29 @@ function getFeedbackMessage(
 
   if (memberRemoved === "1") {
     return { kind: "success", text: "Team member removed successfully." };
+  }
+
+  const orgMemberUpdated = Array.isArray(params.orgMemberUpdated)
+    ? params.orgMemberUpdated[0]
+    : params.orgMemberUpdated;
+  const orgMemberRemoved = Array.isArray(params.orgMemberRemoved)
+    ? params.orgMemberRemoved[0]
+    : params.orgMemberRemoved;
+
+  if (orgMemberUpdated === "1") {
+    return { kind: "success", text: "Organization member role updated." };
+  }
+
+  if (orgMemberRemoved === "1") {
+    return { kind: "success", text: "Organization member removed." };
+  }
+
+  const ownershipTransferred = Array.isArray(params.ownershipTransferred)
+    ? params.ownershipTransferred[0]
+    : params.ownershipTransferred;
+
+  if (ownershipTransferred === "1") {
+    return { kind: "success", text: "Organization ownership transferred." };
   }
 
   const inviteCreated = Array.isArray(params.inviteCreated)
@@ -167,6 +193,20 @@ function getFeedbackMessage(
     return {
       kind: "error",
       text: "That invitation is no longer available.",
+    };
+  }
+
+  if (error === "invalid_org_member_input") {
+    return {
+      kind: "error",
+      text: "Organization member input is invalid.",
+    };
+  }
+
+  if (error === "forbidden_org_member_manage") {
+    return {
+      kind: "error",
+      text: "Your role cannot manage organization members.",
     };
   }
 
@@ -267,6 +307,9 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
   const params = await searchParams;
   const feedbackMessage = getFeedbackMessage(params);
   const roleLabel = data.userContext.organizationRole ?? "athlete";
+  const ownershipTransferCandidates = data.organizationMembers.filter(
+    (member) => member.organizationRole !== "owner",
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -483,6 +526,152 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
           ) : (
             <p className="text-sm text-muted-foreground">
               No teams yet. Create your first team to continue setup.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+        <CardHeader>
+          <CardTitle className="text-2xl">Organization members</CardTitle>
+          <CardDescription>
+            Manage organization-level roles and membership access.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3.5">
+          {data.userContext.organizationRole === "owner" ? (
+            <form
+              action={transferOrganizationOwnershipAction}
+              className="grid gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
+            >
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  New owner
+                </label>
+                <Select name="newOwnerUserId" required>
+                  <SelectTrigger
+                    className="h-10 min-w-56"
+                    disabled={ownershipTransferCandidates.length === 0}
+                  >
+                    <SelectValue placeholder="Select member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ownershipTransferCandidates.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>
+                        {member.email} ({member.organizationRole})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Previous owner role
+                </label>
+                <Select
+                  name="previousOwnerRole"
+                  defaultValue="manager"
+                  required
+                >
+                  <SelectTrigger className="h-10 min-w-44">
+                    <SelectValue placeholder="Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manager">manager</SelectItem>
+                    <SelectItem value="viewer">viewer</SelectItem>
+                    <SelectItem value="athlete">athlete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="h-10 sm:min-w-44"
+                disabled={ownershipTransferCandidates.length === 0}
+              >
+                Transfer ownership
+              </Button>
+
+              {ownershipTransferCandidates.length === 0 ? (
+                <p className="text-xs text-muted-foreground sm:col-span-3">
+                  Add another member before transferring ownership.
+                </p>
+              ) : null}
+            </form>
+          ) : null}
+
+          {data.organizationMembers.length > 0 ? (
+            <ul className="space-y-2.5">
+              {data.organizationMembers.map((member) => {
+                const canManageMember =
+                  canManageInvitations && member.organizationRole !== "owner";
+
+                return (
+                  <li
+                    key={member.userId}
+                    className="space-y-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm">{member.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.organizationRole}
+                      </p>
+                    </div>
+
+                    {canManageMember ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <form
+                          action={updateOrganizationMemberRoleAction}
+                          className="flex flex-wrap items-center gap-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="userId"
+                            value={member.userId}
+                          />
+                          <Select
+                            name="role"
+                            defaultValue={member.organizationRole}
+                          >
+                            <SelectTrigger className="h-8 min-w-32">
+                              <SelectValue placeholder="Role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manager">manager</SelectItem>
+                              <SelectItem value="viewer">viewer</SelectItem>
+                              <SelectItem value="athlete">athlete</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button type="submit" size="xs" variant="outline">
+                            Update role
+                          </Button>
+                        </form>
+
+                        <form action={removeOrganizationMemberAction}>
+                          <input
+                            type="hidden"
+                            name="userId"
+                            value={member.userId}
+                          />
+                          <Button type="submit" size="xs" variant="outline">
+                            Remove member
+                          </Button>
+                        </form>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Role changes for this member are restricted.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No organization members found.
             </p>
           )}
         </CardContent>

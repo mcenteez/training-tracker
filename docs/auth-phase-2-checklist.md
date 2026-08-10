@@ -95,22 +95,22 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Implementation Checklist
 
-- [ ] Add service operations:
-  - [ ] transferOrganizationOwnership
-  - [ ] updateOrganizationMembershipRole
-  - [ ] removeOrganizationMembership
-- [ ] Enforce invariants:
-  - [ ] Organization must always have exactly one owner.
-  - [ ] Owner cannot be removed without transfer.
-  - [ ] Role demotions respect privilege requirements.
-- [ ] Add transactional cascade handling for dependent team memberships.
+- [x] Add service operations:
+  - [x] transferOrganizationOwnership
+  - [x] updateOrganizationMembershipRole
+  - [x] removeOrganizationMembership
+- [x] Enforce invariants:
+  - [x] Organization must always have exactly one owner.
+  - [x] Owner cannot be removed without transfer.
+  - [x] Role demotions respect privilege requirements.
+- [x] Add transactional cascade handling for dependent team memberships.
 - [ ] Add optimistic UI and confirmation dialogs for destructive actions.
 
 ### Acceptance Criteria
 
-- [ ] Ownership transfer preserves exactly one owner.
-- [ ] Removing org membership removes dependent team memberships in one transaction.
-- [ ] Managers cannot escalate privileges beyond policy.
+- [x] Ownership transfer preserves exactly one owner.
+- [x] Removing org membership removes dependent team memberships in one transaction.
+- [x] Managers cannot escalate privileges beyond policy.
 
 ## Milestone 4: Effective Access and Role Precedence Enforcement
 
@@ -229,7 +229,7 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 1. [x] Slice A: Invitations data model + service + tests
 2. [x] Slice B: Invitation UI + accept flow + tests
 3. [x] Slice C: Centralized guards refactor + tests
-4. [ ] Slice D: Membership lifecycle commands + transactional invariants
+4. [x] Slice D: Membership lifecycle commands + transactional invariants
 5. [ ] Slice E: Effective-permission resolver adoption
 6. [ ] Slice F: Tenant-isolation test expansion
 7. [ ] Slice G: Audit events + UX polish
