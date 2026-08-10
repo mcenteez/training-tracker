@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { withDatabase } from "@/db/client";
+import { requireOrganizationAccess } from "@/modules/access-control/guards";
 import { createOrganizationWithOwner } from "@/modules/organizations/application/organization-service";
 import { createOrganizationUnitOfWork } from "@/modules/organizations/db/unit-of-work";
 import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
@@ -66,6 +67,7 @@ export async function createOrganizationAction(
     });
 
     if (userContext.hasOrganizationMembership) {
+      requireOrganizationAccess(userContext);
       return;
     }
 

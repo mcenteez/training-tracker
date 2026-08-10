@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { withDatabase } from "@/db/client";
+import { requireOrganizationAccess } from "@/modules/access-control/guards";
 import {
   AuthorizationError,
   DomainInvariantError,
@@ -70,6 +71,16 @@ function getPrimaryEmailAddress(
   );
 }
 
+function requireOrganizationIdOrRedirect(context: {
+  organizationId: string | null;
+}): string {
+  try {
+    return requireOrganizationAccess(context);
+  } catch {
+    redirect("/onboarding/organization");
+  }
+}
+
 export async function createTeamAction(formData: FormData): Promise<void> {
   const { userId } = await auth();
 
@@ -99,12 +110,10 @@ export async function createTeamAction(formData: FormData): Promise<void> {
         email,
       });
 
-      if (!userContext.organizationId) {
-        redirect("/onboarding/organization");
-      }
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
 
       await createTeam(createTeamUnitOfWork(database), {
-        organizationId: userContext.organizationId,
+        organizationId,
         actorUserId: userContext.id,
         name: parsedInput.data.name,
       });
@@ -162,12 +171,10 @@ export async function addOrUpdateTeamMemberAction(
         email: actor.email,
       });
 
-      if (!userContext.organizationId) {
-        redirect("/onboarding/organization");
-      }
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
 
       await addOrUpdateTeamMember(createTeamUnitOfWork(database), {
-        organizationId: userContext.organizationId,
+        organizationId,
         teamId: parsedInput.data.teamId,
         actorUserId: userContext.id,
         targetUserId: parsedInput.data.userId,
@@ -206,12 +213,10 @@ export async function removeTeamMemberAction(
         email: actor.email,
       });
 
-      if (!userContext.organizationId) {
-        redirect("/onboarding/organization");
-      }
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
 
       await removeTeamMember(createTeamUnitOfWork(database), {
-        organizationId: userContext.organizationId,
+        organizationId,
         teamId: parsedInput.data.teamId,
         actorUserId: userContext.id,
         targetUserId: parsedInput.data.userId,
@@ -249,14 +254,12 @@ export async function inviteOrganizationMemberAction(
         email: actor.email,
       });
 
-      if (!userContext.organizationId) {
-        redirect("/onboarding/organization");
-      }
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
 
       await createOrganizationInvitation(
         createOrganizationUnitOfWork(database),
         {
-          organizationId: userContext.organizationId,
+          organizationId,
           actorUserId: userContext.id,
           invitedEmail: parsedInput.data.invitedEmail,
           invitedRole: parsedInput.data.role,
@@ -299,14 +302,12 @@ export async function revokeOrganizationInvitationAction(
         email: actor.email,
       });
 
-      if (!userContext.organizationId) {
-        redirect("/onboarding/organization");
-      }
+      const organizationId = requireOrganizationIdOrRedirect(userContext);
 
       await revokeOrganizationInvitation(
         createOrganizationUnitOfWork(database),
         {
-          organizationId: userContext.organizationId,
+          organizationId,
           actorUserId: userContext.id,
           invitationId: parsedInput.data.invitationId,
         },

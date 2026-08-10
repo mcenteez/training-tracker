@@ -67,22 +67,22 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Implementation Checklist
 
-- [ ] Introduce guard module under access-control application boundary.
-- [ ] Add standardized guards:
-  - [ ] requireAuthenticatedUser
-  - [ ] requireOrganizationAccess
-  - [ ] requireOrganizationRoleAtLeast
-  - [ ] requireTeamAccess
-  - [ ] requireTeamRoleAtLeast
-- [ ] Refactor existing app actions to use shared guards.
+- [x] Introduce guard module under access-control application boundary.
+- [x] Add standardized guards:
+  - [x] requireAuthenticatedUser
+  - [x] requireOrganizationAccess
+  - [x] requireOrganizationRoleAtLeast
+  - [x] requireTeamAccess
+  - [x] requireTeamRoleAtLeast
+- [x] Refactor existing app actions to use shared guards.
 - [ ] Replace ad hoc redirect/error branching with standard behavior.
 - [ ] Ensure every mutation path verifies organization scope server-side.
 
 ### Acceptance Criteria
 
-- [ ] No app action performs role checks inline without a guard helper.
+- [x] No app action performs role checks inline without a guard helper.
 - [ ] Unauthorized actions fail in a consistent way.
-- [ ] Guard behavior is covered with unit tests and representative integration tests.
+- [x] Guard behavior is covered with unit tests and representative integration tests.
 
 ## Milestone 3: Membership Lifecycle Management
 
@@ -228,7 +228,7 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 1. [x] Slice A: Invitations data model + service + tests
 2. [x] Slice B: Invitation UI + accept flow + tests
-3. [ ] Slice C: Centralized guards refactor + tests
+3. [x] Slice C: Centralized guards refactor + tests
 4. [ ] Slice D: Membership lifecycle commands + transactional invariants
 5. [ ] Slice E: Effective-permission resolver adoption
 6. [ ] Slice F: Tenant-isolation test expansion

@@ -1,8 +1,8 @@
+import { ResourceNotFoundError } from "@/modules/access-control/errors";
 import {
-  AuthorizationError,
-  ResourceNotFoundError,
-} from "@/modules/access-control/errors";
-import { hasPermission } from "@/modules/access-control/permissions";
+  requireOrganizationRoleAtLeast,
+  requireTeamAccess,
+} from "@/modules/access-control/guards";
 import type {
   OrganizationRole,
   TeamRole,
@@ -51,17 +51,15 @@ export async function createTeam(
   input: { organizationId: string; actorUserId: string; name: string },
 ): Promise<TeamRecord> {
   return unitOfWork.transaction(async (transaction) => {
-    const organizationRole = await transaction.findOrganizationRole(
-      input.organizationId,
-      input.actorUserId,
+    const organizationRole = requireOrganizationRoleAtLeast(
+      await transaction.findOrganizationRole(
+        input.organizationId,
+        input.actorUserId,
+      ),
+      "athlete",
     );
 
-    if (
-      organizationRole === null ||
-      !hasPermission({ organizationRole }, "team.create")
-    ) {
-      throw new AuthorizationError();
-    }
+    requireTeamAccess({ organizationRole }, "team.create");
 
     return transaction.createTeam(input.organizationId, input.name);
   });
@@ -78,14 +76,13 @@ export async function addOrUpdateTeamMember(
   },
 ): Promise<void> {
   await unitOfWork.transaction(async (transaction) => {
-    const organizationRole = await transaction.findOrganizationRole(
-      input.organizationId,
-      input.actorUserId,
+    const organizationRole = requireOrganizationRoleAtLeast(
+      await transaction.findOrganizationRole(
+        input.organizationId,
+        input.actorUserId,
+      ),
+      "athlete",
     );
-
-    if (organizationRole === null) {
-      throw new AuthorizationError();
-    }
 
     if (!(await transaction.teamExists(input.organizationId, input.teamId))) {
       throw new ResourceNotFoundError("Team");
@@ -97,9 +94,7 @@ export async function addOrUpdateTeamMember(
       input.actorUserId,
     );
 
-    if (!hasPermission({ organizationRole, teamRole }, "team.members.manage")) {
-      throw new AuthorizationError();
-    }
+    requireTeamAccess({ organizationRole, teamRole }, "team.members.manage");
 
     const targetOrganizationRole = await transaction.findOrganizationRole(
       input.organizationId,
@@ -132,14 +127,13 @@ export async function removeTeamMember(
   },
 ): Promise<void> {
   await unitOfWork.transaction(async (transaction) => {
-    const organizationRole = await transaction.findOrganizationRole(
-      input.organizationId,
-      input.actorUserId,
+    const organizationRole = requireOrganizationRoleAtLeast(
+      await transaction.findOrganizationRole(
+        input.organizationId,
+        input.actorUserId,
+      ),
+      "athlete",
     );
-
-    if (organizationRole === null) {
-      throw new AuthorizationError();
-    }
 
     if (!(await transaction.teamExists(input.organizationId, input.teamId))) {
       throw new ResourceNotFoundError("Team");
@@ -151,9 +145,7 @@ export async function removeTeamMember(
       input.actorUserId,
     );
 
-    if (!hasPermission({ organizationRole, teamRole }, "team.members.manage")) {
-      throw new AuthorizationError();
-    }
+    requireTeamAccess({ organizationRole, teamRole }, "team.members.manage");
 
     await transaction.deleteTeamMembership(
       input.organizationId,
