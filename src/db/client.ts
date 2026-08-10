@@ -1,6 +1,6 @@
 import "server-only";
 
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/neon-serverless";
 
 import { getDatabaseUrl } from "./env";
 
@@ -10,9 +10,14 @@ function createDatabase() {
 
 export type Database = ReturnType<typeof createDatabase>;
 
-let database: Database | undefined;
+export async function withDatabase<Result>(
+  operation: (database: Database) => Promise<Result>,
+): Promise<Result> {
+  const database = createDatabase();
 
-export function getDatabase(): Database {
-  database ??= createDatabase();
-  return database;
+  try {
+    return await operation(database);
+  } finally {
+    await database.$client.end();
+  }
 }
