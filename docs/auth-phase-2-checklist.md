@@ -161,19 +161,19 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Implementation Checklist
 
-- [ ] Add audit event schema and migration.
-- [ ] Log events for:
-  - [ ] invite created/revoked/accepted
-  - [ ] membership role changed
-  - [ ] membership removed
-  - [ ] ownership transferred
-- [ ] Ensure event writes are transactionally consistent with source actions.
-- [ ] Add read model for internal admin troubleshooting view.
+- [x] Add audit event schema and migration.
+- [x] Log events for:
+  - [x] invite created/revoked/accepted
+  - [x] membership role changed
+  - [x] membership removed
+  - [x] ownership transferred
+- [x] Ensure event writes are transactionally consistent with source actions.
+- [x] Add read model for internal admin troubleshooting view.
 
 ### Acceptance Criteria
 
-- [ ] Every sensitive membership mutation emits exactly one audit event.
-- [ ] Event payloads contain enough context for operational debugging.
+- [x] Every sensitive membership mutation emits exactly one audit event.
+- [x] Event payloads contain enough context for operational debugging.
 
 ## Milestone 7: UX and Failure-State Completion
 
@@ -184,14 +184,14 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Implementation Checklist
 
-- [ ] Standardize success/error banners for membership actions.
-- [ ] Add role-aware disabled states for unauthorized controls.
+- [x] Standardize success/error banners for membership actions.
+- [x] Add role-aware disabled states for unauthorized controls.
 - [ ] Add dedicated unauthorized page or section messaging.
-- [ ] Add invitation status UI (pending, revoked, expired, accepted).
+- [x] Add invitation status UI (pending, revoked, expired, accepted).
 
 ### Acceptance Criteria
 
-- [ ] Users receive clear next steps for every blocked action.
+- [x] Users receive clear next steps for every blocked action.
 - [ ] No silent failures for membership/authorization actions.
 
 ## Test Plan Checklist
@@ -232,4 +232,4 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 4. [x] Slice D: Membership lifecycle commands + transactional invariants
 5. [x] Slice E: Effective-permission resolver adoption
 6. [x] Slice F: Tenant-isolation test expansion
-7. [ ] Slice G: Audit events + UX polish
+7. [x] Slice G: Audit events + UX polish

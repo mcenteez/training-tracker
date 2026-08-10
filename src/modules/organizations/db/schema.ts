@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   index,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -92,6 +93,34 @@ export const organizationInvitations = pgTable(
   ],
 );
 
+export const organizationAuditEvents = pgTable(
+  "organization_audit_events",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    targetUserId: uuid("target_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text().notNull(),
+    details: jsonb(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("organization_audit_events_organization_idx").on(
+      table.organizationId,
+    ),
+    index("organization_audit_events_actor_idx").on(table.actorUserId),
+    index("organization_audit_events_action_idx").on(table.action),
+  ],
+);
+
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
 export type OrganizationMembership =
@@ -102,3 +131,7 @@ export type OrganizationInvitation =
   typeof organizationInvitations.$inferSelect;
 export type NewOrganizationInvitation =
   typeof organizationInvitations.$inferInsert;
+export type OrganizationAuditEvent =
+  typeof organizationAuditEvents.$inferSelect;
+export type NewOrganizationAuditEvent =
+  typeof organizationAuditEvents.$inferInsert;

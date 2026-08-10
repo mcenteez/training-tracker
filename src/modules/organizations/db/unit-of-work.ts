@@ -8,6 +8,7 @@ import type {
   OrganizationUnitOfWork,
 } from "@/modules/organizations/application/organization-service";
 import {
+  organizationAuditEvents,
   organizationInvitations,
   organizationMemberships,
   organizations,
@@ -220,6 +221,15 @@ export function createOrganizationUnitOfWork(
                 updatedAt: input.acceptedAt,
               })
               .where(eq(organizationInvitations.id, input.invitationId));
+          },
+          async recordAuditEvent(event) {
+            await databaseTransaction.insert(organizationAuditEvents).values({
+              organizationId: event.organizationId,
+              actorUserId: event.actorUserId,
+              targetUserId: event.targetUserId ?? null,
+              action: event.action,
+              details: event.details,
+            });
           },
         };
 

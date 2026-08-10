@@ -142,6 +142,9 @@ function createTestUnitOfWork(
       invitation.acceptedAt = input.acceptedAt;
       operations.push(`accept:${input.invitationId}:${input.acceptedByUserId}`);
     }),
+    recordAuditEvent: vi.fn(async (event) => {
+      operations.push(`audit:${event.action}`);
+    }),
   };
   const unitOfWork: OrganizationUnitOfWork = {
     transaction: vi.fn(async (operation) => operation(transaction)),
@@ -187,6 +190,7 @@ describe("organization service", () => {
     expect(testContext.operations).toEqual([
       "update:owner-1:manager",
       "update:manager-1:owner",
+      "audit:organization.ownership.transferred",
     ]);
     expect(testContext.roles.get("manager-1")).toBe("owner");
   });
@@ -223,7 +227,10 @@ describe("organization service", () => {
       targetUserId: "athlete-1",
     });
 
-    expect(testContext.operations).toEqual(["delete:athlete-1"]);
+    expect(testContext.operations).toEqual([
+      "delete:athlete-1",
+      "audit:organization.member.removed",
+    ]);
     expect(testContext.roles.has("athlete-1")).toBe(false);
   });
 
@@ -301,6 +308,9 @@ describe("organization service", () => {
     expect(testContext.operations).toContain(
       "invite:newmember@example.com:manager",
     );
+    expect(testContext.operations).toContain(
+      "audit:organization.invite.created",
+    );
   });
 
   it("rejects duplicate pending invites for the same organization email", async () => {
@@ -350,6 +360,9 @@ describe("organization service", () => {
 
     expect(testContext.invitations.get(invitation.id)?.status).toBe("revoked");
     expect(testContext.operations).toContain(`revoke:${invitation.id}`);
+    expect(testContext.operations).toContain(
+      "audit:organization.invite.revoked",
+    );
   });
 
   it("accepts a pending invitation and upserts membership role", async () => {
@@ -379,6 +392,9 @@ describe("organization service", () => {
     });
     expect(testContext.roles.get("new-user-1")).toBe("manager");
     expect(testContext.operations).toContain("upsert:new-user-1:manager");
+    expect(testContext.operations).toContain(
+      "audit:organization.invite.accepted",
+    );
   });
 
   it("marks expired invitation during acceptance and rejects completion", async () => {

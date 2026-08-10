@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/select";
 import { withDatabase } from "@/db/client";
 import { hasPermission } from "@/modules/access-control/permissions";
-import { listOrganizationInvitationsByOrganizationId } from "@/modules/organizations/db/queries";
+import {
+  listOrganizationAuditEventsByOrganizationId,
+  listOrganizationInvitationsByOrganizationId,
+} from "@/modules/organizations/db/queries";
 import {
   listOrganizationMembersByOrganizationId,
   listTeamMembersByOrganizationId,
@@ -240,10 +243,11 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
         organizationMembers: [],
         teamMembers: [],
         invitations: [],
+        auditEvents: [],
       };
     }
 
-    const [teams, organizationMembers, teamMembers, invitations] =
+    const [teams, organizationMembers, teamMembers, invitations, auditEvents] =
       await Promise.all([
         listTeamsByOrganizationId(database, userContext.organizationId),
         listOrganizationMembersByOrganizationId(
@@ -255,6 +259,10 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
           database,
           userContext.organizationId,
         ),
+        listOrganizationAuditEventsByOrganizationId(
+          database,
+          userContext.organizationId,
+        ),
       ]);
 
     return {
@@ -263,6 +271,7 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
       organizationMembers,
       teamMembers,
       invitations,
+      auditEvents,
     };
   });
 
@@ -776,6 +785,45 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">No invitations yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+        <CardHeader>
+          <CardTitle className="text-2xl">Audit trail</CardTitle>
+          <CardDescription>
+            Security-sensitive invitation and membership activity.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {data.auditEvents.length > 0 ? (
+            <ul className="space-y-2.5">
+              {data.auditEvents
+                .slice(-20)
+                .reverse()
+                .map((event) => (
+                  <li
+                    key={event.id}
+                    className="rounded-lg border border-border/70 bg-background/70 px-3 py-2"
+                  >
+                    <p className="text-xs text-muted-foreground">
+                      {event.occurredAt.toLocaleString()}
+                    </p>
+                    <p className="text-sm font-medium">{event.action}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Actor: {event.actorUserId}
+                      {event.targetUserId
+                        ? ` • Target: ${event.targetUserId}`
+                        : ""}
+                    </p>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No audit events yet.
+            </p>
           )}
         </CardContent>
       </Card>

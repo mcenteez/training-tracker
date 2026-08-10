@@ -1,10 +1,13 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import type { OrganizationRole } from "@/modules/access-control/roles";
-import { organizationInvitations } from "@/modules/organizations/db/schema";
+import {
+  organizationAuditEvents,
+  organizationInvitations,
+} from "@/modules/organizations/db/schema";
 
 type OrganizationInvitationStatus =
   "pending" | "accepted" | "revoked" | "expired";
@@ -61,8 +64,35 @@ export async function findInvitationByToken(
       expiresAt: organizationInvitations.expiresAt,
     })
     .from(organizationInvitations)
-    .where(and(eq(organizationInvitations.token, token)))
+    .where(eq(organizationInvitations.token, token))
     .limit(1);
 
   return invitation ?? null;
+}
+
+export interface OrganizationAuditEventListItem {
+  id: string;
+  action: string;
+  actorUserId: string;
+  targetUserId: string | null;
+  details: unknown;
+  occurredAt: Date;
+}
+
+export async function listOrganizationAuditEventsByOrganizationId(
+  database: Database,
+  organizationId: string,
+): Promise<OrganizationAuditEventListItem[]> {
+  return database
+    .select({
+      id: organizationAuditEvents.id,
+      action: organizationAuditEvents.action,
+      actorUserId: organizationAuditEvents.actorUserId,
+      targetUserId: organizationAuditEvents.targetUserId,
+      details: organizationAuditEvents.details,
+      occurredAt: organizationAuditEvents.occurredAt,
+    })
+    .from(organizationAuditEvents)
+    .where(eq(organizationAuditEvents.organizationId, organizationId))
+    .orderBy(asc(organizationAuditEvents.occurredAt));
 }

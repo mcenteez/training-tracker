@@ -33,6 +33,20 @@ export interface OrganizationInvitationRecord {
   revokedAt: Date | null;
 }
 
+export interface OrganizationAuditEventInput {
+  organizationId: string;
+  actorUserId: string;
+  targetUserId?: string | null;
+  action:
+    | "organization.ownership.transferred"
+    | "organization.member.removed"
+    | "organization.member.role_updated"
+    | "organization.invite.created"
+    | "organization.invite.revoked"
+    | "organization.invite.accepted";
+  details?: Record<string, unknown>;
+}
+
 export interface OrganizationTransaction {
   createOrganization(name: string): Promise<OrganizationRecord>;
   addMembership(
@@ -81,6 +95,7 @@ export interface OrganizationTransaction {
     acceptedByUserId: string;
     acceptedAt: Date;
   }): Promise<void>;
+  recordAuditEvent(event: OrganizationAuditEventInput): Promise<void>;
 }
 
 export interface OrganizationUnitOfWork {
@@ -156,6 +171,15 @@ export async function transferOrganizationOwnership(
       input.newOwnerUserId,
       "owner",
     );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.newOwnerUserId,
+      action: "organization.ownership.transferred",
+      details: {
+        previousOwnerRole: input.previousOwnerRole,
+      },
+    });
   });
 }
 
@@ -189,6 +213,12 @@ export async function removeOrganizationMember(
       input.organizationId,
       input.targetUserId,
     );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      action: "organization.member.removed",
+    });
   });
 }
 
@@ -224,6 +254,15 @@ export async function updateOrganizationMembershipRole(
       input.targetUserId,
       input.role,
     );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      action: "organization.member.role_updated",
+      details: {
+        role: input.role,
+      },
+    });
   });
 }
 
@@ -267,7 +306,7 @@ export async function createOrganizationInvitation(
       );
     }
 
-    return transaction.createInvitation({
+    const invitation = await transaction.createInvitation({
       organizationId: input.organizationId,
       invitedEmail,
       role: input.invitedRole,
@@ -275,6 +314,19 @@ export async function createOrganizationInvitation(
       expiresAt: input.expiresAt,
       createdByUserId: input.actorUserId,
     });
+
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "organization.invite.created",
+      details: {
+        invitationId: invitation.id,
+        invitedEmail: invitation.invitedEmail,
+        role: invitation.role,
+      },
+    });
+
+    return invitation;
   });
 }
 
@@ -316,6 +368,15 @@ export async function revokeOrganizationInvitation(
     }
 
     await transaction.markInvitationRevoked(invitation.id, new Date());
+    await transaction.recordAuditEvent({
+      organizationId: invitation.organizationId,
+      actorUserId: input.actorUserId,
+      action: "organization.invite.revoked",
+      details: {
+        invitationId: invitation.id,
+        invitedEmail: invitation.invitedEmail,
+      },
+    });
   });
 }
 
@@ -362,6 +423,16 @@ export async function acceptOrganizationInvitation(
       invitationId: invitation.id,
       acceptedByUserId: input.actorUserId,
       acceptedAt: now,
+    });
+    await transaction.recordAuditEvent({
+      organizationId: invitation.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.actorUserId,
+      action: "organization.invite.accepted",
+      details: {
+        invitationId: invitation.id,
+        role: invitation.role,
+      },
     });
 
     return {
