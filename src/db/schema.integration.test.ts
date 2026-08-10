@@ -1,20 +1,34 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { readdir } from "node:fs/promises";
 
 import { PGlite } from "@electric-sql/pglite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const migrationPath = resolve(
-  process.cwd(),
-  "drizzle/20260810163627_initial_tenancy/migration.sql",
-);
+const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
-async function applyInitialMigration(database: PGlite) {
-  const migration = await readFile(migrationPath, "utf8");
+async function applyMigrations(database: PGlite) {
+  const migrationDirectories = (
+    await readdir(migrationsRootPath, {
+      withFileTypes: true,
+    })
+  )
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
 
-  for (const statement of migration.split("--> statement-breakpoint")) {
-    if (statement.trim()) {
-      await database.exec(statement);
+  for (const directory of migrationDirectories) {
+    const migrationPath = resolve(
+      migrationsRootPath,
+      directory,
+      "migration.sql",
+    );
+    const migration = await readFile(migrationPath, "utf8");
+
+    for (const statement of migration.split("--> statement-breakpoint")) {
+      if (statement.trim()) {
+        await database.exec(statement);
+      }
     }
   }
 }
@@ -40,7 +54,7 @@ describe("tenant schema", () => {
   beforeEach(async () => {
     database = new PGlite();
     await database.waitReady;
-    await applyInitialMigration(database);
+    await applyMigrations(database);
     await seedUsersAndOrganizations(database);
   });
 
@@ -143,5 +157,104 @@ describe("tenant schema", () => {
     `);
 
     expect(result.rows[0]?.count).toBe(1);
+  });
+
+  it("allows only one pending invitation per organization email", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'owner');
+
+      INSERT INTO organization_invitations (
+        organization_id,
+        invited_email,
+        role,
+        token,
+        expires_at,
+        created_by_user_id
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        'invitee@example.com',
+        'viewer',
+        'invite-token-1',
+        now() + interval '7 days',
+        '00000000-0000-0000-0000-000000000001'
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO organization_invitations (
+          organization_id,
+          invited_email,
+          role,
+          token,
+          expires_at,
+          created_by_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          'invitee@example.com',
+          'athlete',
+          'invite-token-2',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        );
+      `),
+    ).rejects.toThrow(/organization_invitations_pending_email_idx/);
+  });
+
+  it("permits reinviting the same email after invitation is revoked", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'owner');
+
+      INSERT INTO organization_invitations (
+        organization_id,
+        invited_email,
+        role,
+        token,
+        expires_at,
+        created_by_user_id,
+        status,
+        revoked_at
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        'invitee@example.com',
+        'viewer',
+        'invite-token-1',
+        now() + interval '7 days',
+        '00000000-0000-0000-0000-000000000001',
+        'revoked',
+        now()
+      );
+
+      INSERT INTO organization_invitations (
+        organization_id,
+        invited_email,
+        role,
+        token,
+        expires_at,
+        created_by_user_id
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        'invitee@example.com',
+        'athlete',
+        'invite-token-2',
+        now() + interval '7 days',
+        '00000000-0000-0000-0000-000000000001'
+      );
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT count(*)::int AS count
+      FROM organization_invitations
+      WHERE organization_id = '10000000-0000-0000-0000-000000000001'
+        AND invited_email = 'invitee@example.com';
+    `);
+
+    expect(result.rows[0]?.count).toBe(2);
   });
 });

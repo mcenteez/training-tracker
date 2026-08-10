@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   AuthorizationError,
   DomainInvariantError,
@@ -12,6 +14,23 @@ import type { OrganizationRole } from "@/modules/access-control/roles";
 export interface OrganizationRecord {
   id: string;
   name: string;
+}
+
+export type OrganizationInvitationStatus =
+  "pending" | "accepted" | "revoked" | "expired";
+
+export interface OrganizationInvitationRecord {
+  id: string;
+  organizationId: string;
+  invitedEmail: string;
+  role: OrganizationRole;
+  status: OrganizationInvitationStatus;
+  token: string;
+  expiresAt: Date;
+  createdByUserId: string;
+  acceptedByUserId: string | null;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
 }
 
 export interface OrganizationTransaction {
@@ -30,13 +49,48 @@ export interface OrganizationTransaction {
     userId: string,
     role: OrganizationRole,
   ): Promise<void>;
+  upsertMembershipRole(
+    organizationId: string,
+    userId: string,
+    role: OrganizationRole,
+  ): Promise<void>;
   deleteMembership(organizationId: string, userId: string): Promise<void>;
+  findPendingInvitationByEmail(
+    organizationId: string,
+    invitedEmail: string,
+  ): Promise<OrganizationInvitationRecord | null>;
+  createInvitation(input: {
+    organizationId: string;
+    invitedEmail: string;
+    role: Exclude<OrganizationRole, "owner">;
+    token: string;
+    expiresAt: Date;
+    createdByUserId: string;
+  }): Promise<OrganizationInvitationRecord>;
+  findInvitationById(
+    organizationId: string,
+    invitationId: string,
+  ): Promise<OrganizationInvitationRecord | null>;
+  findInvitationByToken(
+    token: string,
+  ): Promise<OrganizationInvitationRecord | null>;
+  markInvitationRevoked(invitationId: string, revokedAt: Date): Promise<void>;
+  markInvitationExpired(invitationId: string, expiredAt: Date): Promise<void>;
+  markInvitationAccepted(input: {
+    invitationId: string;
+    acceptedByUserId: string;
+    acceptedAt: Date;
+  }): Promise<void>;
 }
 
 export interface OrganizationUnitOfWork {
   transaction<Result>(
     operation: (transaction: OrganizationTransaction) => Promise<Result>,
   ): Promise<Result>;
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }
 
 export async function createOrganizationWithOwner(
@@ -135,5 +189,149 @@ export async function removeOrganizationMember(
       input.organizationId,
       input.targetUserId,
     );
+  });
+}
+
+export async function createOrganizationInvitation(
+  unitOfWork: OrganizationUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    invitedEmail: string;
+    invitedRole: Exclude<OrganizationRole, "owner">;
+    expiresAt: Date;
+    token?: string;
+  },
+): Promise<OrganizationInvitationRecord> {
+  return unitOfWork.transaction(async (transaction) => {
+    const actorRole = await transaction.findMembershipRole(
+      input.organizationId,
+      input.actorUserId,
+    );
+
+    if (
+      actorRole === null ||
+      !hasPermission(
+        { organizationRole: actorRole },
+        "organization.members.manage",
+      )
+    ) {
+      throw new AuthorizationError();
+    }
+
+    const invitedEmail = normalizeEmail(input.invitedEmail);
+    const existingPendingInvitation =
+      await transaction.findPendingInvitationByEmail(
+        input.organizationId,
+        invitedEmail,
+      );
+
+    if (existingPendingInvitation !== null) {
+      throw new DomainInvariantError(
+        "A pending invitation already exists for this email",
+      );
+    }
+
+    return transaction.createInvitation({
+      organizationId: input.organizationId,
+      invitedEmail,
+      role: input.invitedRole,
+      token: input.token ?? randomUUID(),
+      expiresAt: input.expiresAt,
+      createdByUserId: input.actorUserId,
+    });
+  });
+}
+
+export async function revokeOrganizationInvitation(
+  unitOfWork: OrganizationUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    invitationId: string;
+  },
+): Promise<void> {
+  await unitOfWork.transaction(async (transaction) => {
+    const actorRole = await transaction.findMembershipRole(
+      input.organizationId,
+      input.actorUserId,
+    );
+
+    if (
+      actorRole === null ||
+      !hasPermission(
+        { organizationRole: actorRole },
+        "organization.members.manage",
+      )
+    ) {
+      throw new AuthorizationError();
+    }
+
+    const invitation = await transaction.findInvitationById(
+      input.organizationId,
+      input.invitationId,
+    );
+
+    if (invitation === null) {
+      throw new ResourceNotFoundError("Organization invitation");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new DomainInvariantError("Only pending invitations can be revoked");
+    }
+
+    await transaction.markInvitationRevoked(invitation.id, new Date());
+  });
+}
+
+export async function acceptOrganizationInvitation(
+  unitOfWork: OrganizationUnitOfWork,
+  input: {
+    actorUserId: string;
+    actorEmail: string;
+    invitationToken: string;
+  },
+): Promise<{ organizationId: string; role: OrganizationRole }> {
+  return unitOfWork.transaction(async (transaction) => {
+    const invitation = await transaction.findInvitationByToken(
+      input.invitationToken,
+    );
+
+    if (invitation === null) {
+      throw new ResourceNotFoundError("Organization invitation");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new DomainInvariantError("Invitation is no longer pending");
+    }
+
+    const now = new Date();
+
+    if (invitation.expiresAt.getTime() <= now.getTime()) {
+      await transaction.markInvitationExpired(invitation.id, now);
+      throw new DomainInvariantError("Invitation has expired");
+    }
+
+    const actorEmail = normalizeEmail(input.actorEmail);
+
+    if (actorEmail !== normalizeEmail(invitation.invitedEmail)) {
+      throw new AuthorizationError();
+    }
+
+    await transaction.upsertMembershipRole(
+      invitation.organizationId,
+      input.actorUserId,
+      invitation.role,
+    );
+    await transaction.markInvitationAccepted({
+      invitationId: invitation.id,
+      acceptedByUserId: input.actorUserId,
+      acceptedAt: now,
+    });
+
+    return {
+      organizationId: invitation.organizationId,
+      role: invitation.role,
+    };
   });
 }

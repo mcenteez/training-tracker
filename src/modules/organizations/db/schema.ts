@@ -14,6 +14,10 @@ import { organizationRoles } from "@/modules/access-control/roles";
 import { users } from "@/modules/users/db/schema";
 
 export const organizationRole = pgEnum("organization_role", organizationRoles);
+export const organizationInvitationStatus = pgEnum(
+  "organization_invitation_status",
+  ["pending", "accepted", "revoked", "expired"],
+);
 
 export const organizations = pgTable("organizations", {
   id: uuid().defaultRandom().primaryKey(),
@@ -52,9 +56,49 @@ export const organizationMemberships = pgTable(
   ],
 );
 
+export const organizationInvitations = pgTable(
+  "organization_invitations",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    invitedEmail: text("invited_email").notNull(),
+    role: organizationRole().notNull(),
+    status: organizationInvitationStatus().default("pending").notNull(),
+    token: text().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    acceptedByUserId: uuid("accepted_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("organization_invitations_token_idx").on(table.token),
+    uniqueIndex("organization_invitations_pending_email_idx")
+      .on(table.organizationId, table.invitedEmail)
+      .where(sql`${table.status} = 'pending'`),
+    index("organization_invitations_organization_idx").on(table.organizationId),
+  ],
+);
+
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
 export type OrganizationMembership =
   typeof organizationMemberships.$inferSelect;
 export type NewOrganizationMembership =
   typeof organizationMemberships.$inferInsert;
+export type OrganizationInvitation =
+  typeof organizationInvitations.$inferSelect;
+export type NewOrganizationInvitation =
+  typeof organizationInvitations.$inferInsert;
