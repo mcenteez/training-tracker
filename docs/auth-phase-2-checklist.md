@@ -143,13 +143,13 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 ### Implementation Checklist
 
 - [ ] Audit all query paths in modules for organization scoping.
-- [ ] Add explicit negative tests for cross-organization access.
+- [x] Add explicit negative tests for cross-organization access.
 - [ ] Add checklist enforcement in code review template.
-- [ ] Add integration tests around sensitive flows (invite, transfer ownership, remove membership).
+- [x] Add integration tests around sensitive flows (invite, transfer ownership, remove membership).
 
 ### Acceptance Criteria
 
-- [ ] Cross-tenant read/write attempts are rejected for every tested path.
+- [x] Cross-tenant read/write attempts are rejected for every tested path.
 - [ ] All sensitive paths include explicit organization context checks.
 
 ## Milestone 6: Security Audit Events
@@ -212,7 +212,7 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Security and Tenant Isolation
 
-- [ ] Cross-organization mutation attempts fail
+- [x] Cross-organization mutation attempts fail
 - [ ] Cross-team unauthorized access attempts fail
 - [ ] Athlete cannot view or mutate another athlete data paths
 
@@ -231,5 +231,5 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 3. [x] Slice C: Centralized guards refactor + tests
 4. [x] Slice D: Membership lifecycle commands + transactional invariants
 5. [x] Slice E: Effective-permission resolver adoption
-6. [ ] Slice F: Tenant-isolation test expansion
+6. [x] Slice F: Tenant-isolation test expansion
 7. [ ] Slice G: Audit events + UX polish

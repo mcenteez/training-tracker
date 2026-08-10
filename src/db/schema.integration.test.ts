@@ -257,4 +257,69 @@ describe("tenant schema", () => {
 
     expect(result.rows[0]?.count).toBe(2);
   });
+
+  it("allows the same pending invite email across different organizations", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'owner'),
+        ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'owner');
+
+      INSERT INTO organization_invitations (
+        organization_id,
+        invited_email,
+        role,
+        token,
+        expires_at,
+        created_by_user_id
+      )
+      VALUES
+        (
+          '10000000-0000-0000-0000-000000000001',
+          'shared@example.com',
+          'viewer',
+          'org-1-invite',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        ),
+        (
+          '10000000-0000-0000-0000-000000000002',
+          'shared@example.com',
+          'viewer',
+          'org-2-invite',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000002'
+        );
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT count(*)::int AS count
+      FROM organization_invitations
+      WHERE invited_email = 'shared@example.com'
+        AND status = 'pending';
+    `);
+
+    expect(result.rows[0]?.count).toBe(2);
+  });
+
+  it("keeps membership in another organization when one organization membership is removed", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'athlete'),
+        ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003', 'athlete');
+
+      DELETE FROM organization_memberships
+      WHERE organization_id = '10000000-0000-0000-0000-000000000001'
+        AND user_id = '00000000-0000-0000-0000-000000000003';
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT count(*)::int AS count
+      FROM organization_memberships
+      WHERE user_id = '00000000-0000-0000-0000-000000000003';
+    `);
+
+    expect(result.rows[0]?.count).toBe(1);
+  });
 });
