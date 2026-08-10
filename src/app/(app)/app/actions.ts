@@ -5,7 +5,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { withDatabase } from "@/db/client";
-import { AuthorizationError } from "@/modules/access-control/errors";
+import {
+  AuthorizationError,
+  DomainInvariantError,
+  ResourceNotFoundError,
+} from "@/modules/access-control/errors";
+import {
+  createOrganizationInvitation,
+  revokeOrganizationInvitation,
+} from "@/modules/organizations/application/organization-service";
+import { createOrganizationUnitOfWork } from "@/modules/organizations/db/unit-of-work";
 import {
   addOrUpdateTeamMember,
   createTeam,
@@ -32,6 +41,15 @@ const updateTeamMemberInputSchema = z.object({
 const removeTeamMemberInputSchema = z.object({
   teamId: z.uuid(),
   userId: z.uuid(),
+});
+
+const inviteOrganizationMemberInputSchema = z.object({
+  invitedEmail: z.email(),
+  role: z.enum(["manager", "viewer", "athlete"]),
+});
+
+const revokeInvitationInputSchema = z.object({
+  invitationId: z.uuid(),
 });
 
 function getPrimaryEmailAddress(
@@ -208,4 +226,106 @@ export async function removeTeamMemberAction(
   }
 
   redirect("/app?memberRemoved=1");
+}
+
+export async function inviteOrganizationMemberAction(
+  formData: FormData,
+): Promise<void> {
+  const actor = await loadActorContext();
+
+  const parsedInput = inviteOrganizationMemberInputSchema.safeParse({
+    invitedEmail: formData.get("invitedEmail"),
+    role: formData.get("role"),
+  });
+
+  if (!parsedInput.success) {
+    redirect("/app?error=invalid_invite_input");
+  }
+
+  try {
+    await withDatabase(async (database) => {
+      const userContext = await getAuthenticatedUserContext(database, {
+        clerkUserId: actor.userId,
+        email: actor.email,
+      });
+
+      if (!userContext.organizationId) {
+        redirect("/onboarding/organization");
+      }
+
+      await createOrganizationInvitation(
+        createOrganizationUnitOfWork(database),
+        {
+          organizationId: userContext.organizationId,
+          actorUserId: userContext.id,
+          invitedEmail: parsedInput.data.invitedEmail,
+          invitedRole: parsedInput.data.role,
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        },
+      );
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app?error=forbidden_invite_manage");
+    }
+
+    if (error instanceof DomainInvariantError) {
+      redirect("/app?error=duplicate_invite");
+    }
+
+    throw error;
+  }
+
+  redirect("/app?inviteCreated=1");
+}
+
+export async function revokeOrganizationInvitationAction(
+  formData: FormData,
+): Promise<void> {
+  const actor = await loadActorContext();
+
+  const parsedInput = revokeInvitationInputSchema.safeParse({
+    invitationId: formData.get("invitationId"),
+  });
+
+  if (!parsedInput.success) {
+    redirect("/app?error=invalid_invite_input");
+  }
+
+  try {
+    await withDatabase(async (database) => {
+      const userContext = await getAuthenticatedUserContext(database, {
+        clerkUserId: actor.userId,
+        email: actor.email,
+      });
+
+      if (!userContext.organizationId) {
+        redirect("/onboarding/organization");
+      }
+
+      await revokeOrganizationInvitation(
+        createOrganizationUnitOfWork(database),
+        {
+          organizationId: userContext.organizationId,
+          actorUserId: userContext.id,
+          invitationId: parsedInput.data.invitationId,
+        },
+      );
+    });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      redirect("/app?error=forbidden_invite_manage");
+    }
+
+    if (
+      error instanceof DomainInvariantError ||
+      error instanceof ResourceNotFoundError
+    ) {
+      redirect("/app?error=invite_not_found");
+    }
+
+    throw error;
+  }
+
+  redirect("/app?inviteRevoked=1");
 }

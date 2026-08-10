@@ -45,17 +45,17 @@ Harden and complete tenant-safe authorization workflows after initial authentica
   - [x] createOrganizationInvitation
   - [x] revokeOrganizationInvitation
   - [x] acceptOrganizationInvitation
-- [ ] Add server actions and route handlers for invite create/revoke/accept.
-- [ ] Add onboarding/accept-invite route and UI.
-- [ ] Add anti-enumeration behavior for unknown invite tokens.
+- [x] Add server actions and route handlers for invite create/revoke/accept.
+- [x] Add onboarding/accept-invite route and UI.
+- [x] Add anti-enumeration behavior for unknown invite tokens.
 
 ### Acceptance Criteria
 
 - [x] Owner can invite a new email to an organization role.
-- [ ] Invited user can sign in and accept invitation exactly once.
-- [ ] Revoked and expired invitations cannot be accepted.
+- [x] Invited user can sign in and accept invitation exactly once.
+- [x] Revoked and expired invitations cannot be accepted.
 - [x] Accepting invitation creates or updates membership transactionally.
-- [ ] No cross-organization invitation acceptance is possible.
+- [x] No cross-organization invitation acceptance is possible.
 
 ## Milestone 2: Centralized Authorization Guards
 
@@ -227,7 +227,7 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 ## Suggested Execution Slices
 
 1. [x] Slice A: Invitations data model + service + tests
-2. [ ] Slice B: Invitation UI + accept flow + tests
+2. [x] Slice B: Invitation UI + accept flow + tests
 3. [ ] Slice C: Centralized guards refactor + tests
 4. [ ] Slice D: Membership lifecycle commands + transactional invariants
 5. [ ] Slice E: Effective-permission resolver adoption

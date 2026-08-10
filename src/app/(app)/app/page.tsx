@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { withDatabase } from "@/db/client";
 import { hasPermission } from "@/modules/access-control/permissions";
+import { listOrganizationInvitationsByOrganizationId } from "@/modules/organizations/db/queries";
 import {
   listOrganizationMembersByOrganizationId,
   listTeamMembersByOrganizationId,
@@ -29,6 +31,8 @@ import { getAuthenticatedUserContext } from "@/modules/users/application/user-se
 import {
   addOrUpdateTeamMemberAction,
   createTeamAction,
+  inviteOrganizationMemberAction,
+  revokeOrganizationInvitationAction,
   removeTeamMemberAction,
 } from "./actions";
 
@@ -81,6 +85,28 @@ function getFeedbackMessage(
     return { kind: "success", text: "Team member removed successfully." };
   }
 
+  const inviteCreated = Array.isArray(params.inviteCreated)
+    ? params.inviteCreated[0]
+    : params.inviteCreated;
+  const inviteRevoked = Array.isArray(params.inviteRevoked)
+    ? params.inviteRevoked[0]
+    : params.inviteRevoked;
+  const inviteAccepted = Array.isArray(params.inviteAccepted)
+    ? params.inviteAccepted[0]
+    : params.inviteAccepted;
+
+  if (inviteCreated === "1") {
+    return { kind: "success", text: "Invitation created successfully." };
+  }
+
+  if (inviteRevoked === "1") {
+    return { kind: "success", text: "Invitation revoked successfully." };
+  }
+
+  if (inviteAccepted === "1") {
+    return { kind: "success", text: "Invitation accepted successfully." };
+  }
+
   if (error === "invalid_team_name") {
     return {
       kind: "error",
@@ -116,6 +142,34 @@ function getFeedbackMessage(
     };
   }
 
+  if (error === "invalid_invite_input") {
+    return {
+      kind: "error",
+      text: "Invitation input is invalid. Check email and role.",
+    };
+  }
+
+  if (error === "forbidden_invite_manage") {
+    return {
+      kind: "error",
+      text: "Your current role is not allowed to manage invitations.",
+    };
+  }
+
+  if (error === "duplicate_invite") {
+    return {
+      kind: "error",
+      text: "A pending invitation already exists for that email.",
+    };
+  }
+
+  if (error === "invite_not_found") {
+    return {
+      kind: "error",
+      text: "That invitation is no longer available.",
+    };
+  }
+
   return null;
 }
 
@@ -145,19 +199,31 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
         teams: [],
         organizationMembers: [],
         teamMembers: [],
+        invitations: [],
       };
     }
 
-    const [teams, organizationMembers, teamMembers] = await Promise.all([
-      listTeamsByOrganizationId(database, userContext.organizationId),
-      listOrganizationMembersByOrganizationId(
-        database,
-        userContext.organizationId,
-      ),
-      listTeamMembersByOrganizationId(database, userContext.organizationId),
-    ]);
+    const [teams, organizationMembers, teamMembers, invitations] =
+      await Promise.all([
+        listTeamsByOrganizationId(database, userContext.organizationId),
+        listOrganizationMembersByOrganizationId(
+          database,
+          userContext.organizationId,
+        ),
+        listTeamMembersByOrganizationId(database, userContext.organizationId),
+        listOrganizationInvitationsByOrganizationId(
+          database,
+          userContext.organizationId,
+        ),
+      ]);
 
-    return { userContext, teams, organizationMembers, teamMembers };
+    return {
+      userContext,
+      teams,
+      organizationMembers,
+      teamMembers,
+      invitations,
+    };
   });
 
   if (!data.userContext.hasOrganizationMembership) {
@@ -190,6 +256,13 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
       "team.members.manage",
     );
   };
+
+  const canManageInvitations =
+    data.userContext.organizationRole !== null &&
+    hasPermission(
+      { organizationRole: data.userContext.organizationRole },
+      "organization.members.manage",
+    );
 
   const params = await searchParams;
   const feedbackMessage = getFeedbackMessage(params);
@@ -411,6 +484,109 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
             <p className="text-sm text-muted-foreground">
               No teams yet. Create your first team to continue setup.
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+        <CardHeader>
+          <CardTitle className="text-2xl">Invitations</CardTitle>
+          <CardDescription>
+            Invite organization members by email and role.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {canManageInvitations ? (
+            <form
+              action={inviteOrganizationMemberAction}
+              className="grid gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
+            >
+              <div className="space-y-2">
+                <label
+                  htmlFor="invitedEmail"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Email
+                </label>
+                <Input
+                  id="invitedEmail"
+                  name="invitedEmail"
+                  type="email"
+                  placeholder="coach@school.edu"
+                  required
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Role
+                </label>
+                <Select name="role" defaultValue="athlete" required>
+                  <SelectTrigger className="h-10 min-w-36">
+                    <SelectValue placeholder="Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manager">manager</SelectItem>
+                    <SelectItem value="viewer">viewer</SelectItem>
+                    <SelectItem value="athlete">athlete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" size="lg" className="h-10 sm:min-w-36">
+                Send invite
+              </Button>
+            </form>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Your role does not allow invitation management.
+            </p>
+          )}
+
+          {data.invitations.length > 0 ? (
+            <ul className="space-y-2.5">
+              {data.invitations.map((invitation) => (
+                <li
+                  key={invitation.id}
+                  className="space-y-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm">
+                      {invitation.invitedEmail} ({invitation.role})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {invitation.status}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Expires {invitation.expiresAt.toLocaleDateString()}
+                    </span>
+                    <span>•</span>
+                    <Link
+                      href={`/accept-invite/${invitation.token}`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Accept link
+                    </Link>
+                    {canManageInvitations && invitation.status === "pending" ? (
+                      <form action={revokeOrganizationInvitationAction}>
+                        <input
+                          type="hidden"
+                          name="invitationId"
+                          value={invitation.id}
+                        />
+                        <Button size="xs" variant="outline" type="submit">
+                          Revoke
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No invitations yet.</p>
           )}
         </CardContent>
       </Card>
