@@ -4,6 +4,7 @@ import {
   canManageOrganizationMember,
   hasPermission,
   permissions,
+  resolveEffectivePermissions,
 } from "./permissions";
 
 describe("organization permissions", () => {
@@ -76,6 +77,29 @@ describe("team permissions", () => {
 
     expect(hasPermission(context, "results.read.own")).toBe(true);
     expect(hasPermission(context, "results.read.all")).toBe(false);
+  });
+});
+
+describe("effective permission resolver", () => {
+  it("combines organization and team permissions for effective access", () => {
+    const resolved = resolveEffectivePermissions({
+      organizationRole: "viewer",
+      teamRole: "manager",
+    });
+
+    expect(resolved.has("organization.read")).toBe(true);
+    expect(resolved.has("team.members.manage")).toBe(true);
+    expect(resolved.has("workout.assign.organization")).toBe(false);
+  });
+
+  it("never removes organization-granted permissions", () => {
+    const resolved = resolveEffectivePermissions({
+      organizationRole: "manager",
+      teamRole: "athlete",
+    });
+
+    expect(resolved.has("workout.assign.organization")).toBe(true);
+    expect(resolved.has("team.update")).toBe(true);
   });
 });
 

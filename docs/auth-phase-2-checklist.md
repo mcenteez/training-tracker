@@ -122,16 +122,16 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 
 ### Implementation Checklist
 
-- [ ] Implement one effective-permission resolver utility used across modules.
-- [ ] Encode precedence from access-control requirements document.
-- [ ] Refactor team/member operations to consume resolver.
-- [ ] Add safety assertions for mismatched organization/team ownership chains.
+- [x] Implement one effective-permission resolver utility used across modules.
+- [x] Encode precedence from access-control requirements document.
+- [x] Refactor team/member operations to consume resolver.
+- [x] Add safety assertions for mismatched organization/team ownership chains.
 
 ### Acceptance Criteria
 
-- [ ] Permission outcomes match documented precedence for all role combinations.
-- [ ] Team role never downgrades organization-level access.
-- [ ] Cross-team privilege leakage is prevented.
+- [x] Permission outcomes match documented precedence for all role combinations.
+- [x] Team role never downgrades organization-level access.
+- [x] Cross-team privilege leakage is prevented.
 
 ## Milestone 5: Tenant Isolation Verification Pass
 
@@ -230,6 +230,6 @@ Harden and complete tenant-safe authorization workflows after initial authentica
 2. [x] Slice B: Invitation UI + accept flow + tests
 3. [x] Slice C: Centralized guards refactor + tests
 4. [x] Slice D: Membership lifecycle commands + transactional invariants
-5. [ ] Slice E: Effective-permission resolver adoption
+5. [x] Slice E: Effective-permission resolver adoption
 6. [ ] Slice F: Tenant-isolation test expansion
 7. [ ] Slice G: Audit events + UX polish

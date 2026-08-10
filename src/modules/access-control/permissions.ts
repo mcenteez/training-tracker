@@ -78,16 +78,27 @@ export interface AccessContext {
   teamRole?: TeamRole | null;
 }
 
+export function resolveEffectivePermissions(
+  context: AccessContext,
+): ReadonlySet<Permission> {
+  const resolvedPermissions = new Set<Permission>(
+    organizationPermissions[context.organizationRole],
+  );
+
+  if (context.teamRole !== null && context.teamRole !== undefined) {
+    for (const permission of teamPermissions[context.teamRole]) {
+      resolvedPermissions.add(permission);
+    }
+  }
+
+  return resolvedPermissions;
+}
+
 export function hasPermission(
   context: AccessContext,
   permission: Permission,
 ): boolean {
-  return (
-    organizationPermissions[context.organizationRole].includes(permission) ||
-    (context.teamRole !== null &&
-      context.teamRole !== undefined &&
-      teamPermissions[context.teamRole].includes(permission))
-  );
+  return resolveEffectivePermissions(context).has(permission);
 }
 
 export function canManageOrganizationMember(
