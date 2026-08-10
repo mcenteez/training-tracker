@@ -10,12 +10,13 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { teamRoles } from "@/modules/access-control/roles";
 import {
   organizationMemberships,
   organizations,
 } from "@/modules/organizations/db/schema";
 
-export const teamRole = pgEnum("team_role", ["manager", "viewer", "athlete"]);
+export const teamRole = pgEnum("team_role", teamRoles);
 
 export const teams = pgTable(
   "teams",

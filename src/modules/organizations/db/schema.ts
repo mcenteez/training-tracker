@@ -10,14 +10,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { organizationRoles } from "@/modules/access-control/roles";
 import { users } from "@/modules/users/db/schema";
 
-export const organizationRole = pgEnum("organization_role", [
-  "owner",
-  "manager",
-  "viewer",
-  "athlete",
-]);
+export const organizationRole = pgEnum("organization_role", organizationRoles);
 
 export const organizations = pgTable("organizations", {
   id: uuid().defaultRandom().primaryKey(),
