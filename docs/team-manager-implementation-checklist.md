@@ -53,8 +53,8 @@ A Team Manager must not be able to:
 - [x] Team invitation and acceptance flow for people who are not already organization members.
 - [x] Assignment-authoring options scoped to managed teams and their athletes.
 - [x] Team assignment and compliance read models.
-- [ ] Staff result-review route.
-- [ ] Session comment service, queries, actions, and UI.
+- [x] Staff result-review route.
+- [x] Session comment service, queries, actions, and UI.
 - [x] Team Manager navigation to operational team controls.
 - [ ] End-to-end team-manager authorization and tenant-isolation coverage.
 
@@ -286,26 +286,26 @@ Every team route, query, and mutation must request the specific permission it ne
 
 ### Implementation Checklist
 
-- [ ] Add a staff session-result detail query scoped by organization, team, assignment, recipient, and session.
-- [ ] Return snapshot exercise labels and submitted result metrics in deterministic order.
-- [ ] Add session comment list and insert repository operations.
-- [ ] Add an application service for appending a session comment.
-- [ ] Require `results.read.all` to view team results.
-- [ ] Require `results.comment` to append a comment.
-- [ ] Require the session to be submitted before accepting a comment.
-- [ ] Add `/app/performance/teams/[teamId]/assignments/[assignmentId]/sessions/[sessionId]`.
-- [ ] Add a comment server action using the existing Zod input schema.
-- [ ] Render comment author, body, and timestamp without exposing sensitive identifiers.
-- [ ] Treat comments as append-only in this milestone.
-- [ ] Add tests for Team Manager, Team Viewer, Athlete, unmanaged team, foreign organization, non-submitted session, and malformed comment body.
+- [x] Add a staff session-result detail query scoped by organization, team, assignment, recipient, and session.
+- [x] Return snapshot exercise labels and submitted result metrics in deterministic order.
+- [x] Add session comment list and insert repository operations.
+- [x] Add an application service for appending a session comment.
+- [x] Require `results.read.all` to view team results.
+- [x] Require `results.comment` to append a comment.
+- [x] Require the session to be submitted before accepting a comment.
+- [x] Add `/app/performance/teams/[teamId]/assignments/[assignmentId]/sessions/[sessionId]`.
+- [x] Add a comment server action using the existing Zod input schema.
+- [x] Render comment author, body, and timestamp without exposing sensitive identifiers.
+- [x] Treat comments as append-only in this milestone.
+- [x] Add tests for Team Manager, Team Viewer, Athlete, unmanaged team, foreign organization, non-submitted session, and malformed comment body.
 
 ### Acceptance Criteria
 
-- [ ] Team Managers can review submitted metrics and comment within managed teams.
-- [ ] Team Viewers can review results but cannot comment.
-- [ ] Athletes cannot use staff result routes to inspect teammates.
-- [ ] Comments cannot be appended to in-progress or assigned sessions.
-- [ ] No result or comment data leaks across teams or organizations.
+- [x] Team Managers can review submitted metrics and comment within managed teams.
+- [x] Team Viewers can review results but cannot comment.
+- [x] Athletes cannot use staff result routes to inspect teammates.
+- [x] Comments cannot be appended to in-progress or assigned sessions.
+- [x] No result or comment data leaks across teams or organizations.
 
 ## Milestone 7: Navigation, Auditability, and UX Completion
 
@@ -379,7 +379,7 @@ Every team route, query, and mutation must request the specific permission it ne
 - [x] Slice C: Existing-member roster management UI and action tests.
 - [x] Slice D: Team invitation schema, service, acceptance flow, and tests.
 - [x] Slice E: Team assignment/compliance read models and dashboard UI.
-- [ ] Slice F: Submitted result detail and session comments.
+- [x] Slice F: Submitted result detail and session comments.
 - [ ] Slice G: Navigation, audit events, accessibility, documentation, and final hardening.
 
 Each slice should be independently reviewable and validated before the next slice begins.
