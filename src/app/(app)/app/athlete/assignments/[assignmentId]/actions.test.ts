@@ -8,6 +8,7 @@ const {
   startAssignmentSessionMock,
   autosaveAssignmentSessionResultsMock,
   submitAssignmentSessionMock,
+  resetAssignmentSessionMock,
   createAssignmentSessionUnitOfWorkMock,
   redirectMock,
   revalidatePathMock,
@@ -17,6 +18,7 @@ const {
   startAssignmentSessionMock: vi.fn(),
   autosaveAssignmentSessionResultsMock: vi.fn(),
   submitAssignmentSessionMock: vi.fn(),
+  resetAssignmentSessionMock: vi.fn(),
   createAssignmentSessionUnitOfWorkMock: vi.fn(),
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
@@ -35,11 +37,13 @@ vi.mock("@/modules/assignments/application/assignment-session-service", () => ({
   startAssignmentSession: startAssignmentSessionMock,
   autosaveAssignmentSessionResults: autosaveAssignmentSessionResultsMock,
   submitAssignmentSession: submitAssignmentSessionMock,
+  resetAssignmentSession: resetAssignmentSessionMock,
 }));
 
 import {
   autosaveAssignmentSessionAction,
   startAssignmentSessionAction,
+  resetAssignmentSessionAction,
   submitAssignmentSessionAction,
 } from "./actions";
 
@@ -58,6 +62,7 @@ describe("athlete assignment actions", () => {
     startAssignmentSessionMock.mockReset();
     autosaveAssignmentSessionResultsMock.mockReset();
     submitAssignmentSessionMock.mockReset();
+    resetAssignmentSessionMock.mockReset();
     createAssignmentSessionUnitOfWorkMock.mockReset();
     redirectMock.mockReset();
     revalidatePathMock.mockReset();
@@ -87,6 +92,7 @@ describe("athlete assignment actions", () => {
     startAssignmentSessionMock.mockResolvedValue(undefined);
     autosaveAssignmentSessionResultsMock.mockResolvedValue(undefined);
     submitAssignmentSessionMock.mockResolvedValue(undefined);
+    resetAssignmentSessionMock.mockResolvedValue(undefined);
   });
 
   it("starts a session and redirects with success", async () => {
@@ -234,6 +240,72 @@ describe("athlete assignment actions", () => {
         athleteUserId: ids.athleteUserId,
         sessionId: ids.sessionId,
         expectedVersion: 2,
+      },
+    );
+  });
+
+  it("persists pending workout results before submitting", async () => {
+    autosaveAssignmentSessionResultsMock.mockResolvedValue({ version: 3 });
+
+    const formData = new FormData();
+    formData.set("assignmentId", ids.assignmentId);
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "2");
+    formData.append("itemSnapshotIds", ids.itemSnapshotId);
+    formData.set(`result:${ids.itemSnapshotId}:complete`, "1");
+
+    await expect(submitAssignmentSessionAction(formData)).rejects.toThrow(
+      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?submitted=1`,
+    );
+
+    expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      expect.objectContaining({
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 2,
+        results: [
+          expect.objectContaining({
+            itemSnapshotId: ids.itemSnapshotId,
+            completedAt: expect.any(Date),
+            roundNumber: 1,
+          }),
+        ],
+      }),
+    );
+
+    expect(submitAssignmentSessionMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 3,
+      },
+    );
+  });
+
+  it("resets a session back to its initial state", async () => {
+    const formData = new FormData();
+    formData.set("assignmentId", ids.assignmentId);
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "3");
+
+    await expect(resetAssignmentSessionAction(formData)).rejects.toThrow(
+      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?reset=1`,
+    );
+
+    expect(resetAssignmentSessionMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 3,
       },
     );
   });

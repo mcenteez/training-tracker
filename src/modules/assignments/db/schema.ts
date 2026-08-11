@@ -21,6 +21,7 @@ import {
 import {
   planDayOfWeek,
   planScheduleSlots,
+  planScheduleType,
   plans,
 } from "@/modules/plans/db/schema";
 import { teams } from "@/modules/teams/db/schema";
@@ -418,7 +419,11 @@ export const assignmentPlanSlotSnapshots = pgTable(
     assignmentId: uuid("assignment_id").notNull(),
     sourcePlanSlotId: uuid("source_plan_slot_id"),
     workoutSnapshotId: uuid("workout_snapshot_id").notNull(),
-    dayOfWeek: planDayOfWeek("day_of_week").notNull(),
+    scheduleType: planScheduleType("schedule_type")
+      .default("fixed_day")
+      .notNull(),
+    dayOfWeek: planDayOfWeek("day_of_week"),
+    targetSessionsPerWeek: integer("target_sessions_per_week"),
     position: integer().notNull(),
     label: text(),
   },
@@ -453,9 +458,20 @@ export const assignmentPlanSlotSnapshots = pgTable(
       "assignment_plan_slot_snapshots_position_nonnegative",
       sql`${table.position} >= 0`,
     ),
-    unique("assignment_plan_slot_snapshots_assignment_day_position_unique").on(
+    check(
+      "assignment_plan_slot_snapshots_schedule_shape",
+      sql`(
+        (${table.scheduleType} = 'fixed_day' AND ${table.dayOfWeek} IS NOT NULL AND ${table.targetSessionsPerWeek} IS NULL)
+        OR
+        (${table.scheduleType} = 'weekly_frequency' AND ${table.dayOfWeek} IS NULL AND ${table.targetSessionsPerWeek} IS NOT NULL)
+      )`,
+    ),
+    check(
+      "assignment_plan_slot_snapshots_weekly_target_bounds",
+      sql`${table.targetSessionsPerWeek} IS NULL OR (${table.targetSessionsPerWeek} > 0 AND ${table.targetSessionsPerWeek} <= 14)`,
+    ),
+    unique("assignment_plan_slot_snapshots_assignment_position_unique").on(
       table.assignmentId,
-      table.dayOfWeek,
       table.position,
     ),
     index("assignment_plan_slot_snapshots_assignment_idx").on(

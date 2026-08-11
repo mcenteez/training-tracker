@@ -176,7 +176,9 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
             const sourceSlots = await databaseTransaction
               .select({
                 workoutId: planScheduleSlots.workoutId,
+                scheduleType: planScheduleSlots.scheduleType,
                 dayOfWeek: planScheduleSlots.dayOfWeek,
+                targetSessionsPerWeek: planScheduleSlots.targetSessionsPerWeek,
                 label: planScheduleSlots.label,
               })
               .from(planScheduleSlots)
@@ -187,10 +189,20 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
                 ),
               )
               .orderBy(asc(planScheduleSlots.position));
-            await insertScheduleSlots(
-              organizationId,
-              targetPlanId,
-              sourceSlots,
+
+            if (!sourceSlots.length) return;
+
+            await databaseTransaction.insert(planScheduleSlots).values(
+              sourceSlots.map((slot, position) => ({
+                organizationId,
+                planId: targetPlanId,
+                workoutId: slot.workoutId,
+                scheduleType: slot.scheduleType,
+                dayOfWeek: slot.dayOfWeek,
+                targetSessionsPerWeek: slot.targetSessionsPerWeek,
+                position,
+                label: slot.label,
+              })),
             );
           },
           async setPlanStatus(input) {

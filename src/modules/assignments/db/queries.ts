@@ -58,11 +58,18 @@ export interface AthleteAssignmentDetail extends AthleteAssignmentListItem {
 
 export interface AthleteAssignmentSessionSummary {
   id: string;
+  workoutSnapshotId: string;
   status: "assigned" | "in_progress" | "submitted";
   version: number;
   startedAt: Date | null;
   submittedAt: Date | null;
   resultCount: number;
+}
+
+export interface AthleteAssignmentWorkoutSummary {
+  id: string;
+  name: string;
+  position: number;
 }
 
 export interface AthleteWorkoutItemSnapshot {
@@ -434,6 +441,7 @@ export async function findLatestSessionForAthleteAssignment(
   const [session] = await database
     .select({
       id: assignmentSessions.id,
+      workoutSnapshotId: assignmentSessions.workoutSnapshotId,
       status: assignmentSessions.status,
       version: assignmentSessions.version,
       startedAt: assignmentSessions.startedAt,
@@ -457,6 +465,31 @@ export async function findLatestSessionForAthleteAssignment(
     .limit(1);
 
   return session ?? null;
+}
+
+export async function listWorkoutsForAthleteAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+  },
+): Promise<AthleteAssignmentWorkoutSummary[]> {
+  const rows = await database
+    .select({
+      id: assignmentWorkoutSnapshots.id,
+      name: assignmentWorkoutSnapshots.name,
+      position: assignmentWorkoutSnapshots.position,
+    })
+    .from(assignmentWorkoutSnapshots)
+    .where(
+      and(
+        eq(assignmentWorkoutSnapshots.organizationId, input.organizationId),
+        eq(assignmentWorkoutSnapshots.assignmentId, input.assignmentId),
+      ),
+    )
+    .orderBy(asc(assignmentWorkoutSnapshots.position));
+
+  return rows;
 }
 
 export async function listPrimaryWorkoutItemsForAssignment(

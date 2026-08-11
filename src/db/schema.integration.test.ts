@@ -451,6 +451,174 @@ describe("tenant schema", () => {
     ).rejects.toThrow(/exercises_active_name_unique/);
   });
 
+  it("enforces exactly one schedule configuration per plan slot", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000021', '10000000-0000-0000-0000-000000000001', 'Org 1 Push');
+
+      INSERT INTO plans (id, organization_id, name)
+      VALUES ('60000000-0000-0000-0000-000000000021', '10000000-0000-0000-0000-000000000001', 'Org 1 Mixed Plan');
+
+      INSERT INTO plan_schedule_slots (
+        organization_id, plan_id, workout_id, schedule_type, day_of_week, position
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '60000000-0000-0000-0000-000000000021',
+        '40000000-0000-0000-0000-000000000021',
+        'fixed_day',
+        'monday',
+        0
+      );
+
+      INSERT INTO plan_schedule_slots (
+        organization_id, plan_id, workout_id, schedule_type, target_sessions_per_week, position
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '60000000-0000-0000-0000-000000000021',
+        '40000000-0000-0000-0000-000000000021',
+        'weekly_frequency',
+        2,
+        1
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO plan_schedule_slots (
+          organization_id, plan_id, workout_id, schedule_type, day_of_week, target_sessions_per_week, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '60000000-0000-0000-0000-000000000021',
+          '40000000-0000-0000-0000-000000000021',
+          'fixed_day',
+          'monday',
+          2,
+          2
+        );
+      `),
+    ).rejects.toThrow(/plan_schedule_slots_schedule_shape/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO plan_schedule_slots (
+          organization_id, plan_id, workout_id, schedule_type, day_of_week, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '60000000-0000-0000-0000-000000000021',
+          '40000000-0000-0000-0000-000000000021',
+          'weekly_frequency',
+          'tuesday',
+          2
+        );
+      `),
+    ).rejects.toThrow(/plan_schedule_slots_schedule_shape/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO plan_schedule_slots (
+          organization_id, plan_id, workout_id, schedule_type, target_sessions_per_week, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '60000000-0000-0000-0000-000000000021',
+          '40000000-0000-0000-0000-000000000021',
+          'weekly_frequency',
+          0,
+          2
+        );
+      `),
+    ).rejects.toThrow(
+      /plan_schedule_slots_(schedule_shape|weekly_target_bounds)/,
+    );
+
+    await expect(
+      database.exec(`
+        INSERT INTO plan_schedule_slots (
+          organization_id, plan_id, workout_id, schedule_type, target_sessions_per_week, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '60000000-0000-0000-0000-000000000021',
+          '40000000-0000-0000-0000-000000000021',
+          'weekly_frequency',
+          15,
+          2
+        );
+      `),
+    ).rejects.toThrow(/plan_schedule_slots_weekly_target_bounds/);
+  });
+
+  it("enforces schedule configuration on assignment plan slot snapshots", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000022', '10000000-0000-0000-0000-000000000001', 'Org 1 Session');
+
+      INSERT INTO assignments (id, organization_id, timezone, source_workout_id, scheduled_date)
+      VALUES ('80000000-0000-0000-0000-000000000022', '10000000-0000-0000-0000-000000000001', 'UTC', '40000000-0000-0000-0000-000000000022', '2026-09-01');
+
+      INSERT INTO assignment_workout_snapshots (
+        id, organization_id, assignment_id, source_workout_id, source_workout_version, name, position
+      )
+      VALUES (
+        '90000000-0000-0000-0000-000000000022',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000022',
+        '40000000-0000-0000-0000-000000000022',
+        1,
+        'Snapshot',
+        0
+      );
+
+      INSERT INTO assignment_plan_slot_snapshots (
+        organization_id, assignment_id, workout_snapshot_id, schedule_type, target_sessions_per_week, position
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000022',
+        '90000000-0000-0000-0000-000000000022',
+        'weekly_frequency',
+        3,
+        0
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_plan_slot_snapshots (
+          organization_id, assignment_id, workout_snapshot_id, schedule_type, day_of_week, target_sessions_per_week, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000022',
+          '90000000-0000-0000-0000-000000000022',
+          'weekly_frequency',
+          'friday',
+          3,
+          1
+        );
+      `),
+    ).rejects.toThrow(/assignment_plan_slot_snapshots_schedule_shape/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_plan_slot_snapshots (
+          organization_id, assignment_id, workout_snapshot_id, schedule_type, position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000022',
+          '90000000-0000-0000-0000-000000000022',
+          'fixed_day',
+          1
+        );
+      `),
+    ).rejects.toThrow(/assignment_plan_slot_snapshots_schedule_shape/);
+  });
+
   it("rejects a plan schedule slot using a workout from another organization", async () => {
     await database.exec(`
       INSERT INTO workouts (id, organization_id, name)

@@ -18,6 +18,7 @@ import { users } from "@/modules/users/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
 
 export const planStatuses = ["draft", "active", "archived"] as const;
+export const planScheduleTypes = ["fixed_day", "weekly_frequency"] as const;
 export const planDaysOfWeek = [
   "monday",
   "tuesday",
@@ -28,7 +29,10 @@ export const planDaysOfWeek = [
   "sunday",
 ] as const;
 
+export const maxWeeklyFrequencyTarget = 14;
+
 export const planStatus = pgEnum("plan_status", planStatuses);
+export const planScheduleType = pgEnum("plan_schedule_type", planScheduleTypes);
 export const planDayOfWeek = pgEnum("plan_day_of_week", planDaysOfWeek);
 
 export const plans = pgTable(
@@ -80,7 +84,11 @@ export const planScheduleSlots = pgTable(
     organizationId: uuid("organization_id").notNull(),
     planId: uuid("plan_id").notNull(),
     workoutId: uuid("workout_id").notNull(),
-    dayOfWeek: planDayOfWeek("day_of_week").notNull(),
+    scheduleType: planScheduleType("schedule_type")
+      .default("fixed_day")
+      .notNull(),
+    dayOfWeek: planDayOfWeek("day_of_week"),
+    targetSessionsPerWeek: integer("target_sessions_per_week"),
     position: integer().notNull(),
     label: text(),
   },
@@ -92,11 +100,6 @@ export const planScheduleSlots = pgTable(
     ),
     unique("plan_schedule_slots_plan_position_unique").on(
       table.planId,
-      table.position,
-    ),
-    unique("plan_schedule_slots_plan_day_position_unique").on(
-      table.planId,
-      table.dayOfWeek,
       table.position,
     ),
     foreignKey({
@@ -113,6 +116,18 @@ export const planScheduleSlots = pgTable(
       "plan_schedule_slots_position_nonnegative",
       sql`${table.position} >= 0`,
     ),
+    check(
+      "plan_schedule_slots_schedule_shape",
+      sql`(
+        (${table.scheduleType} = 'fixed_day' AND ${table.dayOfWeek} IS NOT NULL AND ${table.targetSessionsPerWeek} IS NULL)
+        OR
+        (${table.scheduleType} = 'weekly_frequency' AND ${table.dayOfWeek} IS NULL AND ${table.targetSessionsPerWeek} IS NOT NULL)
+      )`,
+    ),
+    check(
+      "plan_schedule_slots_weekly_target_bounds",
+      sql`${table.targetSessionsPerWeek} IS NULL OR (${table.targetSessionsPerWeek} > 0 AND ${table.targetSessionsPerWeek} <= 14)`,
+    ),
     index("plan_schedule_slots_plan_idx").on(table.planId),
     index("plan_schedule_slots_workout_idx").on(table.workoutId),
   ],
@@ -123,4 +138,5 @@ export type NewPlan = typeof plans.$inferInsert;
 export type PlanScheduleSlot = typeof planScheduleSlots.$inferSelect;
 export type NewPlanScheduleSlot = typeof planScheduleSlots.$inferInsert;
 export type PlanStatus = (typeof planStatuses)[number];
+export type PlanScheduleType = (typeof planScheduleTypes)[number];
 export type PlanDayOfWeek = (typeof planDaysOfWeek)[number];

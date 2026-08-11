@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
 import {
+  resetAssignmentSession,
   autosaveAssignmentSessionResults,
   startAssignmentSession,
   submitAssignmentSession,
@@ -97,51 +98,13 @@ function isNonNullable<T>(value: T): value is NonNullable<T> {
   return value !== null;
 }
 
-export async function startAssignmentSessionAction(
-  formData: FormData,
-): Promise<void> {
-  const context = await ensureAthleteContext();
-
-  const assignmentId = String(formData.get("assignmentId") ?? "").trim();
-  if (!assignmentId) {
-    redirect("/app/athlete?error=invalid_assignment");
-  }
-
-  try {
-    await withDatabase((database) =>
-      startAssignmentSession(createAssignmentSessionUnitOfWork(database), {
-        organizationId: context.membership.organizationId,
-        assignmentId,
-        athleteUserId: context.user.id,
-      }),
-    );
-  } catch (error) {
-    expectedActionError(error, assignmentId);
-  }
-
-  revalidatePath(`/app/athlete/assignments/${assignmentId}`);
-  redirect(assignmentUrl(assignmentId, "?started=1"));
-}
-
-export async function autosaveAssignmentSessionAction(
-  formData: FormData,
-): Promise<void> {
-  const context = await ensureAthleteContext();
-
-  const assignmentId = String(formData.get("assignmentId") ?? "").trim();
-  const sessionId = String(formData.get("sessionId") ?? "").trim();
-  const expectedVersion = Number(formData.get("expectedVersion"));
-
-  if (!assignmentId || !sessionId || !Number.isFinite(expectedVersion)) {
-    redirect("/app/athlete?error=invalid_assignment");
-  }
-
+function parseAssignmentSessionResults(formData: FormData) {
   const itemSnapshotIds = formData
     .getAll("itemSnapshotIds")
     .map((value) => String(value).trim())
     .filter(Boolean);
 
-  const results = itemSnapshotIds
+  return itemSnapshotIds
     .map((itemSnapshotId) => ({
       itemSnapshotId,
       roundNumber: 1,
@@ -191,6 +154,48 @@ export async function autosaveAssignmentSessionAction(
       };
     })
     .filter(isNonNullable);
+}
+
+export async function startAssignmentSessionAction(
+  formData: FormData,
+): Promise<void> {
+  const context = await ensureAthleteContext();
+
+  const assignmentId = String(formData.get("assignmentId") ?? "").trim();
+  if (!assignmentId) {
+    redirect("/app/athlete?error=invalid_assignment");
+  }
+
+  try {
+    await withDatabase((database) =>
+      startAssignmentSession(createAssignmentSessionUnitOfWork(database), {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+      }),
+    );
+  } catch (error) {
+    expectedActionError(error, assignmentId);
+  }
+
+  revalidatePath(`/app/athlete/assignments/${assignmentId}`);
+  redirect(assignmentUrl(assignmentId, "?started=1"));
+}
+
+export async function autosaveAssignmentSessionAction(
+  formData: FormData,
+): Promise<void> {
+  const context = await ensureAthleteContext();
+
+  const assignmentId = String(formData.get("assignmentId") ?? "").trim();
+  const sessionId = String(formData.get("sessionId") ?? "").trim();
+  const expectedVersion = Number(formData.get("expectedVersion"));
+
+  if (!assignmentId || !sessionId || !Number.isFinite(expectedVersion)) {
+    redirect("/app/athlete?error=invalid_assignment");
+  }
+
+  const results = parseAssignmentSessionResults(formData);
 
   try {
     await withDatabase((database) =>
@@ -228,9 +233,59 @@ export async function submitAssignmentSessionAction(
     redirect("/app/athlete?error=invalid_assignment");
   }
 
+  const results = parseAssignmentSessionResults(formData);
+
+  try {
+    await withDatabase(async (database) => {
+      const unitOfWork = createAssignmentSessionUnitOfWork(database);
+      let finalVersion = expectedVersion;
+
+      if (results.length > 0) {
+        const saved = await autosaveAssignmentSessionResults(unitOfWork, {
+          organizationId: context.membership.organizationId,
+          assignmentId,
+          athleteUserId: context.user.id,
+          sessionId,
+          expectedVersion: finalVersion,
+          mutationId: crypto.randomUUID(),
+          results,
+        });
+
+        finalVersion = saved.version;
+      }
+
+      await submitAssignmentSession(unitOfWork, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+        sessionId,
+        expectedVersion: finalVersion,
+      });
+    });
+  } catch (error) {
+    expectedActionError(error, assignmentId);
+  }
+
+  revalidatePath(`/app/athlete/assignments/${assignmentId}`);
+  redirect(assignmentUrl(assignmentId, "?submitted=1"));
+}
+
+export async function resetAssignmentSessionAction(
+  formData: FormData,
+): Promise<void> {
+  const context = await ensureAthleteContext();
+
+  const assignmentId = String(formData.get("assignmentId") ?? "").trim();
+  const sessionId = String(formData.get("sessionId") ?? "").trim();
+  const expectedVersion = Number(formData.get("expectedVersion"));
+
+  if (!assignmentId || !sessionId || !Number.isFinite(expectedVersion)) {
+    redirect("/app/athlete?error=invalid_assignment");
+  }
+
   try {
     await withDatabase((database) =>
-      submitAssignmentSession(createAssignmentSessionUnitOfWork(database), {
+      resetAssignmentSession(createAssignmentSessionUnitOfWork(database), {
         organizationId: context.membership.organizationId,
         assignmentId,
         athleteUserId: context.user.id,
@@ -243,5 +298,5 @@ export async function submitAssignmentSessionAction(
   }
 
   revalidatePath(`/app/athlete/assignments/${assignmentId}`);
-  redirect(assignmentUrl(assignmentId, "?submitted=1"));
+  redirect(assignmentUrl(assignmentId, "?reset=1"));
 }

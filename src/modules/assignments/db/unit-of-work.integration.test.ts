@@ -11,7 +11,11 @@ import {
   createAssignment,
   publishAssignment,
 } from "@/modules/assignments/application/assignment-service";
-import { startAssignmentSession } from "@/modules/assignments/application/assignment-session-service";
+import {
+  resetAssignmentSession,
+  startAssignmentSession,
+  autosaveAssignmentSessionResults,
+} from "@/modules/assignments/application/assignment-session-service";
 import {
   findPublishedAssignmentForAthlete,
   listAssignmentsForOrganization,
@@ -295,5 +299,119 @@ describe("assignment unit of work", () => {
     expect(detail).toEqual(
       expect.objectContaining({ id: draft.id, status: "canceled" }),
     );
+  });
+
+  it("resets an athlete session back to its initial state", async () => {
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    const started = await startAssignmentSession(
+      createAssignmentSessionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        now: new Date("2026-08-12T12:00:00.000Z"),
+      },
+    );
+
+    expect(started.status).toBe("in_progress");
+
+    const itemSnapshots = await client.query<{
+      id: string;
+    }>(`
+      SELECT id
+      FROM assignment_workout_item_snapshots
+      WHERE assignment_id = '${draft.id}'
+      ORDER BY position ASC
+      LIMIT 1;
+    `);
+
+    await autosaveAssignmentSessionResults(
+      createAssignmentSessionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        sessionId: started.id,
+        expectedVersion: started.version,
+        mutationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        now: new Date("2026-08-12T12:05:00.000Z"),
+        results: [
+          {
+            itemSnapshotId: itemSnapshots.rows[0].id,
+            completedAt: new Date("2026-08-12T12:05:00.000Z"),
+            roundNumber: 1,
+            reps: 5,
+            load: "75%",
+            durationSeconds: null,
+            distanceMeters: null,
+            notes: null,
+          },
+        ],
+      },
+    );
+
+    const reset = await resetAssignmentSession(
+      createAssignmentSessionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        sessionId: started.id,
+        expectedVersion: started.version + 1,
+        now: new Date("2026-08-12T12:15:00.000Z"),
+      },
+    );
+
+    const sessionRows = await client.query<{
+      status: string;
+      version: number;
+      started_at: string | null;
+      submitted_at: string | null;
+    }>(`
+      SELECT status, version, started_at, submitted_at
+      FROM assignment_sessions
+      WHERE id = '${started.id}';
+    `);
+    const resultRows = await client.query<{ count: number }>(`
+      SELECT count(*)::int AS count
+      FROM assignment_session_item_results
+      WHERE session_id = '${started.id}';
+    `);
+
+    expect(reset.status).toBe("assigned");
+    expect(sessionRows.rows).toEqual([
+      {
+        status: "assigned",
+        version: 1,
+        started_at: null,
+        submitted_at: null,
+      },
+    ]);
+    expect(resultRows.rows).toEqual([{ count: 0 }]);
   });
 });

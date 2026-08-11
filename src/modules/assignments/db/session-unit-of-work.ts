@@ -112,6 +112,7 @@ export function createAssignmentSessionUnitOfWork(
             return session ?? null;
           },
           async createSession(input) {
+            const startedAt = new Date();
             const [session] = await databaseTransaction
               .insert(assignmentSessions)
               .values({
@@ -124,7 +125,8 @@ export function createAssignmentSessionUnitOfWork(
                 scheduledDate: input.scheduledDate,
                 availableFrom: input.availableFrom,
                 availableUntil: input.availableUntil,
-                status: "assigned",
+                status: "in_progress",
+                startedAt,
               })
               .returning();
 
@@ -306,6 +308,45 @@ export function createAssignmentSessionUnitOfWork(
               );
 
             return rows as readonly AssignmentSessionItemResult[];
+          },
+          async resetSession(input) {
+            await databaseTransaction
+              .delete(assignmentSessionItemResults)
+              .where(
+                and(
+                  eq(
+                    assignmentSessionItemResults.organizationId,
+                    input.organizationId,
+                  ),
+                  eq(
+                    assignmentSessionItemResults.assignmentId,
+                    input.assignmentId,
+                  ),
+                  eq(assignmentSessionItemResults.sessionId, input.sessionId),
+                ),
+              );
+
+            const [session] = await databaseTransaction
+              .update(assignmentSessions)
+              .set({
+                status: "assigned",
+                startedAt: null,
+                submittedAt: null,
+                updatedAt: new Date(),
+                version: 1,
+                lastMutationId: null,
+              })
+              .where(
+                and(
+                  eq(assignmentSessions.organizationId, input.organizationId),
+                  eq(assignmentSessions.assignmentId, input.assignmentId),
+                  eq(assignmentSessions.id, input.sessionId),
+                  eq(assignmentSessions.version, input.expectedVersion),
+                ),
+              )
+              .returning();
+
+            return session ?? null;
           },
         };
 

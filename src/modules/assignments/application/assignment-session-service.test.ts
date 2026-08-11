@@ -11,6 +11,7 @@ import type {
 
 import {
   autosaveAssignmentSessionResults,
+  resetAssignmentSession,
   startAssignmentSession,
   submitAssignmentSession,
   type AssignmentSessionTransaction,
@@ -110,6 +111,15 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
       makeSession({ status: "submitted", submittedAt: now, version: 2 }),
     ),
     listSessionResults: vi.fn(async () => [makeResult()]),
+    resetSession: vi.fn(async () =>
+      makeSession({
+        version: 1,
+        status: "assigned",
+        startedAt: null,
+        submittedAt: null,
+        lastMutationId: null,
+      }),
+    ),
     ...overrides,
   };
 
@@ -367,5 +377,45 @@ describe("assignment session service", () => {
         expectedVersion: 1,
       }),
     ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("resets an in-progress session and clears persisted results", async () => {
+    const resetSessionMock = vi.fn(async () =>
+      makeSession({
+        version: 1,
+        status: "assigned",
+        startedAt: null,
+        submittedAt: null,
+        lastMutationId: null,
+      }),
+    );
+    const { transaction, unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () =>
+        makeSession({
+          status: "in_progress",
+          version: 3,
+          lastMutationId: ids.mutationId,
+        }),
+      ),
+      resetSession: resetSessionMock,
+    });
+
+    const reset = await resetAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      sessionId: ids.sessionId,
+      expectedVersion: 3,
+      now: new Date("2026-08-11T15:10:00.000Z"),
+    });
+
+    expect(reset.status).toBe("assigned");
+    expect(resetSessionMock).toHaveBeenCalledWith({
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      sessionId: ids.sessionId,
+      expectedVersion: 3,
+    });
+    expect(transaction.listSessionResults).not.toHaveBeenCalled();
   });
 });

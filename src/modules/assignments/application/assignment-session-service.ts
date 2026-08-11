@@ -110,6 +110,12 @@ export interface AssignmentSessionTransaction {
     assignmentId: string;
     sessionId: string;
   }): Promise<readonly AssignmentSessionItemResult[]>;
+  resetSession(input: {
+    organizationId: string;
+    assignmentId: string;
+    sessionId: string;
+    expectedVersion: number;
+  }): Promise<AssignmentSession | null>;
 }
 
 export interface AssignmentSessionUnitOfWork {
@@ -317,6 +323,7 @@ export async function autosaveAssignmentSessionResults(
     expectedVersion: number;
     mutationId: string;
     results: readonly AssignmentSessionResultInput[];
+    now?: Date;
   },
 ): Promise<AssignmentSession> {
   const parsed = autosaveSessionResultsInputSchema.parse({
@@ -327,6 +334,7 @@ export async function autosaveAssignmentSessionResults(
   });
 
   return unitOfWork.transaction(async (transaction) => {
+    const now = input.now ?? new Date();
     const session = await transaction.findSessionByIdForAthlete(
       input.organizationId,
       input.assignmentId,
@@ -363,7 +371,7 @@ export async function autosaveAssignmentSessionResults(
       return current as AssignmentSession;
     }
 
-    assertSessionWindow(session, new Date());
+    assertSessionWindow(session, now);
 
     const allowedItemSnapshotIds = new Set(
       await transaction.listItemSnapshotIdsForWorkoutSnapshot({
@@ -471,5 +479,58 @@ export async function submitAssignmentSession(
     }
 
     return submitted;
+  });
+}
+
+export async function resetAssignmentSession(
+  unitOfWork: AssignmentSessionUnitOfWork,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+    sessionId: string;
+    expectedVersion: number;
+    now?: Date;
+  },
+): Promise<AssignmentSession> {
+  return unitOfWork.transaction(async (transaction) => {
+    const now = input.now ?? new Date();
+    const session = await transaction.findSessionByIdForAthlete(
+      input.organizationId,
+      input.assignmentId,
+      input.sessionId,
+      input.athleteUserId,
+    );
+
+    if (!session) {
+      throw new AuthorizationError();
+    }
+
+    if (session.status === "submitted") {
+      throw new DomainInvariantError("Submitted sessions cannot be reset.");
+    }
+
+    if (session.version !== input.expectedVersion) {
+      throw new DomainInvariantError(
+        "This session was updated elsewhere. Reload and try again.",
+      );
+    }
+
+    assertSessionWindow(session, now);
+
+    const reset = await transaction.resetSession({
+      organizationId: input.organizationId,
+      assignmentId: input.assignmentId,
+      sessionId: input.sessionId,
+      expectedVersion: input.expectedVersion,
+    });
+
+    if (!reset) {
+      throw new DomainInvariantError(
+        "This session was updated elsewhere. Reload and try again.",
+      );
+    }
+
+    return reset;
   });
 }

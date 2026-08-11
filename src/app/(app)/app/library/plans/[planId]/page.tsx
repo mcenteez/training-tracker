@@ -11,6 +11,19 @@ function formatDay(day: string) {
   return day.charAt(0).toUpperCase() + day.slice(1);
 }
 
+function formatScheduleRule(slot: {
+  scheduleType: "fixed_day" | "weekly_frequency";
+  dayOfWeek: string | null;
+  targetSessionsPerWeek: number | null;
+}) {
+  if (slot.scheduleType === "weekly_frequency") {
+    const target = slot.targetSessionsPerWeek ?? 1;
+    return `${target} session${target === 1 ? "" : "s"} per week`;
+  }
+
+  return slot.dayOfWeek ? `Every ${formatDay(slot.dayOfWeek)}` : "Unscheduled";
+}
+
 export default async function PlanDetailPage({
   params,
 }: {
@@ -65,7 +78,7 @@ export default async function PlanDetailPage({
                 className="grid gap-2 px-4 py-3 sm:grid-cols-[12rem_1fr]"
               >
                 <div className="text-sm font-medium">
-                  {formatDay(slot.dayOfWeek)}
+                  {formatScheduleRule(slot)}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   <p>

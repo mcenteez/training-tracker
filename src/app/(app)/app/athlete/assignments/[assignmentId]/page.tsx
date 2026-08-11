@@ -11,11 +11,13 @@ import {
   findPublishedAssignmentForAthlete,
   listPrimaryWorkoutItemsForAssignment,
   listSessionResultsForAthleteAssignment,
+  listWorkoutsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
 
 import {
   autosaveAssignmentSessionAction,
   startAssignmentSessionAction,
+  resetAssignmentSessionAction,
   submitAssignmentSessionAction,
 } from "./actions";
 
@@ -74,6 +76,16 @@ export default async function AthleteAssignmentDetailPage({
     notFound();
   }
 
+  const planWorkouts =
+    assignment.sourceType === "plan"
+      ? await withDatabase((database) =>
+          listWorkoutsForAthleteAssignment(database, {
+            organizationId: context.membership.organizationId,
+            assignmentId,
+          }),
+        )
+      : [];
+
   const feedbackError = Array.isArray(resolvedSearchParams.error)
     ? resolvedSearchParams.error[0]
     : resolvedSearchParams.error;
@@ -89,6 +101,10 @@ export default async function AthleteAssignmentDetailPage({
     (Array.isArray(resolvedSearchParams.submitted)
       ? resolvedSearchParams.submitted[0]
       : resolvedSearchParams.submitted) === "1";
+  const reset =
+    (Array.isArray(resolvedSearchParams.reset)
+      ? resolvedSearchParams.reset[0]
+      : resolvedSearchParams.reset) === "1";
 
   const existingResults =
     session === null
@@ -113,6 +129,8 @@ export default async function AthleteAssignmentDetailPage({
     session !== null &&
     session.status !== "submitted" &&
     workoutItems.length > 0;
+  const activeWorkoutSnapshotId =
+    session?.workoutSnapshotId ?? planWorkouts[0]?.id ?? null;
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -131,7 +149,7 @@ export default async function AthleteAssignmentDetailPage({
         </Button>
       </section>
 
-      {started || saved || submitted || feedbackError ? (
+      {started || saved || submitted || reset || feedbackError ? (
         <Card
           className={
             feedbackError
@@ -146,7 +164,9 @@ export default async function AthleteAssignmentDetailPage({
                 ? "Progress saved."
                 : submitted
                   ? "Session submitted."
-                  : "Unable to complete that session action."}
+                  : reset
+                    ? "Session reset."
+                    : "Unable to complete that session action."}
           </CardContent>
         </Card>
       ) : null}
@@ -182,6 +202,44 @@ export default async function AthleteAssignmentDetailPage({
           <p>Recipients: {assignment.recipientCount}</p>
         </CardContent>
       </Card>
+
+      {assignment.sourceType === "plan" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Plan Workouts</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {planWorkouts.map((workout, index) => {
+              const isActive = workout.id === activeWorkoutSnapshotId;
+
+              return (
+                <div
+                  key={workout.id}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    isActive
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border/70 bg-background/70"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">
+                        Workout {index + 1} of {planWorkouts.length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {workout.name}
+                      </p>
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {isActive ? "Current workout" : "Upcoming"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -247,8 +305,8 @@ export default async function AthleteAssignmentDetailPage({
                       <p className="text-sm font-medium">{item.exerciseName}</p>
                       <p className="text-xs text-muted-foreground">
                         Block {item.blockPosition + 1}
-                        {item.blockLabel ? ` · ${item.blockLabel}` : ""} · Item{" "}
-                        {item.itemPosition + 1}
+                        {item.blockLabel ? ` (${item.blockLabel})` : ""} -
+                        Exercise {item.itemPosition + 1}
                       </p>
                       <AthleteWorkoutResultFields
                         item={item}
@@ -264,10 +322,17 @@ export default async function AthleteAssignmentDetailPage({
                 <Button type="submit" disabled={!canEditSession}>
                   Save Progress
                 </Button>
+                <Button
+                  type="submit"
+                  formAction={submitAssignmentSessionAction}
+                  disabled={!canEditSession}
+                >
+                  Complete Session
+                </Button>
               </div>
             </form>
 
-            <form action={submitAssignmentSessionAction}>
+            <form action={resetAssignmentSessionAction}>
               <input type="hidden" name="assignmentId" value={assignmentId} />
               <input type="hidden" name="sessionId" value={session?.id ?? ""} />
               <input
@@ -275,8 +340,12 @@ export default async function AthleteAssignmentDetailPage({
                 name="expectedVersion"
                 value={session?.version ?? ""}
               />
-              <Button type="submit" disabled={!canEditSession}>
-                Submit Session
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={!canEditSession}
+              >
+                Reset Session
               </Button>
             </form>
           </CardContent>
