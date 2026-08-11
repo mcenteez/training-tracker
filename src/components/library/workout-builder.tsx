@@ -9,8 +9,53 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { WorkoutGraphInput } from "@/modules/workouts/application/workout-input";
 
+type MetricField =
+  | "reps"
+  | "load"
+  | "durationSeconds"
+  | "distanceMeters"
+  | "restSeconds"
+  | "tempo"
+  | "notes";
+
+const metricOptions: {
+  field: MetricField;
+  label: string;
+  placeholder: string;
+  type: "number" | "text";
+}[] = [
+  { field: "reps", label: "Reps", placeholder: "Reps", type: "number" },
+  { field: "load", label: "Load", placeholder: "Load", type: "text" },
+  {
+    field: "durationSeconds",
+    label: "Duration",
+    placeholder: "Duration sec",
+    type: "number",
+  },
+  {
+    field: "distanceMeters",
+    label: "Distance",
+    placeholder: "Distance m",
+    type: "number",
+  },
+  {
+    field: "restSeconds",
+    label: "Rest",
+    placeholder: "Rest sec",
+    type: "number",
+  },
+  { field: "tempo", label: "Tempo", placeholder: "Tempo", type: "text" },
+  {
+    field: "notes",
+    label: "Notes",
+    placeholder: "Coaching notes",
+    type: "text",
+  },
+];
+
 type BuilderItem = WorkoutGraphInput["blocks"][number]["items"][number] & {
   key: string;
+  enabledMetrics: MetricField[];
 };
 type BuilderBlock = Omit<WorkoutGraphInput["blocks"][number], "items"> & {
   key: string;
@@ -35,6 +80,7 @@ interface WorkoutBuilderProps {
 const emptyItem = (exerciseId = ""): BuilderItem => ({
   key: crypto.randomUUID(),
   exerciseId,
+  enabledMetrics: ["reps"],
   reps: null,
   load: null,
   durationSeconds: null,
@@ -43,6 +89,23 @@ const emptyItem = (exerciseId = ""): BuilderItem => ({
   tempo: null,
   notes: null,
 });
+
+function hasMetricValue(
+  item: WorkoutGraphInput["blocks"][number]["items"][number],
+  metric: MetricField,
+): boolean {
+  const value = item[metric];
+  return typeof value === "string" ? value.trim().length > 0 : value !== null;
+}
+
+function initialEnabledMetrics(
+  item: WorkoutGraphInput["blocks"][number]["items"][number],
+): MetricField[] {
+  const enabled = metricOptions
+    .filter((option) => hasMetricValue(item, option.field))
+    .map((option) => option.field);
+  return enabled.length ? enabled : ["reps"];
+}
 
 const initialState: WorkoutActionState = {};
 
@@ -62,6 +125,7 @@ export function WorkoutBuilder({
         items: block.items.map((item) => ({
           ...item,
           key: crypto.randomUUID(),
+          enabledMetrics: initialEnabledMetrics(item),
         })),
       })) ?? [],
   );
@@ -259,142 +323,144 @@ export function WorkoutBuilder({
               {block.items.map((item, itemIndex) => (
                 <div
                   key={item.key}
-                  className="grid gap-2 border-t border-border/70 pt-3 md:grid-cols-[minmax(12rem,2fr)_repeat(3,minmax(5rem,1fr))_auto]"
+                  className="space-y-3 border-t border-border/70 pt-3"
                 >
-                  <NativeSelect
-                    aria-label="Exercise"
-                    value={item.exerciseId}
-                    onChange={(event) =>
-                      updateBlock(blockIndex, {
-                        items: block.items.map((current, index) =>
-                          index === itemIndex
-                            ? { ...current, exerciseId: event.target.value }
-                            : current,
-                        ),
-                      })
-                    }
-                    required
-                  >
-                    <option value="">Choose exercise</option>
-                    {exercises.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>
-                        {exercise.name}
-                        {exercise.status === "archived" ? " (archived)" : ""}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  {(["reps", "restSeconds", "durationSeconds"] as const).map(
-                    (field) => (
-                      <Input
-                        key={field}
-                        aria-label={field}
-                        type="number"
-                        min={0}
-                        placeholder={
-                          field === "reps"
-                            ? "Reps"
-                            : field === "restSeconds"
-                              ? "Rest sec"
-                              : "Duration sec"
-                        }
-                        value={item[field] ?? ""}
-                        onChange={(event) =>
-                          updateBlock(blockIndex, {
-                            items: block.items.map((current, index) =>
-                              index === itemIndex
-                                ? {
+                  <div className="grid gap-2 md:grid-cols-[minmax(12rem,2fr)_auto]">
+                    <NativeSelect
+                      aria-label="Exercise"
+                      value={item.exerciseId}
+                      onChange={(event) =>
+                        updateBlock(blockIndex, {
+                          items: block.items.map((current, index) =>
+                            index === itemIndex
+                              ? { ...current, exerciseId: event.target.value }
+                              : current,
+                          ),
+                        })
+                      }
+                      required
+                    >
+                      <option value="">Choose exercise</option>
+                      {exercises.map((exercise) => (
+                        <option key={exercise.id} value={exercise.id}>
+                          {exercise.name}
+                          {exercise.status === "archived" ? " (archived)" : ""}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      title="Remove exercise"
+                      onClick={() =>
+                        updateBlock(blockIndex, {
+                          items: block.items.filter(
+                            (_, index) => index !== itemIndex,
+                          ),
+                        })
+                      }
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Fields
+                    </p>
+                    {metricOptions.map((metric) => {
+                      const enabled = item.enabledMetrics.includes(
+                        metric.field,
+                      );
+                      return (
+                        <Button
+                          key={metric.field}
+                          type="button"
+                          size="sm"
+                          variant={enabled ? "default" : "outline"}
+                          onClick={() =>
+                            updateBlock(blockIndex, {
+                              items: block.items.map((current, index) => {
+                                if (index !== itemIndex) return current;
+                                if (enabled) {
+                                  return {
                                     ...current,
-                                    [field]:
-                                      event.target.value === ""
-                                        ? null
-                                        : Number(event.target.value),
+                                    enabledMetrics:
+                                      current.enabledMetrics.filter(
+                                        (field) => field !== metric.field,
+                                      ),
+                                    [metric.field]: null,
+                                  };
+                                }
+                                return {
+                                  ...current,
+                                  enabledMetrics: [
+                                    ...current.enabledMetrics,
+                                    metric.field,
+                                  ],
+                                };
+                              }),
+                            })
+                          }
+                        >
+                          {metric.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {item.enabledMetrics.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Select at least one field for this exercise.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {metricOptions
+                        .filter((metric) =>
+                          item.enabledMetrics.includes(metric.field),
+                        )
+                        .map((metric) => (
+                          <Input
+                            key={metric.field}
+                            aria-label={metric.label}
+                            type={metric.type}
+                            min={metric.type === "number" ? 0 : undefined}
+                            placeholder={metric.placeholder}
+                            className={
+                              metric.field === "notes"
+                                ? "md:col-span-3"
+                                : undefined
+                            }
+                            value={
+                              metric.type === "number"
+                                ? ((item[metric.field] as number | null) ?? "")
+                                : ((item[metric.field] as string | null) ?? "")
+                            }
+                            onChange={(event) =>
+                              updateBlock(blockIndex, {
+                                items: block.items.map((current, index) => {
+                                  if (index !== itemIndex) return current;
+                                  if (metric.type === "number") {
+                                    return {
+                                      ...current,
+                                      [metric.field]:
+                                        event.target.value === ""
+                                          ? null
+                                          : Number(event.target.value),
+                                    };
                                   }
-                                : current,
-                            ),
-                          })
-                        }
-                      />
-                    ),
+                                  return {
+                                    ...current,
+                                    [metric.field]: event.target.value || null,
+                                  };
+                                }),
+                              })
+                            }
+                          />
+                        ))}
+                    </div>
                   )}
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    title="Remove exercise"
-                    onClick={() =>
-                      updateBlock(blockIndex, {
-                        items: block.items.filter(
-                          (_, index) => index !== itemIndex,
-                        ),
-                      })
-                    }
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </Button>
-                  <Input
-                    aria-label="Load"
-                    placeholder="Load"
-                    value={item.load ?? ""}
-                    onChange={(event) =>
-                      updateBlock(blockIndex, {
-                        items: block.items.map((current, index) =>
-                          index === itemIndex
-                            ? { ...current, load: event.target.value || null }
-                            : current,
-                        ),
-                      })
-                    }
-                  />
-                  <Input
-                    aria-label="Tempo"
-                    placeholder="Tempo"
-                    value={item.tempo ?? ""}
-                    onChange={(event) =>
-                      updateBlock(blockIndex, {
-                        items: block.items.map((current, index) =>
-                          index === itemIndex
-                            ? { ...current, tempo: event.target.value || null }
-                            : current,
-                        ),
-                      })
-                    }
-                  />
-                  <Input
-                    aria-label="Distance meters"
-                    type="number"
-                    min={0}
-                    placeholder="Distance m"
-                    value={item.distanceMeters ?? ""}
-                    onChange={(event) =>
-                      updateBlock(blockIndex, {
-                        items: block.items.map((current, index) =>
-                          index === itemIndex
-                            ? {
-                                ...current,
-                                distanceMeters:
-                                  event.target.value === ""
-                                    ? null
-                                    : Number(event.target.value),
-                              }
-                            : current,
-                        ),
-                      })
-                    }
-                  />
-                  <Input
-                    aria-label="Coaching notes"
-                    placeholder="Notes"
-                    value={item.notes ?? ""}
-                    onChange={(event) =>
-                      updateBlock(blockIndex, {
-                        items: block.items.map((current, index) =>
-                          index === itemIndex
-                            ? { ...current, notes: event.target.value || null }
-                            : current,
-                        ),
-                      })
-                    }
-                  />
                 </div>
               ))}
               <Button
