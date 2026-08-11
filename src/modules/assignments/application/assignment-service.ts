@@ -86,6 +86,11 @@ export interface AssignmentTransaction {
     assignmentId: string,
     athleteUserIds: readonly string[],
   ): Promise<void>;
+  snapshotAssignmentSource(
+    organizationId: string,
+    assignmentId: string,
+    source: AssignmentSourceInput,
+  ): Promise<number>;
   markAssignmentPublished(input: {
     organizationId: string;
     assignmentId: string;
@@ -438,6 +443,18 @@ export async function publishAssignment(
       input.assignmentId,
       recipientUserIds,
     );
+
+    const snapshotCount = await transaction.snapshotAssignmentSource(
+      input.organizationId,
+      input.assignmentId,
+      source,
+    );
+
+    if (snapshotCount === 0) {
+      throw new DomainInvariantError(
+        "Assignment source must contain at least one workout.",
+      );
+    }
 
     const published = await transaction.markAssignmentPublished(input);
 

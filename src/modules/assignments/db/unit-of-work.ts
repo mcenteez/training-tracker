@@ -1,8 +1,9 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
+import { exercises } from "@/modules/exercises/db/schema";
 import type {
   AssignmentTransaction,
   AssignmentUnitOfWork,
@@ -10,13 +11,21 @@ import type {
 import type { AssignmentSourceInput } from "@/modules/assignments/application/assignment-input";
 import {
   assignments,
+  assignmentPlanSlotSnapshots,
   assignmentRecipients,
   assignmentTargets,
+  assignmentWorkoutBlockSnapshots,
+  assignmentWorkoutItemSnapshots,
+  assignmentWorkoutSnapshots,
 } from "@/modules/assignments/db/schema";
 import { organizationMemberships } from "@/modules/organizations/db/schema";
-import { plans } from "@/modules/plans/db/schema";
+import { planScheduleSlots, plans } from "@/modules/plans/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
-import { workouts } from "@/modules/workouts/db/schema";
+import {
+  workoutBlocks,
+  workoutItems,
+  workouts,
+} from "@/modules/workouts/db/schema";
 
 function toAssignmentSourceValues(source: AssignmentSourceInput) {
   if (source.sourceType === "plan") {
@@ -267,6 +276,187 @@ export function createAssignmentUnitOfWork(
                 athleteUserId,
               })),
             );
+          },
+          async snapshotAssignmentSource(organizationId, assignmentId, source) {
+            let snapshotCount = 0;
+            const workoutSources =
+              source.sourceType === "workout"
+                ? [
+                    {
+                      workoutId: source.sourceWorkoutId,
+                      sourcePlanSlotId: null,
+                      dayOfWeek: null,
+                      position: 0,
+                      label: null,
+                    },
+                  ]
+                : await databaseTransaction
+                    .select({
+                      workoutId: planScheduleSlots.workoutId,
+                      sourcePlanSlotId: planScheduleSlots.id,
+                      dayOfWeek: planScheduleSlots.dayOfWeek,
+                      position: planScheduleSlots.position,
+                      label: planScheduleSlots.label,
+                    })
+                    .from(planScheduleSlots)
+                    .where(
+                      and(
+                        eq(planScheduleSlots.organizationId, organizationId),
+                        eq(planScheduleSlots.planId, source.sourcePlanId),
+                      ),
+                    )
+                    .orderBy(asc(planScheduleSlots.position));
+
+            for (const workoutSource of workoutSources) {
+              const [sourceWorkout] = await databaseTransaction
+                .select({
+                  id: workouts.id,
+                  name: workouts.name,
+                  description: workouts.description,
+                  version: workouts.version,
+                })
+                .from(workouts)
+                .where(
+                  and(
+                    eq(workouts.organizationId, organizationId),
+                    eq(workouts.id, workoutSource.workoutId),
+                  ),
+                )
+                .limit(1);
+
+              if (!sourceWorkout) {
+                continue;
+              }
+
+              const [workoutSnapshot] = await databaseTransaction
+                .insert(assignmentWorkoutSnapshots)
+                .values({
+                  organizationId,
+                  assignmentId,
+                  sourceWorkoutId: sourceWorkout.id,
+                  sourceWorkoutVersion: sourceWorkout.version,
+                  name: sourceWorkout.name,
+                  description: sourceWorkout.description,
+                  position: workoutSource.position,
+                })
+                .returning({ id: assignmentWorkoutSnapshots.id });
+
+              if (!workoutSnapshot) {
+                throw new Error("Failed to create assignment workout snapshot");
+              }
+              snapshotCount += 1;
+
+              const sourceBlocks = await databaseTransaction
+                .select()
+                .from(workoutBlocks)
+                .where(
+                  and(
+                    eq(workoutBlocks.organizationId, organizationId),
+                    eq(workoutBlocks.workoutId, sourceWorkout.id),
+                  ),
+                )
+                .orderBy(asc(workoutBlocks.position));
+
+              for (const sourceBlock of sourceBlocks) {
+                const [blockSnapshot] = await databaseTransaction
+                  .insert(assignmentWorkoutBlockSnapshots)
+                  .values({
+                    organizationId,
+                    assignmentId,
+                    workoutSnapshotId: workoutSnapshot.id,
+                    sourceBlockId: sourceBlock.id,
+                    type: sourceBlock.type,
+                    label: sourceBlock.label,
+                    rounds: sourceBlock.rounds,
+                    position: sourceBlock.position,
+                  })
+                  .returning({ id: assignmentWorkoutBlockSnapshots.id });
+
+                if (!blockSnapshot) {
+                  throw new Error(
+                    "Failed to create assignment workout block snapshot",
+                  );
+                }
+
+                const sourceItems = await databaseTransaction
+                  .select({
+                    id: workoutItems.id,
+                    exerciseId: workoutItems.exerciseId,
+                    position: workoutItems.position,
+                    reps: workoutItems.reps,
+                    load: workoutItems.load,
+                    durationSeconds: workoutItems.durationSeconds,
+                    distanceMeters: workoutItems.distanceMeters,
+                    restSeconds: workoutItems.restSeconds,
+                    tempo: workoutItems.tempo,
+                    notes: workoutItems.notes,
+                    exerciseName: exercises.name,
+                    exerciseInstructions: exercises.instructions,
+                    exerciseCategory: exercises.category,
+                    exerciseEquipment: exercises.equipment,
+                    exerciseVideoUrl: exercises.videoUrl,
+                  })
+                  .from(workoutItems)
+                  .innerJoin(
+                    exercises,
+                    and(
+                      eq(exercises.organizationId, workoutItems.organizationId),
+                      eq(exercises.id, workoutItems.exerciseId),
+                    ),
+                  )
+                  .where(
+                    and(
+                      eq(workoutItems.organizationId, organizationId),
+                      eq(workoutItems.workoutId, sourceWorkout.id),
+                      eq(workoutItems.blockId, sourceBlock.id),
+                    ),
+                  )
+                  .orderBy(asc(workoutItems.position));
+
+                if (sourceItems.length > 0) {
+                  await databaseTransaction
+                    .insert(assignmentWorkoutItemSnapshots)
+                    .values(
+                      sourceItems.map((sourceItem) => ({
+                        organizationId,
+                        assignmentId,
+                        blockSnapshotId: blockSnapshot.id,
+                        sourceItemId: sourceItem.id,
+                        sourceExerciseId: sourceItem.exerciseId,
+                        exerciseName: sourceItem.exerciseName,
+                        exerciseInstructions: sourceItem.exerciseInstructions,
+                        exerciseCategory: sourceItem.exerciseCategory,
+                        exerciseEquipment: sourceItem.exerciseEquipment,
+                        exerciseVideoUrl: sourceItem.exerciseVideoUrl,
+                        position: sourceItem.position,
+                        reps: sourceItem.reps,
+                        load: sourceItem.load,
+                        durationSeconds: sourceItem.durationSeconds,
+                        distanceMeters: sourceItem.distanceMeters,
+                        restSeconds: sourceItem.restSeconds,
+                        tempo: sourceItem.tempo,
+                        notes: sourceItem.notes,
+                      })),
+                    );
+                }
+              }
+
+              if (workoutSource.sourcePlanSlotId && workoutSource.dayOfWeek) {
+                await databaseTransaction
+                  .insert(assignmentPlanSlotSnapshots)
+                  .values({
+                    organizationId,
+                    assignmentId,
+                    sourcePlanSlotId: workoutSource.sourcePlanSlotId,
+                    workoutSnapshotId: workoutSnapshot.id,
+                    dayOfWeek: workoutSource.dayOfWeek,
+                    position: workoutSource.position,
+                    label: workoutSource.label,
+                  });
+              }
+            }
+
+            return snapshotCount;
           },
           async markAssignmentPublished(input) {
             const [assignment] = await databaseTransaction

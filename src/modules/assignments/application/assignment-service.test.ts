@@ -77,6 +77,7 @@ function setup(overrides: Partial<AssignmentTransaction> = {}) {
     listAthleteUserIdsForTeam: vi.fn(async () => ["athlete-1"]),
     listTeamIdsForAthlete: vi.fn(async () => ["team-1"]),
     replaceAssignmentRecipients: vi.fn(async () => undefined),
+    snapshotAssignmentSource: vi.fn(async () => 1),
     markAssignmentPublished: vi.fn(async () =>
       assignment({ status: "published", version: 2 }),
     ),
@@ -161,7 +162,29 @@ describe("assignment service", () => {
       "assignment-1",
       ["athlete-1"],
     );
+    expect(transaction.snapshotAssignmentSource).toHaveBeenCalledWith(
+      "organization-1",
+      "assignment-1",
+      createInput.source,
+    );
     expect(transaction.markAssignmentPublished).toHaveBeenCalledOnce();
+  });
+
+  it("rejects publish when source produces no workout snapshots", async () => {
+    const { transaction, unitOfWork } = setup({
+      snapshotAssignmentSource: vi.fn(async () => 0),
+    });
+
+    await expect(
+      publishAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.markAssignmentPublished).not.toHaveBeenCalled();
   });
 
   it("rejects publish when source workout is inactive", async () => {
