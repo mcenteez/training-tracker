@@ -234,6 +234,7 @@ export function createAssignmentSessionUnitOfWork(
                   assignmentId: input.assignmentId,
                   sessionId: input.sessionId,
                   itemSnapshotId: result.itemSnapshotId,
+                  completedAt: result.completedAt,
                   roundNumber: result.roundNumber,
                   reps: result.reps,
                   load: result.load,

@@ -80,6 +80,7 @@ export interface AthleteWorkoutItemSnapshot {
 
 export interface AthleteSessionResultItem {
   itemSnapshotId: string;
+  completedAt: Date;
   roundNumber: number;
   reps: number | null;
   load: string | null;
@@ -557,6 +558,7 @@ export async function listSessionResultsForAthleteAssignment(
   return database
     .select({
       itemSnapshotId: assignmentSessionItemResults.itemSnapshotId,
+      completedAt: assignmentSessionItemResults.completedAt,
       roundNumber: assignmentSessionItemResults.roundNumber,
       reps: assignmentSessionItemResults.reps,
       load: assignmentSessionItemResults.load,

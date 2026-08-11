@@ -64,6 +64,7 @@ function makeResult(
     assignmentId: ids.assignmentId,
     sessionId: ids.sessionId,
     itemSnapshotId: ids.itemSnapshotId,
+    completedAt: now,
     roundNumber: 1,
     reps: 5,
     load: "100lb",
@@ -268,6 +269,7 @@ describe("assignment session service", () => {
       results: [
         {
           itemSnapshotId: ids.itemSnapshotId,
+          completedAt: now,
           roundNumber: 1,
           reps: 8,
           load: null,

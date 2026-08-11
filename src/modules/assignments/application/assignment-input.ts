@@ -81,6 +81,7 @@ export const autosaveSessionResultsInputSchema = z.object({
     .array(
       z.object({
         itemSnapshotId: z.uuid(),
+        completedAt: z.date(),
         roundNumber: z.number().int().positive(),
         reps: z.number().int().nonnegative().nullable(),
         load: z.string().trim().max(80).nullable(),

@@ -41,6 +41,7 @@ interface AssignmentSessionRecord {
 
 interface AssignmentSessionResultInput {
   itemSnapshotId: string;
+  completedAt: Date;
   roundNumber: number;
   reps: number | null;
   load: string | null;

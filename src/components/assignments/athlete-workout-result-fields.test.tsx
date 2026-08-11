@@ -23,53 +23,71 @@ const item: AthleteWorkoutItemSnapshot = {
 };
 
 describe("AthleteWorkoutResultFields", () => {
-  it("shows only prescribed metrics plus notes", () => {
+  it("shows prescribed targets with completion and an optional actuals drawer", () => {
     render(<AthleteWorkoutResultFields item={item} disabled={false} />);
 
-    expect(screen.getByLabelText("Reps")).toHaveValue("10");
-    expect(screen.queryByLabelText("Load")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Duration Seconds")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Distance Meters")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Notes")).toBeVisible();
+    expect(screen.getByText("Target")).toBeVisible();
+    expect(screen.getByText("Reps 10")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
+    expect(screen.getByText("Actuals and notes")).toBeVisible();
+    expect(
+      screen.getByText("Actuals and notes").closest("details"),
+    ).not.toHaveAttribute("open");
   });
 
-  it("shows each prescribed conditioning metric", () => {
+  it("keeps the actuals drawer open when saved actuals exist", () => {
     render(
       <AthleteWorkoutResultFields
         item={{
           ...item,
-          reps: null,
-          durationSeconds: 60,
-          distanceMeters: 400,
+        }}
+        result={{
+          completedAt: new Date("2026-08-11T12:00:00.000Z"),
+          itemSnapshotId: item.id,
+          roundNumber: 1,
+          reps: 12,
+          load: null,
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: "Moved well",
         }}
         disabled={false}
       />,
     );
 
-    expect(screen.queryByLabelText("Reps")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Duration Seconds")).toHaveValue("60");
-    expect(screen.getByLabelText("Distance Meters")).toHaveValue("400");
+    expect(screen.getByLabelText("Actual reps")).toHaveValue("12");
+    expect(screen.getByLabelText("Notes")).toHaveValue("Moved well");
+    expect(screen.getByRole("button", { name: "Completed" })).toBeVisible();
   });
 
-  it("keeps a field visible when it contains a saved result", () => {
+  it("falls back to completion and notes when no metrics are prescribed", () => {
     const result: AthleteSessionResultItem = {
+      completedAt: new Date("2026-08-11T12:00:00.000Z"),
       itemSnapshotId: item.id,
       roundNumber: 1,
       reps: null,
-      load: "135 lb",
+      load: null,
       durationSeconds: null,
       distanceMeters: null,
-      notes: null,
+      notes: "Felt good",
     };
 
     render(
       <AthleteWorkoutResultFields
-        item={{ ...item, reps: null }}
+        item={{
+          ...item,
+          reps: null,
+          load: null,
+          durationSeconds: null,
+          distanceMeters: null,
+        }}
         result={result}
         disabled={false}
       />,
     );
 
-    expect(screen.getByLabelText("Load")).toHaveValue("135 lb");
+    expect(screen.queryByText("Actuals and notes")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Notes")).toHaveValue("Felt good");
+    expect(screen.getByRole("button", { name: "Completed" })).toBeVisible();
   });
 });

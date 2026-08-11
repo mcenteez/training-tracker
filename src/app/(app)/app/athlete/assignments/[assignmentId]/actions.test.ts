@@ -148,6 +148,7 @@ describe("athlete assignment actions", () => {
         results: [
           {
             itemSnapshotId: ids.itemSnapshotId,
+            completedAt: expect.any(Date),
             roundNumber: 1,
             reps: 12,
             load: "95lb",
@@ -155,6 +156,44 @@ describe("athlete assignment actions", () => {
             distanceMeters: null,
             notes: "good tempo",
           },
+        ],
+      }),
+    );
+
+    randomUuidSpy.mockRestore();
+  });
+
+  it("saves a completion-only result when the exercise is marked complete", async () => {
+    const randomUuidSpy = vi
+      .spyOn(globalThis.crypto, "randomUUID")
+      .mockReturnValue("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+
+    const formData = new FormData();
+    formData.set("assignmentId", ids.assignmentId);
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "1");
+    formData.append("itemSnapshotIds", ids.itemSnapshotId);
+    formData.set(`result:${ids.itemSnapshotId}:complete`, "1");
+
+    await expect(autosaveAssignmentSessionAction(formData)).rejects.toThrow(
+      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?saved=1`,
+    );
+
+    expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      expect.objectContaining({
+        mutationId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        results: [
+          expect.objectContaining({
+            itemSnapshotId: ids.itemSnapshotId,
+            completedAt: expect.any(Date),
+            roundNumber: 1,
+            reps: null,
+            load: null,
+            durationSeconds: null,
+            distanceMeters: null,
+            notes: null,
+          }),
         ],
       }),
     );

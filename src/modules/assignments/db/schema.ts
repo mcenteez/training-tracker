@@ -564,6 +564,9 @@ export const assignmentSessionItemResults = pgTable(
     assignmentId: uuid("assignment_id").notNull(),
     sessionId: uuid("session_id").notNull(),
     itemSnapshotId: uuid("item_snapshot_id").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     roundNumber: integer("round_number").notNull(),
     reps: integer(),
     load: text(),
