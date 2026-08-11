@@ -259,11 +259,13 @@ export default async function AssignmentDetailPage({
                   .map((target) => target.athleteUserId ?? "")
                   .filter(Boolean)}
               >
-                {members.map((member) => (
-                  <option key={member.userId} value={member.userId}>
-                    {member.fullName ?? member.email}
-                  </option>
-                ))}
+                {members
+                  .filter((member) => member.organizationRole === "athlete")
+                  .map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.fullName ?? member.email}
+                    </option>
+                  ))}
               </NativeSelect>
             </label>
           </CardContent>

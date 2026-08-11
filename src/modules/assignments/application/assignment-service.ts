@@ -246,6 +246,31 @@ async function assertTargetsAllowedForTeamManagerScope(
   }
 }
 
+async function assertDirectTargetsAreAthletes(
+  transaction: AssignmentTransaction,
+  input: {
+    organizationId: string;
+    targets: readonly AssignmentTargetInput[];
+  },
+): Promise<void> {
+  for (const target of input.targets) {
+    if (target.targetType !== "athlete") {
+      continue;
+    }
+
+    const role = await transaction.findOrganizationRole(
+      input.organizationId,
+      target.athleteUserId,
+    );
+
+    if (role !== "athlete") {
+      throw new DomainInvariantError(
+        "Direct assignment targets must be organization athletes.",
+      );
+    }
+  }
+}
+
 async function resolveRecipientUserIds(
   transaction: AssignmentTransaction,
   input: {
@@ -293,6 +318,7 @@ export async function createAssignment(
   return unitOfWork.transaction(async (transaction) => {
     const access = await resolveActorAccess(transaction, input);
 
+    await assertDirectTargetsAreAthletes(transaction, input);
     await assertTargetsAllowedForTeamManagerScope(transaction, {
       organizationId: input.organizationId,
       targets: input.targets,
@@ -338,6 +364,7 @@ export async function updateAssignment(
     assertDraft(current);
     assertVersion(current.version, input.expectedVersion);
 
+    await assertDirectTargetsAreAthletes(transaction, input);
     await assertTargetsAllowedForTeamManagerScope(transaction, {
       organizationId: input.organizationId,
       targets: input.targets,
@@ -412,17 +439,22 @@ export async function publishAssignment(
       input.organizationId,
       input.assignmentId,
     );
+    const normalizedTargets = targets.map((target) =>
+      target.targetType === "team"
+        ? { targetType: "team" as const, teamId: target.teamId! }
+        : {
+            targetType: "athlete" as const,
+            athleteUserId: target.athleteUserId!,
+          },
+    );
 
+    await assertDirectTargetsAreAthletes(transaction, {
+      organizationId: input.organizationId,
+      targets: normalizedTargets,
+    });
     await assertTargetsAllowedForTeamManagerScope(transaction, {
       organizationId: input.organizationId,
-      targets: targets.map((target) =>
-        target.targetType === "team"
-          ? { targetType: "team" as const, teamId: target.teamId! }
-          : {
-              targetType: "athlete" as const,
-              athleteUserId: target.athleteUserId!,
-            },
-      ),
+      targets: normalizedTargets,
       canAssignOrganization: access.canAssignOrganization,
       managedTeamIds: access.managedTeamIds,
     });

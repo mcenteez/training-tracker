@@ -131,6 +131,23 @@ describe("assignment service", () => {
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
+  it("rejects direct targets that are not organization athletes", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+        userId === "user-1" ? ("manager" as const) : ("viewer" as const),
+      ),
+    });
+
+    await expect(
+      createAssignment(unitOfWork, {
+        ...createInput,
+        targets: [{ targetType: "athlete", athleteUserId: "not-an-athlete" }],
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.createAssignmentDraft).not.toHaveBeenCalled();
+  });
+
   it("rejects stale assignment updates", async () => {
     const { transaction, unitOfWork } = setup({
       findAssignment: vi.fn(async () => assignment({ version: 2 })),
@@ -200,6 +217,33 @@ describe("assignment service", () => {
         expectedVersion: 1,
       }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("rejects publish when a direct target is not an organization athlete", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+        userId === "user-1" ? ("manager" as const) : ("viewer" as const),
+      ),
+      listAssignmentTargets: vi.fn(async () => [
+        {
+          id: "target-1",
+          targetType: "athlete" as const,
+          teamId: null,
+          athleteUserId: "not-an-athlete",
+        },
+      ]),
+    });
+
+    await expect(
+      publishAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.replaceAssignmentRecipients).not.toHaveBeenCalled();
   });
 
   it("rejects publish with no recipients", async () => {

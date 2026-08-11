@@ -151,11 +151,13 @@ export default async function NewAssignmentPage() {
             <label className="grid gap-1.5 text-sm">
               Athletes
               <NativeSelect name="athleteUserIds" multiple className="min-h-36">
-                {members.map((member) => (
-                  <option key={member.userId} value={member.userId}>
-                    {member.fullName ?? member.email}
-                  </option>
-                ))}
+                {members
+                  .filter((member) => member.organizationRole === "athlete")
+                  .map((member) => (
+                    <option key={member.userId} value={member.userId}>
+                      {member.fullName ?? member.email}
+                    </option>
+                  ))}
               </NativeSelect>
             </label>
           </CardContent>
