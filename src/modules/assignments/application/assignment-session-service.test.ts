@@ -1,0 +1,254 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  AuthorizationError,
+  DomainInvariantError,
+} from "@/modules/access-control/errors";
+import type {
+  AssignmentSession,
+  AssignmentSessionItemResult,
+} from "@/modules/assignments/db/schema";
+
+import {
+  autosaveAssignmentSessionResults,
+  startAssignmentSession,
+  submitAssignmentSession,
+  type AssignmentSessionTransaction,
+  type AssignmentSessionUnitOfWork,
+} from "./assignment-session-service";
+
+const ids = {
+  organizationId: "11111111-1111-4111-8111-111111111111",
+  assignmentId: "22222222-2222-4222-8222-222222222222",
+  athleteUserId: "33333333-3333-4333-8333-333333333333",
+  recipientId: "44444444-4444-4444-8444-444444444444",
+  sessionId: "55555555-5555-4555-8555-555555555555",
+  workoutSnapshotId: "66666666-6666-4666-8666-666666666666",
+  itemSnapshotId: "77777777-7777-4777-8777-777777777777",
+  mutationId: "88888888-8888-4888-8888-888888888888",
+};
+
+const now = new Date("2026-08-11T15:00:00.000Z");
+
+function makeSession(
+  overrides: Partial<AssignmentSession> = {},
+): AssignmentSession {
+  return {
+    id: ids.sessionId,
+    organizationId: ids.organizationId,
+    assignmentId: ids.assignmentId,
+    recipientId: ids.recipientId,
+    athleteUserId: ids.athleteUserId,
+    workoutSnapshotId: ids.workoutSnapshotId,
+    planSlotSnapshotId: null,
+    scheduledDate: "2026-08-11",
+    availableFrom: new Date("2026-08-11T12:00:00.000Z"),
+    availableUntil: new Date("2026-08-11T18:00:00.000Z"),
+    status: "assigned",
+    startedAt: null,
+    submittedAt: null,
+    version: 1,
+    lastMutationId: null,
+    createdAt: new Date("2026-08-11T12:00:00.000Z"),
+    updatedAt: new Date("2026-08-11T12:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function makeResult(
+  overrides: Partial<AssignmentSessionItemResult> = {},
+): AssignmentSessionItemResult {
+  return {
+    id: "99999999-9999-4999-8999-999999999999",
+    organizationId: ids.organizationId,
+    assignmentId: ids.assignmentId,
+    sessionId: ids.sessionId,
+    itemSnapshotId: ids.itemSnapshotId,
+    roundNumber: 1,
+    reps: 5,
+    load: "100lb",
+    durationSeconds: null,
+    distanceMeters: null,
+    notes: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
+  const transaction: AssignmentSessionTransaction = {
+    findPublishedRecipientAssignment: vi.fn(async () => ({
+      assignmentId: ids.assignmentId,
+      recipientId: ids.recipientId,
+      sourceType: "workout" as const,
+      scheduledDate: "2026-08-11",
+      availableFrom: new Date("2026-08-11T12:00:00.000Z"),
+      availableUntil: new Date("2026-08-11T18:00:00.000Z"),
+    })),
+    findPrimaryWorkoutSnapshot: vi.fn(async () => ({
+      workoutSnapshotId: ids.workoutSnapshotId,
+    })),
+    findSessionForAthlete: vi.fn(async () => null),
+    createSession: vi.fn(async () => makeSession()),
+    findSessionByIdForAthlete: vi.fn(async () => makeSession()),
+    listItemSnapshotIdsForWorkoutSnapshot: vi.fn(async () => [
+      ids.itemSnapshotId,
+    ]),
+    replaceSessionResults: vi.fn(async () => undefined),
+    touchSessionProgress: vi.fn(async () =>
+      makeSession({
+        version: 2,
+        status: "in_progress",
+        lastMutationId: ids.mutationId,
+      }),
+    ),
+    submitSession: vi.fn(async () =>
+      makeSession({ status: "submitted", submittedAt: now, version: 2 }),
+    ),
+    listSessionResults: vi.fn(async () => [makeResult()]),
+    ...overrides,
+  };
+
+  const unitOfWork: AssignmentSessionUnitOfWork = {
+    transaction: vi.fn(async (operation) => operation(transaction)),
+  };
+
+  return { transaction, unitOfWork };
+}
+
+describe("assignment session service", () => {
+  it("denies starting a session when athlete is not a recipient", async () => {
+    const { unitOfWork } = setup({
+      findPublishedRecipientAssignment: vi.fn(async () => null),
+    });
+
+    await expect(
+      startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        now,
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("treats duplicate mutation autosave as idempotent", async () => {
+    const existing = makeSession({
+      status: "in_progress",
+      version: 2,
+      lastMutationId: ids.mutationId,
+    });
+    const { transaction, unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () => existing),
+    });
+
+    const updated = await autosaveAssignmentSessionResults(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      sessionId: ids.sessionId,
+      expectedVersion: 2,
+      mutationId: ids.mutationId,
+      results: [
+        {
+          itemSnapshotId: ids.itemSnapshotId,
+          roundNumber: 1,
+          reps: 8,
+          load: null,
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+
+    expect(updated.id).toBe(ids.sessionId);
+    expect(transaction.replaceSessionResults).not.toHaveBeenCalled();
+    expect(transaction.touchSessionProgress).not.toHaveBeenCalled();
+  });
+
+  it("rejects autosave with stale expected version", async () => {
+    const { transaction, unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () => makeSession({ version: 2 })),
+    });
+
+    await expect(
+      autosaveAssignmentSessionResults(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+        mutationId: ids.mutationId,
+        results: [],
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.replaceSessionResults).not.toHaveBeenCalled();
+    expect(transaction.touchSessionProgress).not.toHaveBeenCalled();
+  });
+
+  it("rejects autosave outside availability window", async () => {
+    const { unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () =>
+        makeSession({
+          availableFrom: new Date("2026-08-11T00:00:00.000Z"),
+          availableUntil: new Date("2026-08-11T00:01:00.000Z"),
+          version: 1,
+        }),
+      ),
+    });
+
+    await expect(
+      autosaveAssignmentSessionResults(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+        mutationId: ids.mutationId,
+        results: [],
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("rejects submit when session is outside availability window", async () => {
+    const { unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () =>
+        makeSession({
+          status: "in_progress",
+          availableFrom: new Date("2026-08-11T00:00:00.000Z"),
+          availableUntil: new Date("2026-08-11T00:01:00.000Z"),
+          version: 1,
+        }),
+      ),
+    });
+
+    await expect(
+      submitAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("rejects submit for non-owner athlete session access", async () => {
+    const { unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () => null),
+    });
+
+    await expect(
+      submitAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+});
