@@ -5,13 +5,13 @@ import { withDatabase } from "@/db/client";
 import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
 import { AssignmentTargetFields } from "@/components/assignments/assignment-target-fields";
 import { buildAthleteTargetOptions } from "@/components/assignments/assignment-target-options";
+import { PublishAssignmentDialog } from "@/components/assignments/publish-assignment-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import {
   cancelAssignmentAction,
-  publishAssignmentAction,
   updateAssignmentAction,
 } from "@/app/(app)/app/assignments/actions";
 import { findAssignmentByOrganization } from "@/modules/assignments/db/queries";
@@ -26,6 +26,11 @@ import { listWorkoutsForOrganization } from "@/modules/workouts/db/queries";
 
 interface AssignmentDetailPageProps {
   params: Promise<{ assignmentId: string }>;
+  searchParams: Promise<{
+    created?: string;
+    updated?: string;
+    published?: string;
+  }>;
 }
 
 function formatDate(value: Date | null): string {
@@ -41,8 +46,10 @@ function formatDate(value: Date | null): string {
 
 export default async function AssignmentDetailPage({
   params,
+  searchParams,
 }: AssignmentDetailPageProps) {
   const { assignmentId } = await params;
+  const feedback = await searchParams;
   const context = await loadActiveAppContext();
 
   const teamMemberships = await withDatabase((database) =>
@@ -117,6 +124,39 @@ export default async function AssignmentDetailPage({
 
   const isDraft = assignment.status === "draft";
   const sourceType = assignment.sourcePlanId ? "plan" : "workout";
+  const selectedTeamIds = assignment.targets
+    .filter((target) => target.targetType === "team")
+    .map((target) => target.teamId ?? "")
+    .filter(Boolean);
+  const selectedAthleteIds = assignment.targets
+    .filter((target) => target.targetType === "athlete")
+    .map((target) => target.athleteUserId ?? "")
+    .filter(Boolean);
+  const athleteOptions = buildAthleteTargetOptions({
+    members,
+    teamMemberships: teamMembers,
+    teams,
+  });
+  const selectedTeamIdSet = new Set(selectedTeamIds);
+  const recipientEstimate = isDraft
+    ? athleteOptions.filter(
+        (athlete) =>
+          selectedAthleteIds.includes(athlete.id) ||
+          athlete.teamIds.some((teamId) => selectedTeamIdSet.has(teamId)),
+      ).length
+    : assignment.recipientCount;
+  const schedule = assignment.scheduledDate
+    ? assignment.scheduledDate
+    : assignment.startDate && assignment.endDate
+      ? `${assignment.startDate} to ${assignment.endDate}`
+      : "Not scheduled";
+  const feedbackMessage = feedback.created
+    ? "Draft created. Review it before publishing."
+    : feedback.updated
+      ? "Draft changes saved."
+      : feedback.published
+        ? "Assignment published and visible to recipients."
+        : null;
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -132,6 +172,59 @@ export default async function AssignmentDetailPage({
         <Button asChild variant="outline">
           <Link href="/app/assignments">Back to assignments</Link>
         </Button>
+      </section>
+
+      {feedbackMessage && (
+        <div
+          role="status"
+          className="border-l-4 border-primary bg-muted px-4 py-3 text-sm"
+        >
+          {feedbackMessage}
+        </div>
+      )}
+
+      <section className="space-y-3 border-y py-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Delivery Review</h2>
+            <p className="text-sm text-muted-foreground">
+              {isDraft
+                ? "This draft is editable and not visible to athletes."
+                : "This assignment's delivery details are read-only."}
+            </p>
+          </div>
+          <span className="rounded-md border px-2 py-1 text-xs font-medium capitalize">
+            {assignment.status}
+          </span>
+        </div>
+        <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="text-muted-foreground">Source</dt>
+            <dd className="font-medium">
+              {assignment.sourceName} ({sourceType})
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Schedule</dt>
+            <dd className="font-medium">{schedule}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Targets</dt>
+            <dd className="font-medium">
+              {selectedTeamIds.length} teams, {selectedAthleteIds.length}{" "}
+              individuals
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {isDraft ? "Estimated recipients" : "Recipients"}
+            </dt>
+            <dd className="font-medium">{recipientEstimate} athletes</dd>
+          </div>
+        </dl>
+        <p className="text-xs text-muted-foreground">
+          Timezone: {assignment.timezone}
+        </p>
       </section>
 
       <Card>
@@ -179,19 +272,9 @@ export default async function AssignmentDetailPage({
                 id: team.id,
                 label: team.name,
               }))}
-              athletes={buildAthleteTargetOptions({
-                members,
-                teamMemberships: teamMembers,
-                teams,
-              })}
-              selectedTeamIds={assignment.targets
-                .filter((target) => target.targetType === "team")
-                .map((target) => target.teamId ?? "")
-                .filter(Boolean)}
-              selectedAthleteIds={assignment.targets
-                .filter((target) => target.targetType === "athlete")
-                .map((target) => target.athleteUserId ?? "")
-                .filter(Boolean)}
+              athletes={athleteOptions}
+              selectedTeamIds={selectedTeamIds}
+              selectedAthleteIds={selectedAthleteIds}
               disabled={!isDraft}
             />
           </CardContent>
@@ -208,13 +291,13 @@ export default async function AssignmentDetailPage({
       </form>
 
       <section className="flex flex-wrap items-center gap-2">
-        <form action={publishAssignmentAction}>
-          <input type="hidden" name="assignmentId" value={assignment.id} />
-          <input type="hidden" name="version" value={assignment.version} />
-          <Button type="submit" disabled={!isDraft}>
-            Publish Assignment
-          </Button>
-        </form>
+        {isDraft && (
+          <PublishAssignmentDialog
+            assignmentId={assignment.id}
+            version={assignment.version}
+            recipientEstimate={recipientEstimate}
+          />
+        )}
 
         <form action={cancelAssignmentAction}>
           <input type="hidden" name="assignmentId" value={assignment.id} />

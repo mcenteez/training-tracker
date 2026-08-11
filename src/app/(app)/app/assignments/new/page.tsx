@@ -116,7 +116,7 @@ export default async function NewAssignmentPage() {
         </Card>
 
         <div className="flex items-center gap-2">
-          <Button type="submit">Create Draft</Button>
+          <Button type="submit">Save Draft and Review</Button>
           <Button asChild variant="outline">
             <Link href="/app/assignments">Cancel</Link>
           </Button>

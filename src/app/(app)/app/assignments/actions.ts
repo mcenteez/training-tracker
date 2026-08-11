@@ -123,8 +123,10 @@ export async function createAssignmentAction(
     redirect("/app/assignments/new?error=invalid_assignment");
   }
 
+  let assignmentId: string;
+
   try {
-    await withDatabase((database) =>
+    const assignment = await withDatabase((database) =>
       createAssignment(createAssignmentUnitOfWork(database), {
         organizationId: context.membership.organizationId,
         actorUserId: context.user.id,
@@ -133,12 +135,13 @@ export async function createAssignmentAction(
         targets: parsed.data.targets,
       }),
     );
+    assignmentId = assignment.id;
   } catch (error) {
     expectedActionError(error);
   }
 
   revalidatePath("/app/assignments");
-  redirect("/app/assignments?created=1");
+  redirect(`/app/assignments/${assignmentId}?created=1`);
 }
 
 export async function updateAssignmentAction(
