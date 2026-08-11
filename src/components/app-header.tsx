@@ -1,89 +1,100 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 
 import { withDatabase } from "@/db/client";
-import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
+import { loadAuthenticatedUser } from "@/lib/app-context";
+import { resolveLandingDestination } from "@/modules/access-control/landing";
+import {
+  activeOrganizationCookieName,
+  resolveActiveOrganization,
+} from "@/modules/organizations/application/active-organization";
+import { listTeamMembershipsForUserInOrganization } from "@/modules/teams/db/queries";
 
 import { AppHeaderClient, type AppNavItem } from "./app-header-client";
 
-function getPrimaryEmailAddress(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
+function getNavigationItems(input: {
+  organizationRole: "owner" | "manager" | "viewer" | "athlete";
+  landingHref: string;
+  hasTeamPerformance: boolean;
+}): AppNavItem[] {
+  const items: AppNavItem[] = [];
+
+  if (input.landingHref === "/app/athlete") {
+    items.push({ href: "/app/athlete", label: "My Dashboard" });
+  } else if (input.hasTeamPerformance) {
+    items.push({ href: "/app/performance/teams", label: "Team Performance" });
   }
 
-  const primaryEmailAddress = user.emailAddresses.find(
-    (emailAddress) => emailAddress.id === user.primaryEmailAddressId,
-  );
-
-  return (
-    primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null
-  );
-}
-
-function getFullName(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
+  if (input.organizationRole !== "athlete") {
+    items.push({
+      href: "/app/performance/organization",
+      label: "Organization Performance",
+    });
   }
 
-  const candidate = user.fullName?.trim();
-  if (candidate) {
-    return candidate;
+  if (
+    input.organizationRole === "owner" ||
+    input.organizationRole === "manager"
+  ) {
+    items.push({ href: "/app/admin", label: "Admin" });
   }
 
-  const fallback = [user.firstName, user.lastName]
-    .filter((part): part is string => Boolean(part))
-    .join(" ")
-    .trim();
-
-  return fallback || null;
-}
-
-function getNavigationItems(role: string | null): AppNavItem[] {
-  if (role === "athlete") {
-    return [{ href: "/app", label: "My Dashboard" }];
-  }
-
-  if (role === "owner" || role === "manager") {
-    return [
-      { href: "/app", label: "Performance" },
-      { href: "/app/admin", label: "Admin" },
-    ];
-  }
-
-  return [{ href: "/app", label: "Performance" }];
+  return items;
 }
 
 export async function AppHeader() {
   const { userId } = await auth();
 
   if (!userId) {
-    return <AppHeaderClient navigationItems={getNavigationItems(null)} />;
+    return <AppHeaderClient navigationItems={[]} />;
   }
 
-  const user = await currentUser();
-  const email = getPrimaryEmailAddress(user);
-  const fullName = getFullName(user);
-
-  if (!email) {
-    return <AppHeaderClient navigationItems={getNavigationItems(null)} />;
-  }
-
-  const context = await withDatabase((database) =>
-    getAuthenticatedUserContext(database, {
-      clerkUserId: userId,
-      email,
-      fullName,
+  const user = await loadAuthenticatedUser();
+  const cookieStore = await cookies();
+  const activeOrganization = await withDatabase((database) =>
+    resolveActiveOrganization(database, {
+      userId: user.id,
+      preferredOrganizationId:
+        cookieStore.get(activeOrganizationCookieName)?.value ?? null,
     }),
+  );
+
+  if (activeOrganization.kind !== "active-organization") {
+    return (
+      <AppHeaderClient
+        navigationItems={[]}
+        canSwitchOrganization={activeOrganization.memberships.length > 1}
+      />
+    );
+  }
+
+  const teamMemberships = await withDatabase((database) =>
+    listTeamMembershipsForUserInOrganization(database, {
+      organizationId: activeOrganization.membership.organizationId,
+      userId: user.id,
+    }),
+  );
+  const destination = resolveLandingDestination({
+    organizationRole: activeOrganization.membership.organizationRole,
+    teamMemberships: teamMemberships.map((membership) => ({
+      teamId: membership.teamId,
+      role: membership.teamRole,
+    })),
+  });
+  const hasTeamPerformance = teamMemberships.some(
+    (membership) =>
+      membership.teamRole === "manager" || membership.teamRole === "viewer",
   );
 
   return (
     <AppHeaderClient
-      navigationItems={getNavigationItems(context.organizationRole)}
+      navigationItems={getNavigationItems({
+        organizationRole: activeOrganization.membership.organizationRole,
+        landingHref: destination.href,
+        hasTeamPerformance,
+      })}
+      activeOrganizationName={activeOrganization.membership.organizationName}
+      canSwitchOrganization={activeOrganization.memberships.length > 1}
     />
   );
 }

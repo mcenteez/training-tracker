@@ -1,117 +1,93 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, currentUserMock, withDatabaseMock, redirectMock } =
+const { loadActiveAppContextMock, withDatabaseMock, teamMembershipsMock } =
   vi.hoisted(() => ({
-    authMock: vi.fn(),
-    currentUserMock: vi.fn(),
+    loadActiveAppContextMock: vi.fn(),
     withDatabaseMock: vi.fn(),
-    redirectMock: vi.fn(),
+    teamMembershipsMock: vi.fn(),
   }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
-  currentUser: currentUserMock,
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`);
+  }),
 }));
 
-vi.mock("next/navigation", () => ({
-  redirect: redirectMock,
+vi.mock("@/lib/app-context", () => ({
+  loadActiveAppContext: loadActiveAppContextMock,
 }));
 
 vi.mock("@/db/client", () => ({
   withDatabase: withDatabaseMock,
 }));
 
+vi.mock("@/modules/teams/db/queries", () => ({
+  listTeamMembershipsForUserInOrganization: teamMembershipsMock,
+}));
+
 import AppHomePage from "./page";
 
-function mockAuthenticatedUser() {
-  authMock.mockResolvedValue({ userId: "clerk_user_1" });
-  currentUserMock.mockResolvedValue({
-    primaryEmailAddressId: "primary_1",
-    emailAddresses: [
-      {
-        id: "primary_1",
-        emailAddress: "athlete@example.com",
-      },
-    ],
-  });
-}
-
-describe("app dashboard role rendering", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
+describe("app landing dispatcher", () => {
   beforeEach(() => {
-    authMock.mockReset();
-    currentUserMock.mockReset();
+    loadActiveAppContextMock.mockReset();
     withDatabaseMock.mockReset();
-    redirectMock.mockReset();
-    redirectMock.mockImplementation((path: string) => {
-      throw new Error(`REDIRECT:${path}`);
-    });
+    teamMembershipsMock.mockReset();
+
+    withDatabaseMock.mockImplementation(
+      async (operation: (database: unknown) => Promise<unknown>) =>
+        operation({}),
+    );
   });
 
-  it("renders athlete-focused dashboard for athlete role", async () => {
-    mockAuthenticatedUser();
-    withDatabaseMock.mockResolvedValue({
-      dashboardView: "athlete",
-      userContext: {
-        id: "user-1",
-        clerkUserId: "clerk_user_1",
-        email: "athlete@example.com",
-        hasOrganizationMembership: true,
-        organizationId: "organization-1",
-        organizationRole: "athlete",
-      },
-      athleteTeams: [
-        {
-          teamId: "team-1",
-          teamName: "Varsity",
-          teamRole: "athlete",
-        },
-      ],
-      teams: [],
-      organizationMembers: [],
-      teamMembers: [],
-      invitations: [],
-      auditEvents: [],
-    });
-
-    const view = await AppHomePage({ searchParams: Promise.resolve({}) });
-    render(view);
-
-    expect(screen.getByText("Athlete Hub")).toBeInTheDocument();
-    expect(screen.getByText("My teams")).toBeInTheDocument();
-    expect(screen.queryByText("Organization members")).not.toBeInTheDocument();
-  });
-
-  it("renders performance dashboard for non-athlete roles", async () => {
-    mockAuthenticatedUser();
-    withDatabaseMock.mockResolvedValue({
-      dashboardView: "performance",
-      userContext: {
-        id: "user-1",
-        clerkUserId: "clerk_user_1",
-        email: "manager@example.com",
-        hasOrganizationMembership: true,
+  it("lands organization managers on organization performance", async () => {
+    loadActiveAppContextMock.mockResolvedValue({
+      user: { id: "user-1" },
+      membership: {
         organizationId: "organization-1",
         organizationRole: "manager",
       },
-      athleteTeams: [],
-      teams: [],
-      organizationMembers: [],
-      teamMembers: [],
-      invitations: [],
-      auditEvents: [],
+      memberships: [],
     });
+    teamMembershipsMock.mockResolvedValue([
+      { teamId: "team-1", teamName: "Varsity", teamRole: "manager" },
+    ]);
 
-    const view = await AppHomePage({ searchParams: Promise.resolve({}) });
-    render(view);
+    await expect(AppHomePage()).rejects.toThrow(
+      "REDIRECT:/app/performance/organization",
+    );
+  });
 
-    expect(screen.getByText("Performance Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Team participation")).toBeInTheDocument();
-    expect(screen.queryByText("Organization members")).not.toBeInTheDocument();
-    expect(screen.queryByText("Athlete Hub")).not.toBeInTheDocument();
+  it("lands team managers without higher org access on team performance", async () => {
+    loadActiveAppContextMock.mockResolvedValue({
+      user: { id: "user-2" },
+      membership: {
+        organizationId: "organization-1",
+        organizationRole: "viewer",
+      },
+      memberships: [],
+    });
+    teamMembershipsMock.mockResolvedValue([
+      { teamId: "team-1", teamName: "Varsity", teamRole: "manager" },
+    ]);
+
+    await expect(AppHomePage()).rejects.toThrow(
+      "REDIRECT:/app/performance/teams",
+    );
+  });
+
+  it("lands team athletes on the athlete dashboard", async () => {
+    loadActiveAppContextMock.mockResolvedValue({
+      user: { id: "user-3" },
+      membership: {
+        organizationId: "organization-1",
+        organizationRole: "athlete",
+      },
+      memberships: [],
+    });
+    teamMembershipsMock.mockResolvedValue([
+      { teamId: "team-1", teamName: "Varsity", teamRole: "athlete" },
+    ]);
+
+    await expect(AppHomePage()).rejects.toThrow("REDIRECT:/app/athlete");
   });
 });

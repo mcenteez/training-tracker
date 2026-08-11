@@ -1,4 +1,3 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { withDatabase } from "@/db/client";
-import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
+import { loadAuthenticatedUser } from "@/lib/app-context";
+import { listOrganizationMembershipsForUser } from "@/modules/organizations/db/queries";
 
 import { createOrganizationAction } from "./actions";
 
@@ -37,70 +37,15 @@ function getErrorMessage(
   return null;
 }
 
-function getPrimaryEmailAddress(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const primaryEmailAddress = user.emailAddresses.find(
-    (emailAddress) => emailAddress.id === user.primaryEmailAddressId,
-  );
-
-  return (
-    primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null
-  );
-}
-
-function getFullName(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const candidate = user.fullName?.trim();
-  if (candidate) {
-    return candidate;
-  }
-
-  const fallback = [user.firstName, user.lastName]
-    .filter((part): part is string => Boolean(part))
-    .join(" ")
-    .trim();
-
-  return fallback || null;
-}
-
 export default async function OrganizationOnboardingPage({
   searchParams,
 }: OrganizationOnboardingPageProps) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const user = await currentUser();
-  const email = getPrimaryEmailAddress(user);
-  const fullName = getFullName(user);
-
-  if (!email) {
-    redirect("/sign-in");
-  }
-
-  const userContext = await withDatabase((database) =>
-    getAuthenticatedUserContext(database, {
-      clerkUserId: userId,
-      email,
-      fullName,
-    }),
+  const user = await loadAuthenticatedUser();
+  const memberships = await withDatabase((database) =>
+    listOrganizationMembershipsForUser(database, user.id),
   );
 
-  if (userContext.hasOrganizationMembership) {
+  if (memberships.length > 0) {
     redirect("/app");
   }
 

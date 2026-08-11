@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { withDatabase } from "@/db/client";
+import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import {
   findOrganizationNameById,
@@ -30,7 +30,6 @@ import {
   listTeamMembersByOrganizationId,
   listTeamsByOrganizationId,
 } from "@/modules/teams/db/queries";
-import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
 
 import {
   addOrUpdateTeamMemberAction,
@@ -46,44 +45,6 @@ import {
 type AdminPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-function getPrimaryEmailAddress(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const primaryEmailAddress = user.emailAddresses.find(
-    (emailAddress) => emailAddress.id === user.primaryEmailAddressId,
-  );
-
-  return (
-    primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null
-  );
-}
-
-function getFullName(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const candidate = user.fullName?.trim();
-  if (candidate) {
-    return candidate;
-  }
-
-  const fallback = [user.firstName, user.lastName]
-    .filter((part): part is string => Boolean(part))
-    .join(" ")
-    .trim();
-
-  return fallback || null;
-}
 
 function getUserDisplayName(user: {
   fullName: string | null;
@@ -238,39 +199,15 @@ function getFeedbackMessage(
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const user = await currentUser();
-  const email = getPrimaryEmailAddress(user);
-  const fullName = getFullName(user);
-
-  if (!email) {
-    redirect("/sign-in");
-  }
+  const activeContext = await loadActiveAppContext();
+  const userContext = {
+    ...activeContext.user,
+    hasOrganizationMembership: true,
+    organizationId: activeContext.membership.organizationId,
+    organizationRole: activeContext.membership.organizationRole,
+  };
 
   const data = await withDatabase(async (database) => {
-    const userContext = await getAuthenticatedUserContext(database, {
-      clerkUserId: userId,
-      email,
-      fullName,
-    });
-
-    if (!userContext.organizationId) {
-      return {
-        userContext,
-        organizationName: null,
-        teams: [],
-        organizationMembers: [],
-        teamMembers: [],
-        invitations: [],
-        auditEvents: [],
-      };
-    }
-
     const [
       teams,
       organizationMembers,
@@ -279,21 +216,30 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       auditEvents,
       organizationName,
     ] = await Promise.all([
-      listTeamsByOrganizationId(database, userContext.organizationId),
+      listTeamsByOrganizationId(
+        database,
+        activeContext.membership.organizationId,
+      ),
       listOrganizationMembersByOrganizationId(
         database,
-        userContext.organizationId,
+        activeContext.membership.organizationId,
       ),
-      listTeamMembersByOrganizationId(database, userContext.organizationId),
+      listTeamMembersByOrganizationId(
+        database,
+        activeContext.membership.organizationId,
+      ),
       listOrganizationInvitationsByOrganizationId(
         database,
-        userContext.organizationId,
+        activeContext.membership.organizationId,
       ),
       listOrganizationAuditEventsByOrganizationId(
         database,
-        userContext.organizationId,
+        activeContext.membership.organizationId,
       ),
-      findOrganizationNameById(database, userContext.organizationId),
+      findOrganizationNameById(
+        database,
+        activeContext.membership.organizationId,
+      ),
     ]);
 
     return {

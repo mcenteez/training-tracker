@@ -23,6 +23,39 @@ export interface AthleteAssignedTeamListItem {
   teamRole: TeamRole;
 }
 
+export interface UserTeamMembershipListItem {
+  teamId: string;
+  teamName: string;
+  teamRole: TeamRole;
+}
+
+export async function listTeamMembershipsForUserInOrganization(
+  database: Database,
+  input: { organizationId: string; userId: string },
+): Promise<UserTeamMembershipListItem[]> {
+  return database
+    .select({
+      teamId: teamMemberships.teamId,
+      teamName: teams.name,
+      teamRole: teamMemberships.role,
+    })
+    .from(teamMemberships)
+    .innerJoin(
+      teams,
+      and(
+        eq(teams.id, teamMemberships.teamId),
+        eq(teams.organizationId, teamMemberships.organizationId),
+      ),
+    )
+    .where(
+      and(
+        eq(teamMemberships.organizationId, input.organizationId),
+        eq(teamMemberships.userId, input.userId),
+      ),
+    )
+    .orderBy(asc(teams.name));
+}
+
 export async function listTeamsByOrganizationId(
   database: Database,
   organizationId: string,
@@ -32,6 +65,24 @@ export async function listTeamsByOrganizationId(
     .from(teams)
     .where(eq(teams.organizationId, organizationId))
     .orderBy(asc(teams.name));
+}
+
+export async function findTeamByOrganizationId(
+  database: Database,
+  input: { organizationId: string; teamId: string },
+): Promise<TeamListItem | null> {
+  const [team] = await database
+    .select({ id: teams.id, name: teams.name })
+    .from(teams)
+    .where(
+      and(
+        eq(teams.organizationId, input.organizationId),
+        eq(teams.id, input.teamId),
+      ),
+    )
+    .limit(1);
+
+  return team ?? null;
 }
 
 export interface OrganizationMemberListItem {
@@ -84,6 +135,29 @@ export async function listTeamMembersByOrganizationId(
     .orderBy(asc(users.email));
 }
 
+export async function listTeamMembersByTeamId(
+  database: Database,
+  input: { organizationId: string; teamId: string },
+): Promise<TeamMemberListItem[]> {
+  return database
+    .select({
+      teamId: teamMemberships.teamId,
+      userId: teamMemberships.userId,
+      email: users.email,
+      fullName: users.fullName,
+      teamRole: teamMemberships.role,
+    })
+    .from(teamMemberships)
+    .innerJoin(users, eq(users.id, teamMemberships.userId))
+    .where(
+      and(
+        eq(teamMemberships.organizationId, input.organizationId),
+        eq(teamMemberships.teamId, input.teamId),
+      ),
+    )
+    .orderBy(asc(users.email));
+}
+
 export async function findTeamRoleForUser(
   database: Database,
   input: { organizationId: string; teamId: string; userId: string },
@@ -107,25 +181,5 @@ export async function listTeamsForAthleteUser(
   database: Database,
   input: { organizationId: string; userId: string },
 ): Promise<AthleteAssignedTeamListItem[]> {
-  return database
-    .select({
-      teamId: teams.id,
-      teamName: teams.name,
-      teamRole: teamMemberships.role,
-    })
-    .from(teamMemberships)
-    .innerJoin(
-      teams,
-      and(
-        eq(teams.id, teamMemberships.teamId),
-        eq(teams.organizationId, teamMemberships.organizationId),
-      ),
-    )
-    .where(
-      and(
-        eq(teamMemberships.organizationId, input.organizationId),
-        eq(teamMemberships.userId, input.userId),
-      ),
-    )
-    .orderBy(asc(teams.name));
+  return listTeamMembershipsForUserInOrganization(database, input);
 }

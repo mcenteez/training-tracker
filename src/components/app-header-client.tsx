@@ -14,9 +14,15 @@ export interface AppNavItem {
 
 interface AppHeaderClientProps {
   navigationItems: AppNavItem[];
+  activeOrganizationName?: string;
+  canSwitchOrganization?: boolean;
 }
 
-export function AppHeaderClient({ navigationItems }: AppHeaderClientProps) {
+export function AppHeaderClient({
+  navigationItems,
+  activeOrganizationName,
+  canSwitchOrganization = false,
+}: AppHeaderClientProps) {
   const pathname = usePathname();
 
   return (
@@ -29,6 +35,21 @@ export function AppHeaderClient({ navigationItems }: AppHeaderClientProps) {
           >
             Training Tracker
           </Link>
+
+          {activeOrganizationName ? (
+            canSwitchOrganization ? (
+              <Link
+                href="/app/organizations"
+                className="hidden text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline md:inline"
+              >
+                {activeOrganizationName}
+              </Link>
+            ) : (
+              <span className="hidden text-xs text-muted-foreground md:inline">
+                {activeOrganizationName}
+              </span>
+            )
+          ) : null}
 
           <nav
             aria-label="Primary"

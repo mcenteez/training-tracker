@@ -37,10 +37,14 @@ Reference: [access-control.md](access-control.md)
 
 ### 2.1) Performance Dashboard And Admin Split
 
-- The default non-athlete landing page is a read-focused performance dashboard.
-- Owners, managers, and viewers can view organization/team snapshots from the performance dashboard.
+- `/app` dispatches each user to the highest applicable organization, team, or athlete landing surface.
+- `/app/performance/organization` is the read-focused organization Performance Dashboard for Owners, Managers, and Organization Viewers.
+- `/app/performance/teams` is a portfolio of managed teams, or viewed teams when the user manages none.
+- `/app/performance/teams/[teamId]` is the canonical team Performance Dashboard and independently enforces team and organization scope.
+- `/app/athlete` focuses athletes on their teams and assigned workouts.
+- `/app/organizations` lets multi-organization users choose an active organization; the saved preference is always revalidated against membership.
 - Only owners and managers can access the admin interface for operational changes.
-- Athletes use a separate athlete-focused dashboard surface.
+- Admin is a secondary destination and is never selected as the default landing page.
 
 ### 3) Team Management
 

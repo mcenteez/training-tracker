@@ -1,14 +1,66 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import type { OrganizationRole } from "@/modules/access-control/roles";
 import {
   organizationAuditEvents,
   organizationInvitations,
+  organizationMemberships,
   organizations,
 } from "@/modules/organizations/db/schema";
+
+export interface UserOrganizationMembershipListItem {
+  organizationId: string;
+  organizationName: string;
+  organizationRole: OrganizationRole;
+}
+
+export async function listOrganizationMembershipsForUser(
+  database: Database,
+  userId: string,
+): Promise<UserOrganizationMembershipListItem[]> {
+  return database
+    .select({
+      organizationId: organizationMemberships.organizationId,
+      organizationName: organizations.name,
+      organizationRole: organizationMemberships.role,
+    })
+    .from(organizationMemberships)
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
+    .where(eq(organizationMemberships.userId, userId))
+    .orderBy(asc(organizations.name));
+}
+
+export async function findOrganizationMembershipForUser(
+  database: Database,
+  input: { userId: string; organizationId: string },
+): Promise<UserOrganizationMembershipListItem | null> {
+  const [membership] = await database
+    .select({
+      organizationId: organizationMemberships.organizationId,
+      organizationName: organizations.name,
+      organizationRole: organizationMemberships.role,
+    })
+    .from(organizationMemberships)
+    .innerJoin(
+      organizations,
+      eq(organizations.id, organizationMemberships.organizationId),
+    )
+    .where(
+      and(
+        eq(organizationMemberships.userId, input.userId),
+        eq(organizationMemberships.organizationId, input.organizationId),
+      ),
+    )
+    .limit(1);
+
+  return membership ?? null;
+}
 
 type OrganizationInvitationStatus =
   "pending" | "accepted" | "revoked" | "expired";

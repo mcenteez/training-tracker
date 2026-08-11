@@ -1,11 +1,10 @@
 "use server";
 
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { withDatabase } from "@/db/client";
-import { requireOrganizationAccess } from "@/modules/access-control/guards";
+import { loadActiveAppContext } from "@/lib/app-context";
 import {
   AuthorizationError,
   DomainInvariantError,
@@ -25,7 +24,6 @@ import {
   removeTeamMember,
 } from "@/modules/teams/application/team-service";
 import { createTeamUnitOfWork } from "@/modules/teams/db/unit-of-work";
-import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
 import { teamRoles } from "@/modules/access-control/roles";
 
 const createTeamInputSchema = z.object({
@@ -70,61 +68,7 @@ const transferOwnershipInputSchema = z.object({
   previousOwnerRole: z.enum(["manager", "viewer", "athlete"]),
 });
 
-function getPrimaryEmailAddress(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const primaryEmailAddress = user.emailAddresses.find(
-    (emailAddress) => emailAddress.id === user.primaryEmailAddressId,
-  );
-
-  return (
-    primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null
-  );
-}
-
-function getFullName(
-  user: Awaited<ReturnType<typeof currentUser>>,
-): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const candidate = user.fullName?.trim();
-  if (candidate) {
-    return candidate;
-  }
-
-  const fallback = [user.firstName, user.lastName]
-    .filter((part): part is string => Boolean(part))
-    .join(" ")
-    .trim();
-
-  return fallback || null;
-}
-
-function requireOrganizationIdOrRedirect(context: {
-  organizationId: string | null;
-}): string {
-  try {
-    return requireOrganizationAccess(context);
-  } catch {
-    redirect("/onboarding/organization");
-  }
-}
-
 export async function createTeamAction(formData: FormData): Promise<void> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
   const parsedInput = createTeamInputSchema.safeParse({
     name: formData.get("teamName"),
   });
@@ -133,27 +77,13 @@ export async function createTeamAction(formData: FormData): Promise<void> {
     redirect("/app/admin?error=invalid_team_name");
   }
 
-  const user = await currentUser();
-  const email = getPrimaryEmailAddress(user);
-  const fullName = getFullName(user);
-
-  if (!email) {
-    redirect("/app/admin?error=missing_email");
-  }
+  const actor = await loadActiveAppContext();
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: userId,
-        email,
-        fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await createTeam(createTeamUnitOfWork(database), {
-        organizationId,
-        actorUserId: userContext.id,
+        organizationId: actor.membership.organizationId,
+        actorUserId: actor.user.id,
         name: parsedInput.data.name,
       });
     });
@@ -168,32 +98,10 @@ export async function createTeamAction(formData: FormData): Promise<void> {
   redirect("/app/admin?created=1");
 }
 
-async function loadActorContext(): Promise<{
-  userId: string;
-  email: string;
-  fullName: string | null;
-}> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const user = await currentUser();
-  const email = getPrimaryEmailAddress(user);
-  const fullName = getFullName(user);
-
-  if (!email) {
-    redirect("/app/admin?error=missing_email");
-  }
-
-  return { userId, email, fullName };
-}
-
 export async function addOrUpdateTeamMemberAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = updateTeamMemberInputSchema.safeParse({
     teamId: formData.get("teamId"),
@@ -207,18 +115,10 @@ export async function addOrUpdateTeamMemberAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await addOrUpdateTeamMember(createTeamUnitOfWork(database), {
-        organizationId,
+        organizationId: actor.membership.organizationId,
         teamId: parsedInput.data.teamId,
-        actorUserId: userContext.id,
+        actorUserId: actor.user.id,
         targetUserId: parsedInput.data.userId,
         role: parsedInput.data.role,
       });
@@ -237,7 +137,7 @@ export async function addOrUpdateTeamMemberAction(
 export async function removeTeamMemberAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = removeTeamMemberInputSchema.safeParse({
     teamId: formData.get("teamId"),
@@ -250,18 +150,10 @@ export async function removeTeamMemberAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await removeTeamMember(createTeamUnitOfWork(database), {
-        organizationId,
+        organizationId: actor.membership.organizationId,
         teamId: parsedInput.data.teamId,
-        actorUserId: userContext.id,
+        actorUserId: actor.user.id,
         targetUserId: parsedInput.data.userId,
       });
     });
@@ -279,7 +171,7 @@ export async function removeTeamMemberAction(
 export async function inviteOrganizationMemberAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = inviteOrganizationMemberInputSchema.safeParse({
     invitedEmail: formData.get("invitedEmail"),
@@ -292,19 +184,11 @@ export async function inviteOrganizationMemberAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await createOrganizationInvitation(
         createOrganizationUnitOfWork(database),
         {
-          organizationId,
-          actorUserId: userContext.id,
+          organizationId: actor.membership.organizationId,
+          actorUserId: actor.user.id,
           invitedEmail: parsedInput.data.invitedEmail,
           invitedRole: parsedInput.data.role,
           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
@@ -329,7 +213,7 @@ export async function inviteOrganizationMemberAction(
 export async function revokeOrganizationInvitationAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = revokeInvitationInputSchema.safeParse({
     invitationId: formData.get("invitationId"),
@@ -341,19 +225,11 @@ export async function revokeOrganizationInvitationAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await revokeOrganizationInvitation(
         createOrganizationUnitOfWork(database),
         {
-          organizationId,
-          actorUserId: userContext.id,
+          organizationId: actor.membership.organizationId,
+          actorUserId: actor.user.id,
           invitationId: parsedInput.data.invitationId,
         },
       );
@@ -379,7 +255,7 @@ export async function revokeOrganizationInvitationAction(
 export async function updateOrganizationMemberRoleAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = updateOrganizationMemberRoleInputSchema.safeParse({
     userId: formData.get("userId"),
@@ -392,19 +268,11 @@ export async function updateOrganizationMemberRoleAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await updateOrganizationMembershipRole(
         createOrganizationUnitOfWork(database),
         {
-          organizationId,
-          actorUserId: userContext.id,
+          organizationId: actor.membership.organizationId,
+          actorUserId: actor.user.id,
           targetUserId: parsedInput.data.userId,
           role: parsedInput.data.role,
         },
@@ -424,7 +292,7 @@ export async function updateOrganizationMemberRoleAction(
 export async function removeOrganizationMemberAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = removeOrganizationMemberInputSchema.safeParse({
     userId: formData.get("userId"),
@@ -436,17 +304,9 @@ export async function removeOrganizationMemberAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await removeOrganizationMember(createOrganizationUnitOfWork(database), {
-        organizationId,
-        actorUserId: userContext.id,
+        organizationId: actor.membership.organizationId,
+        actorUserId: actor.user.id,
         targetUserId: parsedInput.data.userId,
       });
     });
@@ -464,7 +324,7 @@ export async function removeOrganizationMemberAction(
 export async function transferOrganizationOwnershipAction(
   formData: FormData,
 ): Promise<void> {
-  const actor = await loadActorContext();
+  const actor = await loadActiveAppContext();
 
   const parsedInput = transferOwnershipInputSchema.safeParse({
     newOwnerUserId: formData.get("newOwnerUserId"),
@@ -477,19 +337,11 @@ export async function transferOrganizationOwnershipAction(
 
   try {
     await withDatabase(async (database) => {
-      const userContext = await getAuthenticatedUserContext(database, {
-        clerkUserId: actor.userId,
-        email: actor.email,
-        fullName: actor.fullName,
-      });
-
-      const organizationId = requireOrganizationIdOrRedirect(userContext);
-
       await transferOrganizationOwnership(
         createOrganizationUnitOfWork(database),
         {
-          organizationId,
-          actorUserId: userContext.id,
+          organizationId: actor.membership.organizationId,
+          actorUserId: actor.user.id,
           newOwnerUserId: parsedInput.data.newOwnerUserId,
           previousOwnerRole: parsedInput.data.previousOwnerRole,
         },

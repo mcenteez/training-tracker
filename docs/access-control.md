@@ -91,6 +91,22 @@ When organization-level and team-level roles both apply, use the permission that
 
 An organization role applies to every team in that organization. A team role may grant additional access to its specific team, but it cannot reduce access granted at the organization level.
 
+## Landing Resolution
+
+`/app` dynamically selects the user's default destination within the active organization using the effective-access hierarchy:
+
+| Effective access                                    | Default destination                |
+| --------------------------------------------------- | ---------------------------------- |
+| Organization Owner or Manager                       | Organization Performance Dashboard |
+| Team Manager without organization management access | Managed Teams portfolio            |
+| Organization Viewer                                 | Organization Performance Dashboard |
+| Team Viewer with an Athlete organization role       | Viewed Teams portfolio             |
+| Team Athlete or organization-only Athlete           | Athlete Dashboard                  |
+
+Landing priority does not revoke access. It only chooses the most appropriate starting surface; every canonical route must still perform its own server-side authorization.
+
+When a user belongs to multiple organizations, a validated active-organization preference selects the organization context. A missing, stale, or foreign preference requires organization selection and never establishes authorization by itself.
+
 ## Data Policy
 
 - No role may export application data. All data must remain within the application.
