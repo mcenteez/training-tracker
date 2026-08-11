@@ -52,7 +52,7 @@ A Team Manager must not be able to:
 - [x] Team-scoped roster UI and server actions.
 - [x] Team invitation and acceptance flow for people who are not already organization members.
 - [x] Assignment-authoring options scoped to managed teams and their athletes.
-- [ ] Team assignment and compliance read models.
+- [x] Team assignment and compliance read models.
 - [ ] Staff result-review route.
 - [ ] Session comment service, queries, actions, and UI.
 - [x] Team Manager navigation to operational team controls.
@@ -257,25 +257,25 @@ Every team route, query, and mutation must request the specific permission it ne
 
 ### Implementation Checklist
 
-- [ ] Define status and compliance terminology for assigned, in-progress, submitted, missed, and upcoming sessions.
-- [ ] Add a team assignment summary query scoped by organization and team.
-- [ ] Include source name/type, assignment dates, recipient count, session status counts, and latest activity.
-- [ ] Add time-window filters using the organization/assignment timezone.
-- [ ] Extend `/app/performance/teams/[teamId]` with assignment and compliance summaries.
-- [ ] Add `/app/performance/teams/[teamId]/assignments/[assignmentId]`.
-- [ ] Verify that the assignment targets the selected team before returning detail.
-- [ ] Show team recipients and their occurrence/session statuses.
-- [ ] Link submitted sessions to result review.
-- [ ] Provide explicit loading, empty, unavailable, and error states.
-- [ ] Add query integration tests for direct-athlete and team-target assignments.
-- [ ] Add tests for mixed team membership, removed athletes, canceled assignments, and cross-team access.
+- [x] Define status and compliance terminology for assigned, in-progress, submitted, missed, and upcoming sessions.
+- [x] Add a team assignment summary query scoped by organization and team.
+- [x] Include source name/type, assignment dates, recipient count, session status counts, and latest activity.
+- [x] Add time-window filters using the organization/assignment timezone.
+- [x] Extend `/app/performance/teams/[teamId]` with assignment and compliance summaries.
+- [x] Add `/app/performance/teams/[teamId]/assignments/[assignmentId]`.
+- [x] Verify that the assignment targets the selected team before returning detail.
+- [x] Show team recipients and their occurrence/session statuses.
+- [x] Link submitted sessions to result review.
+- [x] Provide explicit loading, empty, unavailable, and error states.
+- [x] Add query integration tests for direct-athlete and team-target assignments.
+- [x] Add tests for mixed team membership, removed athletes, canceled assignments, and cross-team access.
 
 ### Acceptance Criteria
 
-- [ ] Team Managers can see current assignment coverage and completion for managed teams.
-- [ ] Team Viewers receive the same authorized read view without mutation controls.
-- [ ] Assignment detail contains only recipients associated with the selected team.
-- [ ] Unmanaged and foreign assignment identifiers return no data.
+- [x] Team Managers can see current assignment coverage and completion for managed teams.
+- [x] Team Viewers receive the same authorized read view without mutation controls.
+- [x] Assignment detail contains only recipients associated with the selected team.
+- [x] Unmanaged and foreign assignment identifiers return no data.
 
 ## Milestone 6: Submitted Result Review and Comments
 
@@ -378,7 +378,7 @@ Every team route, query, and mutation must request the specific permission it ne
 - [x] Slice B: Team operations portfolio, settings service, actions, and tests.
 - [x] Slice C: Existing-member roster management UI and action tests.
 - [x] Slice D: Team invitation schema, service, acceptance flow, and tests.
-- [ ] Slice E: Team assignment/compliance read models and dashboard UI.
+- [x] Slice E: Team assignment/compliance read models and dashboard UI.
 - [ ] Slice F: Submitted result detail and session comments.
 - [ ] Slice G: Navigation, audit events, accessibility, documentation, and final hardening.
 

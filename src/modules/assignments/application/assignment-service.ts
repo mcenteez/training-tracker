@@ -84,7 +84,10 @@ export interface AssignmentTransaction {
   replaceAssignmentRecipients(
     organizationId: string,
     assignmentId: string,
-    athleteUserIds: readonly string[],
+    recipients: readonly {
+      athleteUserId: string;
+      teamIds: readonly string[];
+    }[],
   ): Promise<void>;
   snapshotAssignmentSource(
     organizationId: string,
@@ -271,19 +274,33 @@ async function assertDirectTargetsAreAthletes(
   }
 }
 
-async function resolveRecipientUserIds(
+async function resolveRecipients(
   transaction: AssignmentTransaction,
   input: {
     organizationId: string;
     targets: readonly AssignmentTargetRecord[];
   },
-): Promise<readonly string[]> {
-  const recipientUserIds = new Set<string>();
+): Promise<readonly { athleteUserId: string; teamIds: readonly string[] }[]> {
+  const teamIdsByAthlete = new Map<string, Set<string>>();
+
+  function addRecipient(athleteUserId: string, teamIds: readonly string[]) {
+    const recipientTeamIds = teamIdsByAthlete.get(athleteUserId) ?? new Set();
+    for (const teamId of teamIds) {
+      recipientTeamIds.add(teamId);
+    }
+    teamIdsByAthlete.set(athleteUserId, recipientTeamIds);
+  }
 
   for (const target of input.targets) {
     if (target.targetType === "athlete") {
       if (target.athleteUserId) {
-        recipientUserIds.add(target.athleteUserId);
+        addRecipient(
+          target.athleteUserId,
+          await transaction.listTeamIdsForAthlete(
+            input.organizationId,
+            target.athleteUserId,
+          ),
+        );
       }
       continue;
     }
@@ -298,11 +315,14 @@ async function resolveRecipientUserIds(
     );
 
     for (const athleteUserId of teamAthletes) {
-      recipientUserIds.add(athleteUserId);
+      addRecipient(athleteUserId, [target.teamId]);
     }
   }
 
-  return [...recipientUserIds];
+  return [...teamIdsByAthlete].map(([athleteUserId, teamIds]) => ({
+    athleteUserId,
+    teamIds: [...teamIds],
+  }));
 }
 
 export async function createAssignment(
@@ -459,12 +479,12 @@ export async function publishAssignment(
       managedTeamIds: access.managedTeamIds,
     });
 
-    const recipientUserIds = await resolveRecipientUserIds(transaction, {
+    const recipients = await resolveRecipients(transaction, {
       organizationId: input.organizationId,
       targets,
     });
 
-    if (recipientUserIds.length === 0) {
+    if (recipients.length === 0) {
       throw new DomainInvariantError(
         "Add at least one eligible athlete before publishing.",
       );
@@ -473,7 +493,7 @@ export async function publishAssignment(
     await transaction.replaceAssignmentRecipients(
       input.organizationId,
       input.assignmentId,
-      recipientUserIds,
+      recipients,
     );
 
     const snapshotCount = await transaction.snapshotAssignmentSource(

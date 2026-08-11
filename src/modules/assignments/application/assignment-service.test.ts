@@ -196,7 +196,7 @@ describe("assignment service", () => {
     expect(transaction.replaceAssignmentRecipients).toHaveBeenCalledWith(
       "organization-1",
       "assignment-1",
-      ["athlete-1"],
+      [{ athleteUserId: "athlete-1", teamIds: ["team-1"] }],
     );
     expect(transaction.snapshotAssignmentSource).toHaveBeenCalledWith(
       "organization-1",
@@ -204,6 +204,42 @@ describe("assignment service", () => {
       createInput.source,
     );
     expect(transaction.markAssignmentPublished).toHaveBeenCalledOnce();
+  });
+
+  it("merges team and direct-athlete scopes for one published recipient", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+        userId === "user-1" ? ("manager" as const) : ("athlete" as const),
+      ),
+      listAssignmentTargets: vi.fn(async () => [
+        {
+          id: "target-1",
+          targetType: "team" as const,
+          teamId: "team-1",
+          athleteUserId: null,
+        },
+        {
+          id: "target-2",
+          targetType: "athlete" as const,
+          teamId: null,
+          athleteUserId: "athlete-1",
+        },
+      ]),
+      listTeamIdsForAthlete: vi.fn(async () => ["team-1", "team-2"]),
+    });
+
+    await publishAssignment(unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      assignmentId: "assignment-1",
+      expectedVersion: 1,
+    });
+
+    expect(transaction.replaceAssignmentRecipients).toHaveBeenCalledWith(
+      "organization-1",
+      "assignment-1",
+      [{ athleteUserId: "athlete-1", teamIds: ["team-1", "team-2"] }],
+    );
   });
 
   it("rejects publish when source produces no workout snapshots", async () => {

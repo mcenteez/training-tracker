@@ -179,6 +179,15 @@ describe("assignment unit of work", () => {
       expectedVersion: draft.version,
     });
 
+    const recipientScopes = await client.query<{ team_id: string }>(`
+      SELECT scope.team_id
+      FROM assignment_recipient_team_scopes scope
+      WHERE scope.assignment_id = '${draft.id}';
+    `);
+    expect(recipientScopes.rows).toEqual([
+      { team_id: "80000000-0000-4000-8000-000000000001" },
+    ]);
+
     const slotSnapshots = await client.query<{
       schedule_type: string;
       day_of_week: string | null;

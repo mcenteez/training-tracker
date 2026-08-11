@@ -13,6 +13,7 @@ import {
   assignments,
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
+  assignmentRecipientTeamScopes,
   assignmentTargets,
   assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
@@ -254,7 +255,7 @@ export function createAssignmentUnitOfWork(
           async replaceAssignmentRecipients(
             organizationId,
             assignmentId,
-            athleteUserIds,
+            recipients,
           ) {
             await databaseTransaction
               .delete(assignmentRecipients)
@@ -265,17 +266,45 @@ export function createAssignmentUnitOfWork(
                 ),
               );
 
-            if (athleteUserIds.length === 0) {
+            if (recipients.length === 0) {
               return;
             }
 
-            await databaseTransaction.insert(assignmentRecipients).values(
-              athleteUserIds.map((athleteUserId) => ({
-                organizationId,
-                assignmentId,
-                athleteUserId,
-              })),
+            const insertedRecipients = await databaseTransaction
+              .insert(assignmentRecipients)
+              .values(
+                recipients.map(({ athleteUserId }) => ({
+                  organizationId,
+                  assignmentId,
+                  athleteUserId,
+                })),
+              )
+              .returning({
+                id: assignmentRecipients.id,
+                athleteUserId: assignmentRecipients.athleteUserId,
+              });
+            const teamIdsByAthlete = new Map(
+              recipients.map((recipient) => [
+                recipient.athleteUserId,
+                recipient.teamIds,
+              ]),
             );
+            const teamScopes = insertedRecipients.flatMap((recipient) =>
+              (teamIdsByAthlete.get(recipient.athleteUserId) ?? []).map(
+                (teamId) => ({
+                  organizationId,
+                  assignmentId,
+                  recipientId: recipient.id,
+                  teamId,
+                }),
+              ),
+            );
+
+            if (teamScopes.length > 0) {
+              await databaseTransaction
+                .insert(assignmentRecipientTeamScopes)
+                .values(teamScopes);
+            }
           },
           async snapshotAssignmentSource(organizationId, assignmentId, source) {
             let snapshotCount = 0;

@@ -7,6 +7,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -230,6 +231,41 @@ export const assignmentRecipients = pgTable(
     index("assignment_recipients_athlete_idx").on(
       table.organizationId,
       table.athleteUserId,
+    ),
+  ],
+);
+
+export const assignmentRecipientTeamScopes = pgTable(
+  "assignment_recipient_team_scopes",
+  {
+    organizationId: uuid("organization_id").notNull(),
+    assignmentId: uuid("assignment_id").notNull(),
+    recipientId: uuid("recipient_id").notNull(),
+    teamId: uuid("team_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recipientId, table.teamId] }),
+    foreignKey({
+      columns: [table.organizationId, table.assignmentId, table.recipientId],
+      foreignColumns: [
+        assignmentRecipients.organizationId,
+        assignmentRecipients.assignmentId,
+        assignmentRecipients.id,
+      ],
+      name: "assignment_recipient_team_scopes_recipient_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.organizationId, table.teamId],
+      foreignColumns: [teams.organizationId, teams.id],
+      name: "assignment_recipient_team_scopes_team_fk",
+    }),
+    index("assignment_recipient_team_scopes_team_assignment_idx").on(
+      table.organizationId,
+      table.teamId,
+      table.assignmentId,
     ),
   ],
 );
@@ -675,6 +711,10 @@ export type AssignmentTarget = typeof assignmentTargets.$inferSelect;
 export type NewAssignmentTarget = typeof assignmentTargets.$inferInsert;
 export type AssignmentRecipient = typeof assignmentRecipients.$inferSelect;
 export type NewAssignmentRecipient = typeof assignmentRecipients.$inferInsert;
+export type AssignmentRecipientTeamScope =
+  typeof assignmentRecipientTeamScopes.$inferSelect;
+export type NewAssignmentRecipientTeamScope =
+  typeof assignmentRecipientTeamScopes.$inferInsert;
 export type AssignmentWorkoutSnapshot =
   typeof assignmentWorkoutSnapshots.$inferSelect;
 export type NewAssignmentWorkoutSnapshot =
