@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AuthorizationError,
   DomainInvariantError,
+  ResourceNotFoundError,
 } from "@/modules/access-control/errors";
 import type {
   AssignmentSession,
@@ -87,12 +88,16 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
       status: "published" as const,
       timezone: "UTC",
       scheduledDate: "2026-08-11",
+      startDate: null,
+      endDate: null,
       availableFrom: new Date("2026-08-11T12:00:00.000Z"),
       availableUntil: new Date("2026-08-11T18:00:00.000Z"),
     })),
     findPrimaryWorkoutSnapshot: vi.fn(async () => ({
       workoutSnapshotId: ids.workoutSnapshotId,
     })),
+    listPlanSlotSnapshots: vi.fn(async () => []),
+    listAthleteSessions: vi.fn(async () => []),
     findSessionForAthlete: vi.fn(async () => null),
     createSession: vi.fn(async () => makeSession()),
     findSessionByIdForAthlete: vi.fn(async () => makeSession()),
@@ -140,6 +145,8 @@ describe("assignment session service", () => {
         status: "published" as const,
         timezone: "America/New_York",
         scheduledDate: "2026-08-11",
+        startDate: null,
+        endDate: null,
         availableFrom: null,
         availableUntil: null,
       })),
@@ -170,6 +177,8 @@ describe("assignment session service", () => {
         status: "published" as const,
         timezone: "America/New_York",
         scheduledDate: "2026-11-01",
+        startDate: null,
+        endDate: null,
         availableFrom: null,
         availableUntil: null,
       })),
@@ -214,6 +223,8 @@ describe("assignment session service", () => {
         status: "canceled" as const,
         timezone: "UTC",
         scheduledDate: "2026-08-11",
+        startDate: null,
+        endDate: null,
         availableFrom: null,
         availableUntil: null,
       })),
@@ -242,6 +253,8 @@ describe("assignment session service", () => {
         status: "canceled" as const,
         timezone: "UTC",
         scheduledDate: "2026-08-11",
+        startDate: null,
+        endDate: null,
         availableFrom: null,
         availableUntil: null,
       })),
@@ -257,6 +270,242 @@ describe("assignment session service", () => {
     });
 
     expect(session.status).toBe("in_progress");
+  });
+
+  describe("plan occurrence sessions", () => {
+    const planSlotId = "aaaaaaa1-0000-4000-8000-000000000001";
+    const flexSlotId = "aaaaaaa2-0000-4000-8000-000000000002";
+
+    function planSetup(overrides: Partial<AssignmentSessionTransaction> = {}) {
+      return setup({
+        findRecipientAssignment: vi.fn(async () => ({
+          assignmentId: ids.assignmentId,
+          recipientId: ids.recipientId,
+          sourceType: "plan" as const,
+          status: "published" as const,
+          timezone: "UTC",
+          scheduledDate: null,
+          startDate: "2026-08-10",
+          endDate: "2026-08-30",
+          availableFrom: null,
+          availableUntil: null,
+        })),
+        listPlanSlotSnapshots: vi.fn(async () => [
+          {
+            id: planSlotId,
+            workoutSnapshotId: ids.workoutSnapshotId,
+            scheduleType: "fixed_day" as const,
+            dayOfWeek: "monday" as const,
+            targetSessionsPerWeek: null,
+          },
+          {
+            id: flexSlotId,
+            workoutSnapshotId: "66666666-6666-4666-8666-666666666667",
+            scheduleType: "weekly_frequency" as const,
+            dayOfWeek: null,
+            targetSessionsPerWeek: 2,
+          },
+        ]),
+        ...overrides,
+      });
+    }
+
+    it("requires an explicit plan workout selection", async () => {
+      const { unitOfWork } = planSetup();
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          now,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+    });
+
+    it("starts a fixed-day occurrence on its scheduled weekday", async () => {
+      const { transaction, unitOfWork } = planSetup();
+
+      await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: planSlotId,
+        scheduledDate: "2026-08-10",
+        now,
+      });
+
+      expect(transaction.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workoutSnapshotId: ids.workoutSnapshotId,
+          planSlotSnapshotId: planSlotId,
+          scheduledDate: "2026-08-10",
+        }),
+      );
+    });
+
+    it("rejects a fixed-day occurrence on the wrong weekday", async () => {
+      const { transaction, unitOfWork } = planSetup();
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          planSlotSnapshotId: planSlotId,
+          scheduledDate: "2026-08-11",
+          now,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(transaction.createSession).not.toHaveBeenCalled();
+    });
+
+    it("rejects dates outside the assignment range", async () => {
+      const { unitOfWork } = planSetup();
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          planSlotSnapshotId: planSlotId,
+          scheduledDate: "2026-09-07",
+          now,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+    });
+
+    it("returns the existing session for the same occurrence", async () => {
+      const existing = makeSession({ status: "in_progress" });
+      const { transaction, unitOfWork } = planSetup({
+        listAthleteSessions: vi.fn(async () => [
+          {
+            id: existing.id,
+            planSlotSnapshotId: planSlotId,
+            workoutSnapshotId: ids.workoutSnapshotId,
+            scheduledDate: "2026-08-10",
+            status: "in_progress" as const,
+          },
+        ]),
+        findSessionByIdForAthlete: vi.fn(async () => existing),
+      });
+
+      const session = await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: planSlotId,
+        scheduledDate: "2026-08-10",
+        now,
+      });
+
+      expect(session.id).toBe(existing.id);
+      expect(transaction.createSession).not.toHaveBeenCalled();
+    });
+
+    it("starts flexible occurrences on athlete-chosen current-week days", async () => {
+      const { transaction, unitOfWork } = planSetup();
+
+      await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: flexSlotId,
+        now,
+      });
+
+      expect(transaction.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planSlotSnapshotId: flexSlotId,
+          scheduledDate: "2026-08-11",
+        }),
+      );
+    });
+
+    it("rejects flexible starts beyond the weekly target", async () => {
+      const { transaction, unitOfWork } = planSetup({
+        listAthleteSessions: vi.fn(async () => [
+          {
+            id: "s1",
+            planSlotSnapshotId: flexSlotId,
+            workoutSnapshotId: "66666666-6666-4666-8666-666666666667",
+            scheduledDate: "2026-08-10",
+            status: "submitted" as const,
+          },
+          {
+            id: "s2",
+            planSlotSnapshotId: flexSlotId,
+            workoutSnapshotId: "66666666-6666-4666-8666-666666666667",
+            scheduledDate: "2026-08-11",
+            status: "in_progress" as const,
+          },
+        ]),
+      });
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          planSlotSnapshotId: flexSlotId,
+          scheduledDate: "2026-08-12",
+          now: new Date("2026-08-12T15:00:00.000Z"),
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(transaction.createSession).not.toHaveBeenCalled();
+    });
+
+    it("allows a new flexible occurrence after the week rolls over", async () => {
+      const { transaction, unitOfWork } = planSetup({
+        listAthleteSessions: vi.fn(async () => [
+          {
+            id: "s1",
+            planSlotSnapshotId: flexSlotId,
+            workoutSnapshotId: "66666666-6666-4666-8666-666666666667",
+            scheduledDate: "2026-08-10",
+            status: "submitted" as const,
+          },
+          {
+            id: "s2",
+            planSlotSnapshotId: flexSlotId,
+            workoutSnapshotId: "66666666-6666-4666-8666-666666666667",
+            scheduledDate: "2026-08-13",
+            status: "submitted" as const,
+          },
+        ]),
+      });
+
+      await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: flexSlotId,
+        now: new Date("2026-08-18T15:00:00.000Z"),
+      });
+
+      expect(transaction.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planSlotSnapshotId: flexSlotId,
+          scheduledDate: "2026-08-18",
+        }),
+      );
+    });
+
+    it("rejects unknown plan slot snapshot ids", async () => {
+      const { unitOfWork } = planSetup();
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          planSlotSnapshotId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          now,
+        }),
+      ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    });
   });
 
   it("treats duplicate mutation autosave as idempotent", async () => {

@@ -6,6 +6,7 @@ import type { Database } from "@/db/client";
 import type { AssignmentSessionItemResult } from "@/modules/assignments/db/schema";
 import {
   assignments,
+  assignmentPlanSlotSnapshots,
   assignmentRecipients,
   assignmentSessionItemResults,
   assignmentSessions,
@@ -41,6 +42,8 @@ export function createAssignmentSessionUnitOfWork(
                 status: sql<"published" | "canceled">`${assignments.status}`,
                 timezone: assignments.timezone,
                 scheduledDate: assignments.scheduledDate,
+                startDate: assignments.startDate,
+                endDate: assignments.endDate,
                 availableFrom: assignments.availableFrom,
                 availableUntil: assignments.availableUntil,
               })
@@ -80,6 +83,52 @@ export function createAssignmentSessionUnitOfWork(
               .limit(1);
 
             return snapshot ?? null;
+          },
+          async listPlanSlotSnapshots(organizationId, assignmentId) {
+            return databaseTransaction
+              .select({
+                id: assignmentPlanSlotSnapshots.id,
+                workoutSnapshotId:
+                  assignmentPlanSlotSnapshots.workoutSnapshotId,
+                scheduleType: assignmentPlanSlotSnapshots.scheduleType,
+                dayOfWeek: assignmentPlanSlotSnapshots.dayOfWeek,
+                targetSessionsPerWeek:
+                  assignmentPlanSlotSnapshots.targetSessionsPerWeek,
+              })
+              .from(assignmentPlanSlotSnapshots)
+              .where(
+                and(
+                  eq(
+                    assignmentPlanSlotSnapshots.organizationId,
+                    organizationId,
+                  ),
+                  eq(assignmentPlanSlotSnapshots.assignmentId, assignmentId),
+                ),
+              )
+              .orderBy(asc(assignmentPlanSlotSnapshots.position));
+          },
+          async listAthleteSessions(
+            organizationId,
+            assignmentId,
+            athleteUserId,
+          ) {
+            return databaseTransaction
+              .select({
+                id: assignmentSessions.id,
+                planSlotSnapshotId: assignmentSessions.planSlotSnapshotId,
+                workoutSnapshotId: assignmentSessions.workoutSnapshotId,
+                scheduledDate: assignmentSessions.scheduledDate,
+                status: assignmentSessions.status,
+              })
+              .from(assignmentSessions)
+              .where(
+                and(
+                  eq(assignmentSessions.organizationId, organizationId),
+                  eq(assignmentSessions.assignmentId, assignmentId),
+                  eq(assignmentSessions.athleteUserId, athleteUserId),
+                ),
+              )
+              .orderBy(asc(assignmentSessions.scheduledDate));
           },
           async findSessionForAthlete(
             organizationId,
@@ -121,7 +170,7 @@ export function createAssignmentSessionUnitOfWork(
                 recipientId: input.recipientId,
                 athleteUserId: input.athleteUserId,
                 workoutSnapshotId: input.workoutSnapshotId,
-                planSlotSnapshotId: null,
+                planSlotSnapshotId: input.planSlotSnapshotId,
                 scheduledDate: input.scheduledDate,
                 availableFrom: input.availableFrom,
                 availableUntil: input.availableUntil,

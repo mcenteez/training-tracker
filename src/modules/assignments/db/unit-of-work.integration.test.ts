@@ -288,6 +288,91 @@ describe("assignment unit of work", () => {
     expect(outsiderSlots).toEqual([]);
   });
 
+  it("creates distinct occurrence sessions for a flexible plan workout", async () => {
+    await client.exec(`
+      INSERT INTO plans (id, organization_id, name, status)
+      VALUES ('61000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'Flexible Plan', 'active');
+
+      INSERT INTO plan_schedule_slots (
+        organization_id, plan_id, workout_id, schedule_type, target_sessions_per_week, position
+      ) VALUES
+        ('10000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000001', 'weekly_frequency', 2, 0);
+    `);
+
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "plan",
+        sourcePlanId: "61000000-0000-4000-8000-000000000003",
+        startDate: "2026-08-10",
+        endDate: "2026-08-30",
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    const slotRows = await client.query<{ id: string }>(`
+      SELECT id FROM assignment_plan_slot_snapshots
+      WHERE assignment_id = '${draft.id}';
+    `);
+    const slotId = slotRows.rows[0]!.id;
+    const sessionUnitOfWork = createAssignmentSessionUnitOfWork(database);
+
+    const first = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      planSlotSnapshotId: slotId,
+      scheduledDate: "2026-08-10",
+      now: new Date("2026-08-10T12:00:00.000Z"),
+    });
+    const second = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      planSlotSnapshotId: slotId,
+      scheduledDate: "2026-08-12",
+      now: new Date("2026-08-12T12:00:00.000Z"),
+    });
+    const firstAgain = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      planSlotSnapshotId: slotId,
+      scheduledDate: "2026-08-10",
+      now: new Date("2026-08-10T14:00:00.000Z"),
+    });
+
+    expect(first.id).not.toBe(second.id);
+    expect(firstAgain.id).toBe(first.id);
+    expect(first.planSlotSnapshotId).toBe(slotId);
+
+    await expect(
+      startAssignmentSession(sessionUnitOfWork, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        planSlotSnapshotId: slotId,
+        scheduledDate: "2026-08-13",
+        now: new Date("2026-08-13T12:00:00.000Z"),
+      }),
+    ).rejects.toThrow(/weekly target/);
+  });
+
   it("publishes a session-ready immutable workout snapshot", async () => {
     const unitOfWork = createAssignmentUnitOfWork(database);
     const draft = await createAssignment(unitOfWork, {

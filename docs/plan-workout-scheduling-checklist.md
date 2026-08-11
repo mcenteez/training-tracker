@@ -211,25 +211,25 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Add a server-side assignment-local date utility.
-- [ ] Add Monday-Sunday week-boundary utilities with DST tests.
-- [ ] Add fixed-day occurrence generation for assignment date ranges.
-- [ ] Add flexible weekly-progress calculation by plan slot snapshot.
-- [ ] Return current-week target and completed count for flexible slots.
-- [ ] Return exact session state for dated occurrences.
-- [ ] Return the next actionable occurrence for overview emphasis.
-- [ ] Return completed occurrence history for each plan workout.
-- [ ] Ensure occurrence queries authorize the athlete recipient before returning data.
-- [ ] Avoid materializing future occurrence rows in the database until a session starts.
-- [ ] Add query integration tests across week and timezone boundaries.
+- [x] Add a server-side assignment-local date utility.
+- [x] Add Monday-Sunday week-boundary utilities with DST tests.
+- [x] Add fixed-day occurrence generation for assignment date ranges.
+- [x] Add flexible weekly-progress calculation by plan slot snapshot.
+- [x] Return current-week target and completed count for flexible slots.
+- [x] Return exact session state for dated occurrences.
+- [x] Return the next actionable occurrence for overview emphasis.
+- [x] Return completed occurrence history for each plan workout.
+- [x] Ensure occurrence queries authorize the athlete recipient before returning data.
+- [x] Avoid materializing future occurrence rows in the database until a session starts.
+- [x] Add query integration tests across week and timezone boundaries.
 
 ### Acceptance Criteria
 
-- [ ] Fixed-day occurrences appear only on matching eligible dates.
-- [ ] Flexible progress resets at assignment-local Monday midnight.
-- [ ] Sessions around UTC midnight count toward the correct local week.
-- [ ] Partial first and last weeks remain bounded by assignment dates.
-- [ ] No cross-athlete or cross-organization occurrence data is returned.
+- [x] Fixed-day occurrences appear only on matching eligible dates.
+- [x] Flexible progress resets at assignment-local Monday midnight.
+- [x] Sessions around UTC midnight count toward the correct local week.
+- [x] Partial first and last weeks remain bounded by assignment dates.
+- [x] No cross-athlete or cross-organization occurrence data is returned.
 
 ## Milestone 5: Athlete Plan Overview
 
@@ -396,9 +396,9 @@ Each plan workout slot uses exactly one scheduling mode:
 ### Unit
 
 - [ ] Discriminated plan-slot input validation.
-- [ ] Week-boundary calculations in multiple timezones.
-- [ ] Fixed-day occurrence generation.
-- [ ] Flexible weekly-progress calculation.
+- [x] Week-boundary calculations in multiple timezones.
+- [x] Fixed-day occurrence generation.
+- [x] Flexible weekly-progress calculation.
 - [ ] Session lifecycle schedule invariants.
 
 ### Component
@@ -459,7 +459,7 @@ Each plan workout slot uses exactly one scheduling mode:
 1. [x] Slice A: Scheduling schema, migration, and database tests.
 2. [x] Slice B: Plan input, builder, repository, and library views.
 3. [x] Slice C: Assignment snapshot publication for both schedule modes.
-4. [ ] Slice D: Date utilities, occurrence read model, and progress queries.
+4. [x] Slice D: Date utilities, occurrence read model, and progress queries.
 5. [ ] Slice E: Plan-only athlete overview with clickable workouts.
 6. [ ] Slice F: Dedicated workout logging route and selected-snapshot reads.
 7. [ ] Slice G: Occurrence-aware session start, save, reset, and complete.

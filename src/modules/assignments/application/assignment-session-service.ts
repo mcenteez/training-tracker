@@ -7,10 +7,18 @@ import {
   autosaveSessionResultsInputSchema,
   submitSessionResultsInputSchema,
 } from "@/modules/assignments/application/assignment-input";
+import {
+  compareDates,
+  currentWeekWindow,
+  listFixedDayDates,
+  toLocalDateString,
+  weekdayOf,
+} from "@/modules/assignments/application/schedule-dates";
 import type {
   AssignmentSession,
   AssignmentSessionItemResult,
 } from "@/modules/assignments/db/schema";
+import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
 
 interface AssignmentRecipientRecord {
   assignmentId: string;
@@ -19,12 +27,30 @@ interface AssignmentRecipientRecord {
   status: "published" | "canceled";
   timezone: string;
   scheduledDate: string | null;
+  startDate: string | null;
+  endDate: string | null;
   availableFrom: Date | null;
   availableUntil: Date | null;
 }
 
 interface WorkoutSnapshotRecord {
   workoutSnapshotId: string;
+}
+
+interface PlanSlotSnapshotRecord {
+  id: string;
+  workoutSnapshotId: string;
+  scheduleType: "fixed_day" | "weekly_frequency";
+  dayOfWeek: PlanDayOfWeek | null;
+  targetSessionsPerWeek: number | null;
+}
+
+interface AthleteSessionOccurrenceRecord {
+  id: string;
+  planSlotSnapshotId: string | null;
+  workoutSnapshotId: string;
+  scheduledDate: string;
+  status: AssignmentSession["status"];
 }
 
 interface AssignmentSessionRecord {
@@ -60,6 +86,15 @@ export interface AssignmentSessionTransaction {
     organizationId: string,
     assignmentId: string,
   ): Promise<WorkoutSnapshotRecord | null>;
+  listPlanSlotSnapshots(
+    organizationId: string,
+    assignmentId: string,
+  ): Promise<readonly PlanSlotSnapshotRecord[]>;
+  listAthleteSessions(
+    organizationId: string,
+    assignmentId: string,
+    athleteUserId: string,
+  ): Promise<readonly AthleteSessionOccurrenceRecord[]>;
   findSessionForAthlete(
     organizationId: string,
     assignmentId: string,
@@ -71,6 +106,7 @@ export interface AssignmentSessionTransaction {
     recipientId: string;
     athleteUserId: string;
     workoutSnapshotId: string;
+    planSlotSnapshotId: string | null;
     scheduledDate: string;
     availableFrom: Date;
     availableUntil: Date;
@@ -226,6 +262,8 @@ export async function startAssignmentSession(
     organizationId: string;
     assignmentId: string;
     athleteUserId: string;
+    planSlotSnapshotId?: string | null;
+    scheduledDate?: string | null;
     now?: Date;
   },
 ): Promise<AssignmentSession> {
@@ -239,6 +277,14 @@ export async function startAssignmentSession(
 
     if (!assignment) {
       throw new AuthorizationError();
+    }
+
+    if (assignment.sourceType === "plan") {
+      return startPlanOccurrenceSession(transaction, {
+        ...input,
+        assignment,
+        now,
+      });
     }
 
     const existingSession = await transaction.findSessionForAthlete(
@@ -306,10 +352,173 @@ export async function startAssignmentSession(
       recipientId: assignment.recipientId,
       athleteUserId: input.athleteUserId,
       workoutSnapshotId: primaryWorkoutSnapshot.workoutSnapshotId,
+      planSlotSnapshotId: null,
       scheduledDate: assignment.scheduledDate ?? nowDateOnly(now),
       availableFrom: availability.availableFrom,
       availableUntil: availability.availableUntil,
     });
+  });
+}
+
+async function startPlanOccurrenceSession(
+  transaction: AssignmentSessionTransaction,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+    planSlotSnapshotId?: string | null;
+    scheduledDate?: string | null;
+    assignment: AssignmentRecipientRecord;
+    now: Date;
+  },
+): Promise<AssignmentSession> {
+  const { assignment, now } = input;
+
+  if (!input.planSlotSnapshotId) {
+    throw new DomainInvariantError(
+      "Choose a plan workout before starting a session.",
+    );
+  }
+
+  if (!assignment.startDate || !assignment.endDate) {
+    throw new DomainInvariantError(
+      "This plan assignment is missing its date range.",
+    );
+  }
+
+  const slots = await transaction.listPlanSlotSnapshots(
+    input.organizationId,
+    input.assignmentId,
+  );
+  const slot = slots.find(
+    (candidate) => candidate.id === input.planSlotSnapshotId,
+  );
+
+  if (!slot) {
+    throw new ResourceNotFoundError("Plan workout");
+  }
+
+  const today = toLocalDateString(now, assignment.timezone);
+  const { weekStart, weekEnd } = currentWeekWindow(now, assignment.timezone);
+  const scheduledDate = input.scheduledDate ?? today;
+
+  if (
+    compareDates(scheduledDate, assignment.startDate) < 0 ||
+    compareDates(scheduledDate, assignment.endDate) > 0
+  ) {
+    throw new DomainInvariantError(
+      "This workout date is outside the assignment schedule.",
+    );
+  }
+
+  if (slot.scheduleType === "fixed_day") {
+    if (!slot.dayOfWeek || weekdayOf(scheduledDate) !== slot.dayOfWeek) {
+      throw new DomainInvariantError(
+        "This workout is scheduled for a different day of the week.",
+      );
+    }
+
+    const eligibleDates = listFixedDayDates({
+      dayOfWeek: slot.dayOfWeek,
+      startDate: assignment.startDate,
+      endDate: assignment.endDate,
+    });
+
+    if (!eligibleDates.includes(scheduledDate)) {
+      throw new DomainInvariantError(
+        "This workout date is outside the assignment schedule.",
+      );
+    }
+
+    if (compareDates(scheduledDate, today) > 0) {
+      throw new DomainInvariantError(
+        "This workout is not available to start yet.",
+      );
+    }
+  } else {
+    if (
+      compareDates(scheduledDate, weekStart) < 0 ||
+      compareDates(scheduledDate, weekEnd) > 0 ||
+      compareDates(scheduledDate, today) > 0
+    ) {
+      throw new DomainInvariantError(
+        "Flexible workouts can only be started during the current week.",
+      );
+    }
+  }
+
+  const sessions = await transaction.listAthleteSessions(
+    input.organizationId,
+    input.assignmentId,
+    input.athleteUserId,
+  );
+  const existing = sessions.find(
+    (session) =>
+      session.planSlotSnapshotId === slot.id &&
+      session.scheduledDate === scheduledDate,
+  );
+
+  if (existing) {
+    if (existing.status === "submitted") {
+      throw new DomainInvariantError(
+        "This assignment session is already submitted.",
+      );
+    }
+
+    const record = await transaction.findSessionByIdForAthlete(
+      input.organizationId,
+      input.assignmentId,
+      existing.id,
+      input.athleteUserId,
+    );
+
+    if (!record) {
+      throw new ResourceNotFoundError("Assignment session");
+    }
+
+    return record as AssignmentSession;
+  }
+
+  if (assignment.status !== "published") {
+    throw new DomainInvariantError(
+      "Canceled assignments cannot start new sessions.",
+    );
+  }
+
+  if (slot.scheduleType === "weekly_frequency") {
+    const target = slot.targetSessionsPerWeek ?? 1;
+    const countedThisWeek = sessions.filter(
+      (session) =>
+        session.planSlotSnapshotId === slot.id &&
+        compareDates(session.scheduledDate, weekStart) >= 0 &&
+        compareDates(session.scheduledDate, weekEnd) <= 0,
+    ).length;
+
+    if (countedThisWeek >= target) {
+      throw new DomainInvariantError(
+        "The weekly target for this workout is already met.",
+      );
+    }
+  }
+
+  const availability = resolveAvailabilityWindow({
+    availableFrom: null,
+    availableUntil: null,
+    scheduledDate,
+    timezone: assignment.timezone,
+    now,
+  });
+
+  return transaction.createSession({
+    organizationId: input.organizationId,
+    assignmentId: input.assignmentId,
+    recipientId: assignment.recipientId,
+    athleteUserId: input.athleteUserId,
+    workoutSnapshotId: slot.workoutSnapshotId,
+    planSlotSnapshotId: slot.id,
+    scheduledDate,
+    availableFrom: availability.availableFrom,
+    availableUntil: availability.availableUntil,
   });
 }
 
