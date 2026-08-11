@@ -7,6 +7,7 @@ import type { OrganizationRole } from "@/modules/access-control/roles";
 import {
   organizationAuditEvents,
   organizationInvitations,
+  organizations,
 } from "@/modules/organizations/db/schema";
 
 type OrganizationInvitationStatus =
@@ -95,4 +96,17 @@ export async function listOrganizationAuditEventsByOrganizationId(
     .from(organizationAuditEvents)
     .where(eq(organizationAuditEvents.organizationId, organizationId))
     .orderBy(asc(organizationAuditEvents.occurredAt));
+}
+
+export async function findOrganizationNameById(
+  database: Database,
+  organizationId: string,
+): Promise<string | null> {
+  const [organization] = await database
+    .select({ name: organizations.name })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  return organization?.name ?? null;
 }

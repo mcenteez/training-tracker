@@ -20,6 +20,13 @@ export default async function Home() {
   const email =
     primaryEmailAddress?.emailAddress ??
     clerkUser?.emailAddresses[0]?.emailAddress;
+  const fullName =
+    clerkUser?.fullName?.trim() ||
+    [clerkUser?.firstName, clerkUser?.lastName]
+      .filter((part): part is string => Boolean(part))
+      .join(" ")
+      .trim() ||
+    null;
 
   if (!email) {
     throw new Error("Authenticated user is missing an email address");
@@ -29,6 +36,7 @@ export default async function Home() {
     getAuthenticatedUserContext(database, {
       clerkUserId: userId,
       email,
+      fullName,
     }),
   );
 

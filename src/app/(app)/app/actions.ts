@@ -88,6 +88,26 @@ function getPrimaryEmailAddress(
   );
 }
 
+function getFullName(
+  user: Awaited<ReturnType<typeof currentUser>>,
+): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidate = user.fullName?.trim();
+  if (candidate) {
+    return candidate;
+  }
+
+  const fallback = [user.firstName, user.lastName]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .trim();
+
+  return fallback || null;
+}
+
 function requireOrganizationIdOrRedirect(context: {
   organizationId: string | null;
 }): string {
@@ -115,6 +135,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
 
   const user = await currentUser();
   const email = getPrimaryEmailAddress(user);
+  const fullName = getFullName(user);
 
   if (!email) {
     redirect("/app?error=missing_email");
@@ -125,6 +146,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: userId,
         email,
+        fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -149,6 +171,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
 async function loadActorContext(): Promise<{
   userId: string;
   email: string;
+  fullName: string | null;
 }> {
   const { userId } = await auth();
 
@@ -158,12 +181,13 @@ async function loadActorContext(): Promise<{
 
   const user = await currentUser();
   const email = getPrimaryEmailAddress(user);
+  const fullName = getFullName(user);
 
   if (!email) {
     redirect("/app?error=missing_email");
   }
 
-  return { userId, email };
+  return { userId, email, fullName };
 }
 
 export async function addOrUpdateTeamMemberAction(
@@ -186,6 +210,7 @@ export async function addOrUpdateTeamMemberAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -228,6 +253,7 @@ export async function removeTeamMemberAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -269,6 +295,7 @@ export async function inviteOrganizationMemberAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -317,6 +344,7 @@ export async function revokeOrganizationInvitationAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -367,6 +395,7 @@ export async function updateOrganizationMemberRoleAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -410,6 +439,7 @@ export async function removeOrganizationMemberAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);
@@ -450,6 +480,7 @@ export async function transferOrganizationOwnershipAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: actor.userId,
         email: actor.email,
+        fullName: actor.fullName,
       });
 
       const organizationId = requireOrganizationIdOrRedirect(userContext);

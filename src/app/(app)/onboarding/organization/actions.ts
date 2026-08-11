@@ -36,6 +36,26 @@ function getPrimaryEmailAddress(
   );
 }
 
+function getFullName(
+  user: Awaited<ReturnType<typeof currentUser>>,
+): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidate = user.fullName?.trim();
+  if (candidate) {
+    return candidate;
+  }
+
+  const fallback = [user.firstName, user.lastName]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .trim();
+
+  return fallback || null;
+}
+
 export async function createOrganizationAction(
   formData: FormData,
 ): Promise<void> {
@@ -55,6 +75,7 @@ export async function createOrganizationAction(
 
   const user = await currentUser();
   const email = getPrimaryEmailAddress(user);
+  const fullName = getFullName(user);
 
   if (!email) {
     redirect("/onboarding/organization?error=missing_email");
@@ -64,6 +85,7 @@ export async function createOrganizationAction(
     const userContext = await getAuthenticatedUserContext(database, {
       clerkUserId: userId,
       email,
+      fullName,
     });
 
     if (userContext.hasOrganizationMembership) {

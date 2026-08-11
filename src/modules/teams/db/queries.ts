@@ -17,6 +17,12 @@ export interface TeamListItem {
   name: string;
 }
 
+export interface AthleteAssignedTeamListItem {
+  teamId: string;
+  teamName: string;
+  teamRole: TeamRole;
+}
+
 export async function listTeamsByOrganizationId(
   database: Database,
   organizationId: string,
@@ -31,6 +37,7 @@ export async function listTeamsByOrganizationId(
 export interface OrganizationMemberListItem {
   userId: string;
   email: string;
+  fullName: string | null;
   organizationRole: OrganizationRole;
 }
 
@@ -42,6 +49,7 @@ export async function listOrganizationMembersByOrganizationId(
     .select({
       userId: organizationMemberships.userId,
       email: users.email,
+      fullName: users.fullName,
       organizationRole: organizationMemberships.role,
     })
     .from(organizationMemberships)
@@ -54,6 +62,7 @@ export interface TeamMemberListItem {
   teamId: string;
   userId: string;
   email: string;
+  fullName: string | null;
   teamRole: TeamRole;
 }
 
@@ -66,6 +75,7 @@ export async function listTeamMembersByOrganizationId(
       teamId: teamMemberships.teamId,
       userId: teamMemberships.userId,
       email: users.email,
+      fullName: users.fullName,
       teamRole: teamMemberships.role,
     })
     .from(teamMemberships)
@@ -91,4 +101,31 @@ export async function findTeamRoleForUser(
     .limit(1);
 
   return membership?.teamRole ?? null;
+}
+
+export async function listTeamsForAthleteUser(
+  database: Database,
+  input: { organizationId: string; userId: string },
+): Promise<AthleteAssignedTeamListItem[]> {
+  return database
+    .select({
+      teamId: teams.id,
+      teamName: teams.name,
+      teamRole: teamMemberships.role,
+    })
+    .from(teamMemberships)
+    .innerJoin(
+      teams,
+      and(
+        eq(teams.id, teamMemberships.teamId),
+        eq(teams.organizationId, teamMemberships.organizationId),
+      ),
+    )
+    .where(
+      and(
+        eq(teamMemberships.organizationId, input.organizationId),
+        eq(teamMemberships.userId, input.userId),
+      ),
+    )
+    .orderBy(asc(teams.name));
 }

@@ -31,6 +31,26 @@ function getPrimaryEmailAddress(
   );
 }
 
+function getFullName(
+  user: Awaited<ReturnType<typeof currentUser>>,
+): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidate = user.fullName?.trim();
+  if (candidate) {
+    return candidate;
+  }
+
+  const fallback = [user.firstName, user.lastName]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .trim();
+
+  return fallback || null;
+}
+
 export async function acceptOrganizationInvitationAction(
   token: string,
 ): Promise<void> {
@@ -42,6 +62,7 @@ export async function acceptOrganizationInvitationAction(
 
   const user = await currentUser();
   const email = getPrimaryEmailAddress(user);
+  const fullName = getFullName(user);
 
   if (!email) {
     redirect(`/accept-invite/${token}?error=missing_email`);
@@ -52,6 +73,7 @@ export async function acceptOrganizationInvitationAction(
       const userContext = await getAuthenticatedUserContext(database, {
         clerkUserId: userId,
         email,
+        fullName,
       });
 
       await acceptOrganizationInvitation(

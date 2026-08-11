@@ -3,9 +3,30 @@ import { describe, expect, it, vi } from "vitest";
 import { getOrCreateUserByClerkId } from "./user-service";
 
 function createDatabaseMock(options?: {
-  existingUser?: { id: string; clerkUserId: string; email: string };
-  createdUser?: { id: string; clerkUserId: string; email: string };
-  fallbackUser?: { id: string; clerkUserId: string; email: string };
+  existingUser?: {
+    id: string;
+    clerkUserId: string;
+    email: string;
+    fullName: string | null;
+  };
+  createdUser?: {
+    id: string;
+    clerkUserId: string;
+    email: string;
+    fullName: string | null;
+  };
+  fallbackUser?: {
+    id: string;
+    clerkUserId: string;
+    email: string;
+    fullName: string | null;
+  };
+  updatedUser?: {
+    id: string;
+    clerkUserId: string;
+    email: string;
+    fullName: string | null;
+  };
 }) {
   const state = {
     firstSelectCall: 0,
@@ -41,9 +62,20 @@ function createDatabaseMock(options?: {
     })),
   }));
 
+  const update = vi.fn(() => ({
+    set: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(async () => {
+          return options?.updatedUser ? [options.updatedUser] : [];
+        }),
+      })),
+    })),
+  }));
+
   const transaction = {
     select,
     insert,
+    update,
   };
 
   const database = {
@@ -62,6 +94,7 @@ describe("user service", () => {
       id: "user-1",
       clerkUserId: "clerk_user_1",
       email: "existing@example.com",
+      fullName: null,
     };
     const { database } = createDatabaseMock({ existingUser });
 
@@ -78,12 +111,14 @@ describe("user service", () => {
       id: "user-2",
       clerkUserId: "clerk_user_2",
       email: "created@example.com",
+      fullName: "Created User",
     };
     const { database } = createDatabaseMock({ createdUser });
 
     const result = await getOrCreateUserByClerkId(database as never, {
       clerkUserId: "clerk_user_2",
       email: "created@example.com",
+      fullName: "Created User",
     });
 
     expect(result).toEqual(createdUser);
@@ -94,6 +129,7 @@ describe("user service", () => {
       id: "user-3",
       clerkUserId: "clerk_user_3",
       email: "winner@example.com",
+      fullName: null,
     };
     const { database } = createDatabaseMock({ fallbackUser });
 
@@ -114,5 +150,29 @@ describe("user service", () => {
         email: "missing@example.com",
       }),
     ).rejects.toThrow("Failed to create or load user");
+  });
+
+  it("updates existing user when profile email or name has changed", async () => {
+    const existingUser = {
+      id: "user-4",
+      clerkUserId: "clerk_user_4",
+      email: "old@example.com",
+      fullName: null,
+    };
+    const updatedUser = {
+      id: "user-4",
+      clerkUserId: "clerk_user_4",
+      email: "new@example.com",
+      fullName: "New Name",
+    };
+    const { database } = createDatabaseMock({ existingUser, updatedUser });
+
+    const result = await getOrCreateUserByClerkId(database as never, {
+      clerkUserId: "clerk_user_4",
+      email: "new@example.com",
+      fullName: "New Name",
+    });
+
+    expect(result).toEqual(updatedUser);
   });
 });

@@ -6,6 +6,7 @@ export const users = pgTable(
     id: uuid().defaultRandom().primaryKey(),
     clerkUserId: text("clerk_user_id").notNull().unique(),
     email: text().notNull(),
+    fullName: text("full_name"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

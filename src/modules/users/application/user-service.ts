@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
   id: string;
   clerkUserId: string;
   email: string;
+  fullName: string | null;
 }
 
 export interface AuthenticatedUserContext extends AuthenticatedUser {
@@ -21,31 +22,59 @@ export interface AuthenticatedUserContext extends AuthenticatedUser {
 
 export async function getOrCreateUserByClerkId(
   database: Database,
-  input: { clerkUserId: string; email: string },
+  input: { clerkUserId: string; email: string; fullName?: string | null },
 ): Promise<AuthenticatedUser> {
+  const normalizedFullName = input.fullName?.trim() || null;
+
   return database.transaction(async (transaction) => {
     const [existingUser] = await transaction
       .select({
         id: users.id,
         clerkUserId: users.clerkUserId,
         email: users.email,
+        fullName: users.fullName,
       })
       .from(users)
       .where(eq(users.clerkUserId, input.clerkUserId))
       .limit(1);
 
     if (existingUser) {
+      if (
+        existingUser.email !== input.email ||
+        existingUser.fullName !== normalizedFullName
+      ) {
+        const [updatedUser] = await transaction
+          .update(users)
+          .set({ email: input.email, fullName: normalizedFullName })
+          .where(eq(users.id, existingUser.id))
+          .returning({
+            id: users.id,
+            clerkUserId: users.clerkUserId,
+            email: users.email,
+            fullName: users.fullName,
+          });
+
+        if (updatedUser) {
+          return updatedUser;
+        }
+      }
+
       return existingUser;
     }
 
     const [createdUser] = await transaction
       .insert(users)
-      .values({ clerkUserId: input.clerkUserId, email: input.email })
+      .values({
+        clerkUserId: input.clerkUserId,
+        email: input.email,
+        fullName: normalizedFullName,
+      })
       .onConflictDoNothing({ target: users.clerkUserId })
       .returning({
         id: users.id,
         clerkUserId: users.clerkUserId,
         email: users.email,
+        fullName: users.fullName,
       });
 
     if (createdUser) {
@@ -57,6 +86,7 @@ export async function getOrCreateUserByClerkId(
         id: users.id,
         clerkUserId: users.clerkUserId,
         email: users.email,
+        fullName: users.fullName,
       })
       .from(users)
       .where(eq(users.clerkUserId, input.clerkUserId))
@@ -72,7 +102,7 @@ export async function getOrCreateUserByClerkId(
 
 export async function getAuthenticatedUserContext(
   database: Database,
-  input: { clerkUserId: string; email: string },
+  input: { clerkUserId: string; email: string; fullName?: string | null },
 ): Promise<AuthenticatedUserContext> {
   const user = await getOrCreateUserByClerkId(database, input);
 

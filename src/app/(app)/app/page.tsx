@@ -21,10 +21,12 @@ import {
 import { withDatabase } from "@/db/client";
 import { hasPermission } from "@/modules/access-control/permissions";
 import {
+  findOrganizationNameById,
   listOrganizationAuditEventsByOrganizationId,
   listOrganizationInvitationsByOrganizationId,
 } from "@/modules/organizations/db/queries";
 import {
+  listTeamsForAthleteUser,
   listOrganizationMembersByOrganizationId,
   listTeamMembersByOrganizationId,
   listTeamsByOrganizationId,
@@ -62,6 +64,33 @@ function getPrimaryEmailAddress(
     user.emailAddresses[0]?.emailAddress ??
     null
   );
+}
+
+function getFullName(
+  user: Awaited<ReturnType<typeof currentUser>>,
+): string | null {
+  if (!user) {
+    return null;
+  }
+
+  const candidate = user.fullName?.trim();
+  if (candidate) {
+    return candidate;
+  }
+
+  const fallback = [user.firstName, user.lastName]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .trim();
+
+  return fallback || null;
+}
+
+function getUserDisplayName(user: {
+  fullName: string | null;
+  email: string;
+}): string {
+  return user.fullName?.trim() || user.email;
 }
 
 function getFeedbackMessage(
@@ -225,6 +254,7 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
 
   const user = await currentUser();
   const email = getPrimaryEmailAddress(user);
+  const fullName = getFullName(user);
 
   if (!email) {
     redirect("/sign-in");
@@ -234,11 +264,15 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
     const userContext = await getAuthenticatedUserContext(database, {
       clerkUserId: userId,
       email,
+      fullName,
     });
 
     if (!userContext.organizationId) {
       return {
+        dashboardView: "athlete" as const,
         userContext,
+        organizationName: null,
+        athleteTeams: [],
         teams: [],
         organizationMembers: [],
         teamMembers: [],
@@ -247,26 +281,58 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
       };
     }
 
-    const [teams, organizationMembers, teamMembers, invitations, auditEvents] =
-      await Promise.all([
-        listTeamsByOrganizationId(database, userContext.organizationId),
-        listOrganizationMembersByOrganizationId(
-          database,
-          userContext.organizationId,
-        ),
-        listTeamMembersByOrganizationId(database, userContext.organizationId),
-        listOrganizationInvitationsByOrganizationId(
-          database,
-          userContext.organizationId,
-        ),
-        listOrganizationAuditEventsByOrganizationId(
-          database,
-          userContext.organizationId,
-        ),
+    if (userContext.organizationRole === "athlete") {
+      const [athleteTeams, organizationName] = await Promise.all([
+        listTeamsForAthleteUser(database, {
+          organizationId: userContext.organizationId,
+          userId: userContext.id,
+        }),
+        findOrganizationNameById(database, userContext.organizationId),
       ]);
 
+      return {
+        dashboardView: "athlete" as const,
+        userContext,
+        organizationName,
+        athleteTeams,
+        teams: [],
+        organizationMembers: [],
+        teamMembers: [],
+        invitations: [],
+        auditEvents: [],
+      };
+    }
+
+    const [
+      teams,
+      organizationMembers,
+      teamMembers,
+      invitations,
+      auditEvents,
+      organizationName,
+    ] = await Promise.all([
+      listTeamsByOrganizationId(database, userContext.organizationId),
+      listOrganizationMembersByOrganizationId(
+        database,
+        userContext.organizationId,
+      ),
+      listTeamMembersByOrganizationId(database, userContext.organizationId),
+      listOrganizationInvitationsByOrganizationId(
+        database,
+        userContext.organizationId,
+      ),
+      listOrganizationAuditEventsByOrganizationId(
+        database,
+        userContext.organizationId,
+      ),
+      findOrganizationNameById(database, userContext.organizationId),
+    ]);
+
     return {
+      dashboardView: "admin" as const,
       userContext,
+      organizationName,
+      athleteTeams: [],
       teams,
       organizationMembers,
       teamMembers,
@@ -316,9 +382,100 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
   const params = await searchParams;
   const feedbackMessage = getFeedbackMessage(params);
   const roleLabel = data.userContext.organizationRole ?? "athlete";
+  const organizationName = data.organizationName ?? "Unknown organization";
   const ownershipTransferCandidates = data.organizationMembers.filter(
     (member) => member.organizationRole !== "owner",
   );
+
+  if (data.dashboardView === "athlete") {
+    return (
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
+        <Card className="border-primary/25 bg-linear-to-br from-card via-card to-accent/10 shadow-2xl shadow-black/20">
+          <CardHeader className="gap-3">
+            <div className="inline-flex w-fit items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium tracking-wide text-primary uppercase">
+              Athlete Hub
+            </div>
+            <CardTitle className="text-3xl tracking-tight sm:text-4xl">
+              Your training dashboard
+            </CardTitle>
+            <CardDescription className="max-w-2xl text-base">
+              Stay focused on your teams and upcoming workouts.
+            </CardDescription>
+            <div className="flex w-fit items-center rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur">
+              Organization:{" "}
+              <span className="ml-1 font-semibold text-foreground">
+                {organizationName}
+              </span>
+            </div>
+            <div className="flex w-fit items-center rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur">
+              Organization role:{" "}
+              <span className="ml-1 font-semibold text-foreground">
+                {roleLabel}
+              </span>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {feedbackMessage ? (
+          <p
+            className={
+              feedbackMessage.kind === "success"
+                ? "rounded-xl border border-emerald-500/25 bg-emerald-500/12 px-3.5 py-2.5 text-sm text-emerald-700 dark:text-emerald-300"
+                : "rounded-xl border border-destructive/25 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+            }
+          >
+            {feedbackMessage.text}
+          </p>
+        ) : null}
+
+        <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+          <CardHeader>
+            <CardTitle className="text-2xl">My teams</CardTitle>
+            <CardDescription>
+              Teams where you are currently assigned.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data.athleteTeams.length > 0 ? (
+              <ul className="space-y-2.5">
+                {data.athleteTeams.map((team) => (
+                  <li
+                    key={team.teamId}
+                    className="rounded-lg border border-border/70 bg-background/70 px-3 py-2"
+                  >
+                    <p className="text-sm font-medium">{team.teamName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Team role: {team.teamRole}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                You are not assigned to a team yet. Contact your coach or
+                organization manager.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+          <CardHeader>
+            <CardTitle className="text-2xl">Workouts</CardTitle>
+            <CardDescription>
+              Your assigned workout list will appear here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              No workout assignments are available yet. This area will power a
+              mobile-first workout logging flow in the next phase.
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -334,6 +491,12 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
             Create teams, manage member access, and shape daily operations from
             one focused admin surface.
           </CardDescription>
+          <div className="flex w-fit items-center rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur">
+            Organization:{" "}
+            <span className="ml-1 font-semibold text-foreground">
+              {organizationName}
+            </span>
+          </div>
           <div className="flex w-fit items-center rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur">
             Organization role:{" "}
             <span className="ml-1 font-semibold text-foreground">
@@ -434,7 +597,8 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
                                       key={member.userId}
                                       value={member.userId}
                                     >
-                                      {member.email} ({member.organizationRole})
+                                      {getUserDisplayName(member)} (
+                                      {member.organizationRole})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -498,7 +662,8 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
                                 className="flex items-center justify-between rounded-lg border border-border/70 bg-background/70 px-2.5 py-1.5"
                               >
                                 <span className="text-xs">
-                                  {member.email} ({member.teamRole})
+                                  {getUserDisplayName(member)} (
+                                  {member.teamRole})
                                 </span>
 
                                 {canManageTeamMembers(team.id) ? (
@@ -567,7 +732,7 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
                   <SelectContent>
                     {ownershipTransferCandidates.map((member) => (
                       <SelectItem key={member.userId} value={member.userId}>
-                        {member.email} ({member.organizationRole})
+                        {getUserDisplayName(member)} ({member.organizationRole})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -623,7 +788,14 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
                     className="space-y-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm">{member.email}</p>
+                      <div>
+                        <p className="text-sm">{getUserDisplayName(member)}</p>
+                        {member.fullName ? (
+                          <p className="text-xs text-muted-foreground">
+                            {member.email}
+                          </p>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {member.organizationRole}
                       </p>
