@@ -31,6 +31,24 @@ export function createTeamUnitOfWork(database: Database): TeamUnitOfWork {
 
             return team;
           },
+          async updateTeam(organizationId, teamId, name) {
+            const [team] = await databaseTransaction
+              .update(teams)
+              .set({ name, updatedAt: new Date() })
+              .where(
+                and(
+                  eq(teams.organizationId, organizationId),
+                  eq(teams.id, teamId),
+                ),
+              )
+              .returning({
+                id: teams.id,
+                organizationId: teams.organizationId,
+                name: teams.name,
+              });
+
+            return team ?? null;
+          },
           async teamExists(organizationId, teamId) {
             const [team] = await databaseTransaction
               .select({ id: teams.id })

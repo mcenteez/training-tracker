@@ -1,5 +1,3 @@
-import { notFound, redirect } from "next/navigation";
-
 import {
   Card,
   CardContent,
@@ -8,13 +6,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
-import { loadActiveAppContext } from "@/lib/app-context";
-import { hasPermission } from "@/modules/access-control/permissions";
-import {
-  findTeamByOrganizationId,
-  findTeamRoleForUser,
-  listTeamMembersByTeamId,
-} from "@/modules/teams/db/queries";
+import { loadAuthorizedTeamContext } from "@/lib/team-context";
+import { listTeamMembersByTeamId } from "@/modules/teams/db/queries";
 
 type TeamPerformancePageProps = {
   params: Promise<{ teamId: string }>;
@@ -23,36 +16,9 @@ type TeamPerformancePageProps = {
 export default async function TeamPerformancePage({
   params,
 }: TeamPerformancePageProps) {
-  const context = await loadActiveAppContext();
   const { teamId } = await params;
+  const context = await loadAuthorizedTeamContext(teamId, "team.read");
   const organizationId = context.membership.organizationId;
-  const [team, teamRole] = await withDatabase((database) =>
-    Promise.all([
-      findTeamByOrganizationId(database, { organizationId, teamId }),
-      findTeamRoleForUser(database, {
-        organizationId,
-        teamId,
-        userId: context.user.id,
-      }),
-    ]),
-  );
-
-  if (!team) {
-    notFound();
-  }
-
-  if (
-    !hasPermission(
-      {
-        organizationRole: context.membership.organizationRole,
-        teamRole,
-      },
-      "team.read",
-    )
-  ) {
-    redirect("/app");
-  }
-
   const members = await withDatabase((database) =>
     listTeamMembersByTeamId(database, { organizationId, teamId }),
   );
@@ -65,7 +31,7 @@ export default async function TeamPerformancePage({
             Team Performance
           </div>
           <CardTitle className="text-3xl tracking-tight sm:text-4xl">
-            {team.name}
+            {context.team.name}
           </CardTitle>
           <CardDescription>
             {context.membership.organizationName} - {members.length} roster

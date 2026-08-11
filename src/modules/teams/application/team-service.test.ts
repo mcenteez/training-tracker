@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AuthorizationError } from "@/modules/access-control/errors";
+import {
+  AuthorizationError,
+  ResourceNotFoundError,
+} from "@/modules/access-control/errors";
 import type {
   OrganizationRole,
   TeamRole,
@@ -10,6 +13,7 @@ import {
   addOrUpdateTeamMember,
   createTeam,
   removeTeamMember,
+  updateTeam,
   type TeamTransaction,
   type TeamUnitOfWork,
 } from "./team-service";
@@ -26,6 +30,10 @@ function createTestUnitOfWork(options?: {
     createTeam: vi.fn(async (organizationId, name) => {
       operations.push(`create-team:${name}`);
       return { id: "team-1", organizationId, name };
+    }),
+    updateTeam: vi.fn(async (organizationId, teamId, name) => {
+      operations.push(`update-team:${teamId}:${name}`);
+      return { id: teamId, organizationId, name };
     }),
     teamExists: vi.fn(async () => options?.teamExists ?? true),
     findOrganizationRole: vi.fn(async (_organizationId, userId) => {
@@ -87,6 +95,74 @@ describe("team service", () => {
         name: "Varsity",
       }),
     ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("allows a Team Manager to update their team", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "athlete"]]),
+      teamRoles: new Map([["manager-1", "manager"]]),
+    });
+
+    const team = await updateTeam(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      teamId: "team-1",
+      actorUserId: "manager-1",
+      name: "Varsity Strength",
+    });
+
+    expect(team.name).toBe("Varsity Strength");
+    expect(testContext.operations).toEqual([
+      "update-team:team-1:Varsity Strength",
+    ]);
+  });
+
+  it("allows an Organization Manager to update any organization team", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "manager"]]),
+    });
+
+    await updateTeam(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      teamId: "team-1",
+      actorUserId: "manager-1",
+      name: "Varsity Strength",
+    });
+
+    expect(testContext.operations).toEqual([
+      "update-team:team-1:Varsity Strength",
+    ]);
+  });
+
+  it("prevents a Team Viewer from updating a team", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["viewer-1", "athlete"]]),
+      teamRoles: new Map([["viewer-1", "viewer"]]),
+    });
+
+    await expect(
+      updateTeam(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        teamId: "team-1",
+        actorUserId: "viewer-1",
+        name: "Varsity Strength",
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("does not update a missing or foreign team", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "manager"]]),
+      teamExists: false,
+    });
+
+    await expect(
+      updateTeam(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        teamId: "foreign-team",
+        actorUserId: "manager-1",
+        name: "Varsity Strength",
+      }),
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
   });
 
   it("creates missing organization membership before team membership", async () => {

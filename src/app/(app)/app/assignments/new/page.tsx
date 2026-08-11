@@ -10,52 +10,20 @@ import { buildAthleteTargetOptions } from "@/components/assignments/assignment-t
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { createAssignmentAction } from "@/app/(app)/app/assignments/actions";
+import { listAssignmentTargetData } from "@/modules/assignments/application/assignment-target-data";
 import { listPlansForOrganization } from "@/modules/plans/db/queries";
-import { listTeamsByOrganizationId } from "@/modules/teams/db/queries";
-import { listOrganizationMembersByOrganizationId } from "@/modules/teams/db/queries";
-import { listTeamMembersByOrganizationId } from "@/modules/teams/db/queries";
 import { listTeamMembershipsForUserInOrganization } from "@/modules/teams/db/queries";
 import { listWorkoutsForOrganization } from "@/modules/workouts/db/queries";
 
 export default async function NewAssignmentPage() {
   const context = await loadActiveAppContext();
-
-  const [teamMemberships, plans, workouts, teams, members, teamMembers] =
-    await Promise.all([
-      withDatabase((database) =>
-        listTeamMembershipsForUserInOrganization(database, {
-          organizationId: context.membership.organizationId,
-          userId: context.user.id,
-        }),
-      ),
-      withDatabase((database) =>
-        listPlansForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listWorkoutsForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listTeamsByOrganizationId(database, context.membership.organizationId),
-      ),
-      withDatabase((database) =>
-        listOrganizationMembersByOrganizationId(
-          database,
-          context.membership.organizationId,
-        ),
-      ),
-      withDatabase((database) =>
-        listTeamMembersByOrganizationId(
-          database,
-          context.membership.organizationId,
-        ),
-      ),
-    ]);
+  const organizationId = context.membership.organizationId;
+  const teamMemberships = await withDatabase((database) =>
+    listTeamMembershipsForUserInOrganization(database, {
+      organizationId,
+      userId: context.user.id,
+    }),
+  );
 
   const canAssignOrganization = hasPermission(
     { organizationRole: context.membership.organizationRole },
@@ -74,6 +42,30 @@ export default async function NewAssignmentPage() {
   if (!canAssignOrganization && !canAssignTeam) {
     redirect("/app");
   }
+
+  const managedTeamIds = teamMemberships
+    .filter((membership) => membership.teamRole === "manager")
+    .map((membership) => membership.teamId);
+  const [plans, workouts, targetData] = await Promise.all([
+    withDatabase((database) =>
+      listPlansForOrganization(database, {
+        organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listWorkoutsForOrganization(database, {
+        organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listAssignmentTargetData(database, {
+        organizationId,
+        managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
+      }),
+    ),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -102,14 +94,14 @@ export default async function NewAssignmentPage() {
           </CardHeader>
           <CardContent>
             <AssignmentTargetFields
-              teams={teams.map((team) => ({
+              teams={targetData.teams.map((team) => ({
                 id: team.id,
                 label: team.name,
               }))}
               athletes={buildAthleteTargetOptions({
-                members,
-                teamMemberships: teamMembers,
-                teams,
+                members: targetData.members,
+                teamMemberships: targetData.teamMembers,
+                teams: targetData.teams,
               })}
             />
           </CardContent>

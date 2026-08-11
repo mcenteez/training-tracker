@@ -131,6 +131,25 @@ describe("assignment service", () => {
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
+  it("prevents team-manager assignment to athletes outside managed teams", async () => {
+    const { unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+        userId === "user-1" ? ("athlete" as const) : ("athlete" as const),
+      ),
+      listTeamRoles: vi.fn(async () => [
+        { teamId: "team-1", role: "manager" as const },
+      ]),
+      listTeamIdsForAthlete: vi.fn(async () => ["team-2"]),
+    });
+
+    await expect(
+      createAssignment(unitOfWork, {
+        ...createInput,
+        targets: [{ targetType: "athlete", athleteUserId: "outside-athlete" }],
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
   it("rejects direct targets that are not organization athletes", async () => {
     const { transaction, unitOfWork } = setup({
       findOrganizationRole: vi.fn(async (_organizationId, userId) =>

@@ -18,6 +18,7 @@ function getNavigationItems(input: {
   organizationRole: "owner" | "manager" | "viewer" | "athlete";
   landingHref: string;
   hasTeamPerformance: boolean;
+  hasTeamManagement: boolean;
   hasLibraryAccess: boolean;
   hasAssignmentAccess: boolean;
 }): AppNavItem[] {
@@ -27,6 +28,10 @@ function getNavigationItems(input: {
     items.push({ href: "/app/athlete", label: "My Dashboard" });
   } else if (input.hasTeamPerformance) {
     items.push({ href: "/app/performance/teams", label: "Team Performance" });
+  }
+
+  if (input.hasTeamManagement) {
+    items.push({ href: "/app/teams", label: "Team Management" });
   }
 
   if (input.organizationRole !== "athlete") {
@@ -113,6 +118,20 @@ export async function AppHeader() {
           "workout.assign.team",
         ),
     );
+  const hasTeamManagement =
+    hasPermission(
+      { organizationRole: activeOrganization.membership.organizationRole },
+      "team.update",
+    ) ||
+    teamMemberships.some((membership) =>
+      hasPermission(
+        {
+          organizationRole: activeOrganization.membership.organizationRole,
+          teamRole: membership.teamRole,
+        },
+        "team.update",
+      ),
+    );
   const libraryAccess = resolveLibraryAccess({
     organizationRole: activeOrganization.membership.organizationRole,
     teamRoles: teamMemberships.map((membership) => membership.teamRole),
@@ -124,6 +143,7 @@ export async function AppHeader() {
         organizationRole: activeOrganization.membership.organizationRole,
         landingHref: destination.href,
         hasTeamPerformance,
+        hasTeamManagement,
         hasLibraryAccess: libraryAccess !== "none",
         hasAssignmentAccess,
       })}

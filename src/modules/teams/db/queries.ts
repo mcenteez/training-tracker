@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import type {
@@ -67,6 +67,26 @@ export async function listTeamsByOrganizationId(
     .orderBy(asc(teams.name));
 }
 
+export async function listTeamsByIdsInOrganization(
+  database: Database,
+  input: { organizationId: string; teamIds: readonly string[] },
+): Promise<TeamListItem[]> {
+  if (input.teamIds.length === 0) {
+    return [];
+  }
+
+  return database
+    .select({ id: teams.id, name: teams.name })
+    .from(teams)
+    .where(
+      and(
+        eq(teams.organizationId, input.organizationId),
+        inArray(teams.id, input.teamIds),
+      ),
+    )
+    .orderBy(asc(teams.name));
+}
+
 export async function findTeamByOrganizationId(
   database: Database,
   input: { organizationId: string; teamId: string },
@@ -115,6 +135,48 @@ export interface TeamMemberListItem {
   email: string;
   fullName: string | null;
   teamRole: TeamRole;
+}
+
+export interface AssignmentTargetTeamMemberListItem extends TeamMemberListItem {
+  organizationRole: OrganizationRole;
+}
+
+export async function listAssignmentTargetTeamMembers(
+  database: Database,
+  input: { organizationId: string; teamIds: readonly string[] },
+): Promise<AssignmentTargetTeamMemberListItem[]> {
+  if (input.teamIds.length === 0) {
+    return [];
+  }
+
+  return database
+    .select({
+      teamId: teamMemberships.teamId,
+      userId: teamMemberships.userId,
+      email: users.email,
+      fullName: users.fullName,
+      teamRole: teamMemberships.role,
+      organizationRole: organizationMemberships.role,
+    })
+    .from(teamMemberships)
+    .innerJoin(users, eq(users.id, teamMemberships.userId))
+    .innerJoin(
+      organizationMemberships,
+      and(
+        eq(
+          organizationMemberships.organizationId,
+          teamMemberships.organizationId,
+        ),
+        eq(organizationMemberships.userId, teamMemberships.userId),
+      ),
+    )
+    .where(
+      and(
+        eq(teamMemberships.organizationId, input.organizationId),
+        inArray(teamMemberships.teamId, input.teamIds),
+      ),
+    )
+    .orderBy(asc(users.email), asc(teamMemberships.teamId));
 }
 
 export async function listTeamMembersByOrganizationId(

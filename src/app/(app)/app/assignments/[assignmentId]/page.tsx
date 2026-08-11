@@ -14,14 +14,10 @@ import {
   cancelAssignmentAction,
   updateAssignmentAction,
 } from "@/app/(app)/app/assignments/actions";
+import { listAssignmentTargetData } from "@/modules/assignments/application/assignment-target-data";
 import { findAssignmentByOrganization } from "@/modules/assignments/db/queries";
 import { listPlansForOrganization } from "@/modules/plans/db/queries";
-import {
-  listOrganizationMembersByOrganizationId,
-  listTeamMembersByOrganizationId,
-  listTeamMembershipsForUserInOrganization,
-  listTeamsByOrganizationId,
-} from "@/modules/teams/db/queries";
+import { listTeamMembershipsForUserInOrganization } from "@/modules/teams/db/queries";
 import { listWorkoutsForOrganization } from "@/modules/workouts/db/queries";
 
 interface AssignmentDetailPageProps {
@@ -80,43 +76,33 @@ export default async function AssignmentDetailPage({
   const managedTeamIds = teamMemberships
     .filter((membership) => membership.teamRole === "manager")
     .map((membership) => membership.teamId);
-  const [assignment, plans, workouts, teams, members, teamMembers] =
-    await Promise.all([
-      withDatabase((database) =>
-        findAssignmentByOrganization(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-          managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
-        }),
-      ),
-      withDatabase((database) =>
-        listPlansForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listWorkoutsForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listTeamsByOrganizationId(database, context.membership.organizationId),
-      ),
-      withDatabase((database) =>
-        listOrganizationMembersByOrganizationId(
-          database,
-          context.membership.organizationId,
-        ),
-      ),
-      withDatabase((database) =>
-        listTeamMembersByOrganizationId(
-          database,
-          context.membership.organizationId,
-        ),
-      ),
-    ]);
+  const [assignment, plans, workouts, targetData] = await Promise.all([
+    withDatabase((database) =>
+      findAssignmentByOrganization(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
+      }),
+    ),
+    withDatabase((database) =>
+      listPlansForOrganization(database, {
+        organizationId: context.membership.organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listWorkoutsForOrganization(database, {
+        organizationId: context.membership.organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listAssignmentTargetData(database, {
+        organizationId: context.membership.organizationId,
+        managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
+      }),
+    ),
+  ]);
 
   if (!assignment) {
     notFound();
@@ -133,9 +119,9 @@ export default async function AssignmentDetailPage({
     .map((target) => target.athleteUserId ?? "")
     .filter(Boolean);
   const athleteOptions = buildAthleteTargetOptions({
-    members,
-    teamMemberships: teamMembers,
-    teams,
+    members: targetData.members,
+    teamMemberships: targetData.teamMembers,
+    teams: targetData.teams,
   });
   const selectedTeamIdSet = new Set(selectedTeamIds);
   const recipientEstimate = isDraft
@@ -268,7 +254,7 @@ export default async function AssignmentDetailPage({
           </CardHeader>
           <CardContent>
             <AssignmentTargetFields
-              teams={teams.map((team) => ({
+              teams={targetData.teams.map((team) => ({
                 id: team.id,
                 label: team.name,
               }))}

@@ -16,6 +16,11 @@ export interface TeamRecord {
 
 export interface TeamTransaction {
   createTeam(organizationId: string, name: string): Promise<TeamRecord>;
+  updateTeam(
+    organizationId: string,
+    teamId: string,
+    name: string,
+  ): Promise<TeamRecord | null>;
   teamExists(organizationId: string, teamId: string): Promise<boolean>;
   findOrganizationRole(
     organizationId: string,
@@ -62,6 +67,50 @@ export async function createTeam(
     requireTeamAccess({ organizationRole }, "team.create");
 
     return transaction.createTeam(input.organizationId, input.name);
+  });
+}
+
+export async function updateTeam(
+  unitOfWork: TeamUnitOfWork,
+  input: {
+    organizationId: string;
+    teamId: string;
+    actorUserId: string;
+    name: string;
+  },
+): Promise<TeamRecord> {
+  return unitOfWork.transaction(async (transaction) => {
+    const organizationRole = requireOrganizationRoleAtLeast(
+      await transaction.findOrganizationRole(
+        input.organizationId,
+        input.actorUserId,
+      ),
+      "athlete",
+    );
+
+    if (!(await transaction.teamExists(input.organizationId, input.teamId))) {
+      throw new ResourceNotFoundError("Team");
+    }
+
+    const teamRole = await transaction.findTeamRole(
+      input.organizationId,
+      input.teamId,
+      input.actorUserId,
+    );
+
+    requireTeamAccess({ organizationRole, teamRole }, "team.update");
+
+    const team = await transaction.updateTeam(
+      input.organizationId,
+      input.teamId,
+      input.name,
+    );
+
+    if (!team) {
+      throw new ResourceNotFoundError("Team");
+    }
+
+    return team;
   });
 }
 
