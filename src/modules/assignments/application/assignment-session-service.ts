@@ -16,6 +16,7 @@ interface AssignmentRecipientRecord {
   assignmentId: string;
   recipientId: string;
   sourceType: "plan" | "workout";
+  timezone: string;
   scheduledDate: string | null;
   availableFrom: Date | null;
   availableUntil: Date | null;
@@ -119,14 +120,76 @@ function nowDateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+function addUtcDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year!, month! - 1, day! + days))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function localMidnightToUtc(date: string, timezone: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  const targetTime = Date.UTC(year!, month! - 1, day!);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  let candidateTime = targetTime;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(candidateTime))
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, Number(part.value)]),
+    );
+    const representedTime = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+    );
+    const adjustment = targetTime - representedTime;
+
+    candidateTime += adjustment;
+    if (adjustment === 0) {
+      break;
+    }
+  }
+
+  return new Date(candidateTime);
+}
+
 function resolveAvailabilityWindow(input: {
   availableFrom: Date | null;
   availableUntil: Date | null;
+  scheduledDate: string | null;
+  timezone: string;
   now: Date;
 }): { availableFrom: Date; availableUntil: Date } {
-  const availableFrom = input.availableFrom ?? input.now;
+  const scheduledDayStart = input.scheduledDate
+    ? localMidnightToUtc(input.scheduledDate, input.timezone)
+    : null;
+  const scheduledDayEnd = input.scheduledDate
+    ? new Date(
+        localMidnightToUtc(
+          addUtcDays(input.scheduledDate, 1),
+          input.timezone,
+        ).getTime() - 1,
+      )
+    : null;
+  const availableFrom = input.availableFrom ?? scheduledDayStart ?? input.now;
   const availableUntil =
     input.availableUntil ??
+    scheduledDayEnd ??
     new Date(availableFrom.getTime() + 24 * 60 * 60 * 1000);
 
   if (availableUntil <= availableFrom) {
@@ -212,6 +275,8 @@ export async function startAssignmentSession(
     const availability = resolveAvailabilityWindow({
       availableFrom: assignment.availableFrom,
       availableUntil: assignment.availableUntil,
+      scheduledDate: assignment.scheduledDate,
+      timezone: assignment.timezone,
       now,
     });
 

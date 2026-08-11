@@ -38,6 +38,7 @@ export function createAssignmentSessionUnitOfWork(
                   WHEN ${assignments.sourcePlanId} IS NOT NULL THEN 'plan'
                   ELSE 'workout'
                 END`,
+                timezone: assignments.timezone,
                 scheduledDate: assignments.scheduledDate,
                 availableFrom: assignments.availableFrom,
                 availableUntil: assignments.availableUntil,

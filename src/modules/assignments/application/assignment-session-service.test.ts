@@ -82,6 +82,7 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
       assignmentId: ids.assignmentId,
       recipientId: ids.recipientId,
       sourceType: "workout" as const,
+      timezone: "UTC",
       scheduledDate: "2026-08-11",
       availableFrom: new Date("2026-08-11T12:00:00.000Z"),
       availableUntil: new Date("2026-08-11T18:00:00.000Z"),
@@ -118,6 +119,63 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
 }
 
 describe("assignment session service", () => {
+  it("uses the scheduled local day when availability bounds are omitted", async () => {
+    const { transaction, unitOfWork } = setup({
+      findPublishedRecipientAssignment: vi.fn(async () => ({
+        assignmentId: ids.assignmentId,
+        recipientId: ids.recipientId,
+        sourceType: "workout" as const,
+        timezone: "America/New_York",
+        scheduledDate: "2026-08-11",
+        availableFrom: null,
+        availableUntil: null,
+      })),
+    });
+
+    await startAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      now,
+    });
+
+    expect(transaction.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduledDate: "2026-08-11",
+        availableFrom: new Date("2026-08-11T04:00:00.000Z"),
+        availableUntil: new Date("2026-08-12T03:59:59.999Z"),
+      }),
+    );
+  });
+
+  it("preserves the full scheduled local day across daylight-saving changes", async () => {
+    const { transaction, unitOfWork } = setup({
+      findPublishedRecipientAssignment: vi.fn(async () => ({
+        assignmentId: ids.assignmentId,
+        recipientId: ids.recipientId,
+        sourceType: "workout" as const,
+        timezone: "America/New_York",
+        scheduledDate: "2026-11-01",
+        availableFrom: null,
+        availableUntil: null,
+      })),
+    });
+
+    await startAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      now: new Date("2026-11-01T15:00:00.000Z"),
+    });
+
+    expect(transaction.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        availableFrom: new Date("2026-11-01T04:00:00.000Z"),
+        availableUntil: new Date("2026-11-02T04:59:59.999Z"),
+      }),
+    );
+  });
+
   it("denies starting a session when athlete is not a recipient", async () => {
     const { unitOfWork } = setup({
       findPublishedRecipientAssignment: vi.fn(async () => null),
