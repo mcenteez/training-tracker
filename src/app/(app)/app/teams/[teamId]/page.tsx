@@ -14,9 +14,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
-import { listTeamMembersByTeamId } from "@/modules/teams/db/queries";
+import {
+  listPendingTeamInvitations,
+  listTeamMembersByTeamId,
+} from "@/modules/teams/db/queries";
 
-import { addTeamMemberAction, updateTeamAction } from "./actions";
+import {
+  addTeamMemberAction,
+  createTeamInvitationAction,
+  revokeTeamInvitationAction,
+  updateTeamAction,
+} from "./actions";
 
 interface TeamOperationsDetailPageProps {
   params: Promise<{ teamId: string }>;
@@ -24,6 +32,8 @@ interface TeamOperationsDetailPageProps {
     updated?: string;
     memberSaved?: string;
     memberRemoved?: string;
+    inviteToken?: string;
+    invitationRevoked?: string;
     error?: string;
   }>;
 }
@@ -35,11 +45,17 @@ export default async function TeamOperationsDetailPage({
   const { teamId } = await params;
   const feedback = await searchParams;
   const context = await loadAuthorizedTeamContext(teamId, "team.update");
-  const members = await withDatabase((database) =>
-    listTeamMembersByTeamId(database, {
-      organizationId: context.membership.organizationId,
-      teamId,
-    }),
+  const [members, pendingInvitations] = await withDatabase((database) =>
+    Promise.all([
+      listTeamMembersByTeamId(database, {
+        organizationId: context.membership.organizationId,
+        teamId,
+      }),
+      listPendingTeamInvitations(database, {
+        organizationId: context.membership.organizationId,
+        teamId,
+      }),
+    ]),
   );
 
   return (
@@ -95,6 +111,22 @@ export default async function TeamOperationsDetailPage({
       {feedback.error === "member_update_unavailable" ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           The roster could not be changed. Refresh and try again.
+        </p>
+      ) : null}
+      {feedback.invitationRevoked === "1" ? (
+        <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+          Team invitation revoked.
+        </p>
+      ) : null}
+      {feedback.error === "invitation_create_unavailable" ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          The invitation could not be created. Check for an existing pending
+          invitation and try again.
+        </p>
+      ) : null}
+      {feedback.error === "invitation_revoke_unavailable" ? (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          The invitation could not be revoked. Refresh and try again.
         </p>
       ) : null}
 
@@ -217,6 +249,110 @@ export default async function TeamOperationsDetailPage({
                       }
                     />
                   </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Team invitations</CardTitle>
+          <CardDescription>
+            Invite a person directly to this team. New organization members
+            receive Athlete access only.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {feedback.inviteToken ? (
+            <div className="space-y-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+              <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                Invitation created. Share this single-use link with the invited
+                person.
+              </p>
+              <Input
+                aria-label="Invitation link"
+                readOnly
+                value={`/accept-team-invite/${feedback.inviteToken}`}
+              />
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/accept-team-invite/${feedback.inviteToken}`}>
+                  Open invitation
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+
+          <form
+            action={createTeamInvitationAction}
+            className="grid gap-3 rounded-md border p-3 sm:grid-cols-[1fr_10rem_auto] sm:items-end"
+          >
+            <input type="hidden" name="teamId" value={teamId} />
+            <div className="space-y-2">
+              <label htmlFor="invited-email" className="text-sm font-medium">
+                Email address
+              </label>
+              <Input
+                id="invited-email"
+                name="email"
+                type="email"
+                autoComplete="off"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="invited-role" className="text-sm font-medium">
+                Team role
+              </label>
+              <select
+                id="invited-role"
+                name="role"
+                defaultValue="athlete"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="athlete">Athlete</option>
+                <option value="viewer">Viewer</option>
+                <option value="manager">Manager</option>
+              </select>
+            </div>
+            <PendingSubmitButton
+              label="Create invitation"
+              pendingLabel="Creating invitation"
+            />
+          </form>
+
+          {pendingInvitations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              There are no pending invitations for this team.
+            </p>
+          ) : (
+            <ul className="divide-y rounded-md border">
+              {pendingInvitations.map((invitation) => (
+                <li
+                  key={invitation.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-3 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {invitation.invitedEmail}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {invitation.role} · expires{" "}
+                      {invitation.expiresAt.toLocaleString()}
+                    </p>
+                  </div>
+                  <form action={revokeTeamInvitationAction}>
+                    <input type="hidden" name="teamId" value={teamId} />
+                    <input
+                      type="hidden"
+                      name="invitationId"
+                      value={invitation.id}
+                    />
+                    <Button type="submit" size="sm" variant="destructive">
+                      Revoke
+                    </Button>
+                  </form>
                 </li>
               ))}
             </ul>

@@ -330,6 +330,120 @@ describe("tenant schema", () => {
     expect(result.rows[0]?.count).toBe(2);
   });
 
+  it("allows only one pending team invitation per team and normalized email", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'owner');
+
+      INSERT INTO teams (id, organization_id, name)
+      VALUES ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Varsity');
+
+      INSERT INTO team_invitations (
+        organization_id, team_id, invited_email, role, token_hash,
+        expires_at, created_by_user_id
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '20000000-0000-0000-0000-000000000001',
+        'invitee@example.com',
+        'athlete',
+        'token-hash-1',
+        now() + interval '7 days',
+        '00000000-0000-0000-0000-000000000001'
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO team_invitations (
+          organization_id, team_id, invited_email, role, token_hash,
+          expires_at, created_by_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '20000000-0000-0000-0000-000000000001',
+          'invitee@example.com',
+          'viewer',
+          'token-hash-2',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        );
+      `),
+    ).rejects.toThrow(/team_invitations_pending_email_idx/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO team_invitations (
+          organization_id, team_id, invited_email, role, token_hash,
+          expires_at, created_by_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '20000000-0000-0000-0000-000000000001',
+          ' Invitee@Example.com ',
+          'athlete',
+          'token-hash-3',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        );
+      `),
+    ).rejects.toThrow(/team_invitations_normalized_email_check/);
+  });
+
+  it("scopes pending team invitations and team ownership to one team", async () => {
+    await database.exec(`
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'owner');
+
+      INSERT INTO teams (id, organization_id, name)
+      VALUES
+        ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Varsity'),
+        ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Junior Varsity');
+
+      INSERT INTO team_invitations (
+        organization_id, team_id, invited_email, role, token_hash,
+        expires_at, created_by_user_id
+      )
+      VALUES
+        (
+          '10000000-0000-0000-0000-000000000001',
+          '20000000-0000-0000-0000-000000000001',
+          'shared@example.com', 'athlete', 'team-token-1',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        ),
+        (
+          '10000000-0000-0000-0000-000000000001',
+          '20000000-0000-0000-0000-000000000002',
+          'shared@example.com', 'viewer', 'team-token-2',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        );
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT count(*)::int AS count FROM team_invitations
+      WHERE invited_email = 'shared@example.com' AND status = 'pending';
+    `);
+    expect(result.rows[0]?.count).toBe(2);
+
+    await expect(
+      database.exec(`
+        INSERT INTO team_invitations (
+          organization_id, team_id, invited_email, role, token_hash,
+          expires_at, created_by_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000002',
+          '20000000-0000-0000-0000-000000000001',
+          'foreign@example.com', 'athlete', 'foreign-token',
+          now() + interval '7 days',
+          '00000000-0000-0000-0000-000000000001'
+        );
+      `),
+    ).rejects.toThrow(/team_invitations_team_fk/);
+  });
+
   it("keeps membership in another organization when one organization membership is removed", async () => {
     await database.exec(`
       INSERT INTO organization_memberships (organization_id, user_id, role)

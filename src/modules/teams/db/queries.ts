@@ -1,14 +1,15 @@
 import "server-only";
 
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import type {
   OrganizationRole,
   TeamRole,
 } from "@/modules/access-control/roles";
+import { hashTeamInvitationToken } from "@/modules/teams/application/team-invitation-token";
 import { organizationMemberships } from "@/modules/organizations/db/schema";
-import { teams } from "@/modules/teams/db/schema";
+import { teamInvitations, teams } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import { teamMemberships } from "./schema";
 
@@ -103,6 +104,68 @@ export async function findTeamByOrganizationId(
     .limit(1);
 
   return team ?? null;
+}
+
+export interface PendingTeamInvitationListItem {
+  id: string;
+  invitedEmail: string;
+  role: TeamRole;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export async function listPendingTeamInvitations(
+  database: Database,
+  input: { organizationId: string; teamId: string; now?: Date },
+): Promise<PendingTeamInvitationListItem[]> {
+  return database
+    .select({
+      id: teamInvitations.id,
+      invitedEmail: teamInvitations.invitedEmail,
+      role: teamInvitations.role,
+      expiresAt: teamInvitations.expiresAt,
+      createdAt: teamInvitations.createdAt,
+    })
+    .from(teamInvitations)
+    .where(
+      and(
+        eq(teamInvitations.organizationId, input.organizationId),
+        eq(teamInvitations.teamId, input.teamId),
+        eq(teamInvitations.status, "pending"),
+        gt(teamInvitations.expiresAt, input.now ?? new Date()),
+      ),
+    )
+    .orderBy(asc(teamInvitations.invitedEmail));
+}
+
+export interface TeamInvitationPreview {
+  teamName: string;
+  role: TeamRole;
+  isUsable: boolean;
+}
+
+export async function findTeamInvitationPreviewByToken(
+  database: Database,
+  token: string,
+): Promise<TeamInvitationPreview | null> {
+  const [invitation] = await database
+    .select({
+      teamName: teams.name,
+      role: teamInvitations.role,
+      isUsable: sql<boolean>`${teamInvitations.status} = 'pending' AND ${teamInvitations.expiresAt} > now()`,
+    })
+    .from(teamInvitations)
+    .innerJoin(
+      teams,
+      and(
+        eq(teams.organizationId, teamInvitations.organizationId),
+        eq(teams.id, teamInvitations.teamId),
+      ),
+    )
+    .where(eq(teamInvitations.tokenHash, hashTeamInvitationToken(token)))
+    .limit(1);
+
+  return invitation ?? null;
 }
 
 export interface OrganizationMemberListItem {
