@@ -60,10 +60,15 @@ Reference: [access-control.md](access-control.md)
 
 ### 5) Exercise and Workout Library
 
-- Trainers create and manage reusable exercises at the organization level.
+- The training library is a standalone operational surface at `/app/library`, separate from organization Admin and read-focused Performance dashboards.
+- Trainers create and manage reusable exercises at the organization level with a name, coaching instructions, category, equipment, and optional demonstration video URL.
 - An exercise can be reused across any number of workouts in that organization.
 - Trainers create and manage reusable workouts at the organization level.
-- A workout is a compilation of one or more exercises with programmed details such as sets, reps, weight/load, and rest time.
+- A workout is composed of ordered straight-set, circuit, or superset blocks. Each block contains ordered exercises with programming such as rounds, reps, load, duration, distance, rest, tempo, and coaching notes.
+- Incomplete workouts may be saved as drafts. Activation requires at least one populated block and valid active exercises from the same organization.
+- Exercises and workouts are archived and restored rather than hard-deleted through the application.
+- Workouts can be duplicated into independent drafts while retaining source-template provenance.
+- Concurrent edits use optimistic versions so a stale editor cannot silently overwrite newer programming.
 
 ### 6) Workout Assignment
 
@@ -73,6 +78,7 @@ Reference: [access-control.md](access-control.md)
 - A customization creates a new workout in the organization library, which can then be assigned like any other library workout.
 - Assignment workflows should preserve library reuse (reuse first, create when needed).
 - Control assignment visibility and availability windows.
+- Assignments must snapshot workout programming so later library edits or archival cannot change historical or in-progress prescriptions.
 
 ### 7) Results and Progress Tracking
 

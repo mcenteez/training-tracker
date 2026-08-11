@@ -91,6 +91,18 @@ When organization-level and team-level roles both apply, use the permission that
 
 An organization role applies to every team in that organization. A team role may grant additional access to its specific team, but it cannot reduce access granted at the organization level.
 
+## Training Library Access
+
+The organization training library is distinct from assigned workout access:
+
+- Organization Owners and Managers can read and manage the shared exercise and workout library.
+- Team Managers can read and manage the shared organization library, even when their organization role is Athlete or Viewer.
+- Organization Viewers and Team Viewers can browse the library but cannot mutate it.
+- Athlete-only users do not browse organization templates. They receive only workouts assigned to them through the athlete experience.
+- A global library decision evaluates every team membership in the active organization. A role in another organization grants no access.
+
+Library routes and every library mutation independently revalidate the active organization, current memberships, and requested resource ownership on the server. Exercise and workout identifiers supplied by clients never establish organization scope.
+
 ## Landing Resolution
 
 `/app` dynamically selects the user's default destination within the active organization using the effective-access hierarchy:

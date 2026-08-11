@@ -322,4 +322,153 @@ describe("tenant schema", () => {
 
     expect(result.rows[0]?.count).toBe(1);
   });
+
+  it("rejects a workout item using an exercise from another organization", async () => {
+    await database.exec(`
+      INSERT INTO exercises (id, organization_id, name)
+      VALUES ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'Back Squat');
+
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Lower Strength');
+
+      INSERT INTO workout_blocks (id, organization_id, workout_id, position)
+      VALUES (
+        '50000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '40000000-0000-0000-0000-000000000001',
+        0
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO workout_items (
+          organization_id,
+          workout_id,
+          block_id,
+          exercise_id,
+          position,
+          reps
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '40000000-0000-0000-0000-000000000001',
+          '50000000-0000-0000-0000-000000000001',
+          '30000000-0000-0000-0000-000000000001',
+          0,
+          5
+        );
+      `),
+    ).rejects.toThrow(/workout_items_exercise_fk/);
+  });
+
+  it("rejects negative workout prescription values", async () => {
+    await database.exec(`
+      INSERT INTO exercises (id, organization_id, name)
+      VALUES ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Back Squat');
+
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Lower Strength');
+
+      INSERT INTO workout_blocks (id, organization_id, workout_id, position)
+      VALUES (
+        '50000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '40000000-0000-0000-0000-000000000001',
+        0
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO workout_items (
+          organization_id,
+          workout_id,
+          block_id,
+          exercise_id,
+          position,
+          rest_seconds
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '40000000-0000-0000-0000-000000000001',
+          '50000000-0000-0000-0000-000000000001',
+          '30000000-0000-0000-0000-000000000001',
+          0,
+          -1
+        );
+      `),
+    ).rejects.toThrow(/workout_items_rest_nonnegative/);
+  });
+
+  it("allows archived exercise names to be reused while active names stay unique", async () => {
+    await database.exec(`
+      INSERT INTO exercises (organization_id, name, status, archived_at)
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        'Back Squat',
+        'archived',
+        now()
+      );
+
+      INSERT INTO exercises (organization_id, name)
+      VALUES ('10000000-0000-0000-0000-000000000001', 'back squat');
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO exercises (organization_id, name)
+        VALUES ('10000000-0000-0000-0000-000000000001', 'BACK SQUAT');
+      `),
+    ).rejects.toThrow(/exercises_active_name_unique/);
+  });
+
+  it("cascades organization deletion through the workout graph", async () => {
+    await database.exec(`
+      INSERT INTO exercises (id, organization_id, name)
+      VALUES ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Back Squat');
+
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Lower Strength');
+
+      INSERT INTO workout_blocks (id, organization_id, workout_id, position)
+      VALUES (
+        '50000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '40000000-0000-0000-0000-000000000001',
+        0
+      );
+
+      INSERT INTO workout_items (
+        organization_id,
+        workout_id,
+        block_id,
+        exercise_id,
+        position,
+        reps
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '40000000-0000-0000-0000-000000000001',
+        '50000000-0000-0000-0000-000000000001',
+        '30000000-0000-0000-0000-000000000001',
+        0,
+        5
+      );
+
+      DELETE FROM organizations
+      WHERE id = '10000000-0000-0000-0000-000000000001';
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT (
+        (SELECT count(*) FROM exercises) +
+        (SELECT count(*) FROM workouts) +
+        (SELECT count(*) FROM workout_blocks) +
+        (SELECT count(*) FROM workout_items)
+      )::int AS count;
+    `);
+
+    expect(result.rows[0]?.count).toBe(0);
+  });
 });

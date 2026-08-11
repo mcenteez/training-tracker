@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { withDatabase } from "@/db/client";
 import { loadAuthenticatedUser } from "@/lib/app-context";
+import { resolveLibraryAccess } from "@/modules/access-control/library-access";
 import { resolveLandingDestination } from "@/modules/access-control/landing";
 import {
   activeOrganizationCookieName,
@@ -16,6 +17,7 @@ function getNavigationItems(input: {
   organizationRole: "owner" | "manager" | "viewer" | "athlete";
   landingHref: string;
   hasTeamPerformance: boolean;
+  hasLibraryAccess: boolean;
 }): AppNavItem[] {
   const items: AppNavItem[] = [];
 
@@ -30,6 +32,10 @@ function getNavigationItems(input: {
       href: "/app/performance/organization",
       label: "Organization Performance",
     });
+  }
+
+  if (input.hasLibraryAccess) {
+    items.push({ href: "/app/library", label: "Library" });
   }
 
   if (
@@ -85,6 +91,10 @@ export async function AppHeader() {
     (membership) =>
       membership.teamRole === "manager" || membership.teamRole === "viewer",
   );
+  const libraryAccess = resolveLibraryAccess({
+    organizationRole: activeOrganization.membership.organizationRole,
+    teamRoles: teamMemberships.map((membership) => membership.teamRole),
+  });
 
   return (
     <AppHeaderClient
@@ -92,6 +102,7 @@ export async function AppHeader() {
         organizationRole: activeOrganization.membership.organizationRole,
         landingHref: destination.href,
         hasTeamPerformance,
+        hasLibraryAccess: libraryAccess !== "none",
       })}
       activeOrganizationName={activeOrganization.membership.organizationName}
       canSwitchOrganization={activeOrganization.memberships.length > 1}
