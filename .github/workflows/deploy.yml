@@ -46,17 +46,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate
-        run: npm run validate
-
-      - name: Build
-        run: npm run build
+      - name: Reset Vercel link state
+        run: rm -rf .vercel
 
       - name: Run database migrations
         run: npm run db:migrate
 
       - name: Pull Vercel production settings
-        run: npx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: npx vercel pull --yes --environment=production --project="$VERCEL_PROJECT_ID" --token="$VERCEL_TOKEN"
 
       - name: Build Vercel artifact
         run: npx vercel build --prod --token="$VERCEL_TOKEN"
@@ -66,4 +63,4 @@ jobs:
 
       - name: Deploy summary
         run: |
-          echo "Production release completed: validate, build, migrate, and deploy."
+          echo "Production release completed: migrate and deploy (CI handled validate/build)."
