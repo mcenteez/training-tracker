@@ -23,6 +23,7 @@ export const organizationInvitationStatus = pgEnum(
 export const organizations = pgTable("organizations", {
   id: uuid().defaultRandom().primaryKey(),
   name: text().notNull(),
+  timezone: text().default("UTC").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -23,6 +23,7 @@ describe("organization permissions", () => {
     expect(hasPermission(context, "workout.assign.organization")).toBe(true);
     expect(hasPermission(context, "exercise.library.manage")).toBe(true);
     expect(hasPermission(context, "workout.library.manage")).toBe(true);
+    expect(hasPermission(context, "results.comment")).toBe(true);
     expect(hasPermission(context, "organization.delete")).toBe(false);
     expect(hasPermission(context, "organization.ownership.transfer")).toBe(
       false,
@@ -36,6 +37,7 @@ describe("organization permissions", () => {
     expect(hasPermission(context, "results.read.all")).toBe(true);
     expect(hasPermission(context, "exercise.library.read")).toBe(true);
     expect(hasPermission(context, "workout.library.read")).toBe(true);
+    expect(hasPermission(context, "results.comment")).toBe(false);
     expect(hasPermission(context, "workout.library.manage")).toBe(false);
     expect(hasPermission(context, "team.update")).toBe(false);
     expect(hasPermission(context, "results.write.own")).toBe(false);
@@ -46,6 +48,7 @@ describe("organization permissions", () => {
 
     expect(hasPermission(context, "results.read.own")).toBe(true);
     expect(hasPermission(context, "results.write.own")).toBe(true);
+    expect(hasPermission(context, "results.comment")).toBe(false);
     expect(hasPermission(context, "results.read.all")).toBe(false);
     expect(hasPermission(context, "exercise.library.read")).toBe(false);
     expect(hasPermission(context, "workout.library.read")).toBe(false);
@@ -64,6 +67,7 @@ describe("team permissions", () => {
     expect(hasPermission(context, "workout.assign.team")).toBe(true);
     expect(hasPermission(context, "exercise.library.manage")).toBe(true);
     expect(hasPermission(context, "workout.library.manage")).toBe(true);
+    expect(hasPermission(context, "results.comment")).toBe(true);
     expect(hasPermission(context, "workout.assign.organization")).toBe(false);
     expect(hasPermission(context, "team.delete")).toBe(false);
   });
@@ -77,6 +81,7 @@ describe("team permissions", () => {
     expect(hasPermission(context, "results.read.all")).toBe(true);
     expect(hasPermission(context, "exercise.library.read")).toBe(true);
     expect(hasPermission(context, "workout.library.read")).toBe(true);
+    expect(hasPermission(context, "results.comment")).toBe(false);
     expect(hasPermission(context, "workout.library.manage")).toBe(false);
     expect(hasPermission(context, "team.update")).toBe(false);
   });

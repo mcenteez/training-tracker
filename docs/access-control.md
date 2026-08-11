@@ -30,6 +30,7 @@ This document defines the agreed authorization model. It should guide the databa
 - Manages organization members, including inviting and removing other Managers.
 - Creates, updates, and deletes teams.
 - Manages athletes, workouts, assignments, and results across the organization.
+- Can comment on athlete-submitted results for operational review.
 - Cannot delete the organization.
 - Cannot transfer ownership.
 
@@ -52,6 +53,7 @@ An Athlete organization membership represents a user who participates as an athl
 
 - Manages the assigned team.
 - Manages team athletes, workouts, assignments, and results.
+- Can comment on athlete-submitted results within managed teams.
 - Cannot assign workouts organization-wide.
 - Cannot manage teams to which they have not been assigned unless an organization role grants that access.
 
@@ -128,6 +130,13 @@ When a user belongs to multiple organizations, a validated active-organization p
 - Client-provided organization, team, user, athlete, or role identifiers must never establish authorization by themselves.
 - Ownership transfer and organization-member removal must be transactional.
 - Removing organization access must remove dependent team access in the same transaction.
+
+## Organization Timezone
+
+- Each organization stores an IANA timezone identifier used for scheduling behavior.
+- Organization timezone defaults to `UTC` when an organization is created.
+- Only roles with `organization.update` permission (Owner and Manager) may update timezone settings.
+- Timezone values must be validated server-side before persistence.
 
 ## Testing Expectations
 

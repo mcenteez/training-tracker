@@ -41,6 +41,7 @@ export interface OrganizationAuditEventInput {
     | "organization.ownership.transferred"
     | "organization.member.removed"
     | "organization.member.role_updated"
+    | "organization.timezone.updated"
     | "organization.invite.created"
     | "organization.invite.revoked"
     | "organization.invite.accepted";
@@ -69,6 +70,10 @@ export interface OrganizationTransaction {
     role: OrganizationRole,
   ): Promise<void>;
   deleteMembership(organizationId: string, userId: string): Promise<void>;
+  updateOrganizationTimezone(
+    organizationId: string,
+    timezone: string,
+  ): Promise<void>;
   findPendingInvitationByEmail(
     organizationId: string,
     invitedEmail: string,
@@ -106,6 +111,22 @@ export interface OrganizationUnitOfWork {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function normalizeTimezone(timezone: string): string {
+  const normalizedTimezone = timezone.trim();
+
+  if (normalizedTimezone.length === 0) {
+    throw new DomainInvariantError("Timezone is required");
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: normalizedTimezone });
+  } catch {
+    throw new DomainInvariantError("Timezone must be a valid IANA timezone");
+  }
+
+  return normalizedTimezone;
 }
 
 export async function createOrganizationWithOwner(
@@ -262,6 +283,42 @@ export async function updateOrganizationMembershipRole(
       details: {
         role: input.role,
       },
+    });
+  });
+}
+
+export async function updateOrganizationTimezone(
+  unitOfWork: OrganizationUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    timezone: string;
+  },
+): Promise<void> {
+  const timezone = normalizeTimezone(input.timezone);
+
+  await unitOfWork.transaction(async (transaction) => {
+    const actorRole = await transaction.findMembershipRole(
+      input.organizationId,
+      input.actorUserId,
+    );
+
+    if (
+      actorRole === null ||
+      !hasPermission({ organizationRole: actorRole }, "organization.update")
+    ) {
+      throw new AuthorizationError();
+    }
+
+    await transaction.updateOrganizationTimezone(
+      input.organizationId,
+      timezone,
+    );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "organization.timezone.updated",
+      details: { timezone },
     });
   });
 }

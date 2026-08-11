@@ -14,6 +14,7 @@ import {
   revokeOrganizationInvitation,
   transferOrganizationOwnership,
   updateOrganizationMembershipRole,
+  updateOrganizationTimezone,
   type OrganizationInvitationRecord,
   type OrganizationTransaction,
   type OrganizationUnitOfWork,
@@ -65,6 +66,9 @@ function createTestUnitOfWork(
     deleteMembership: vi.fn(async (_organizationId, userId) => {
       operations.push(`delete:${userId}`);
       roles.delete(userId);
+    }),
+    updateOrganizationTimezone: vi.fn(async (_organizationId, timezone) => {
+      operations.push(`timezone:${timezone}`);
     }),
     findPendingInvitationByEmail: vi.fn(
       async (organizationId, invitedEmail) => {
@@ -286,6 +290,78 @@ describe("organization service", () => {
         role: "viewer",
       }),
     ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("allows owners and managers to update organization timezone", async () => {
+    const testContext = createTestUnitOfWork(
+      new Map([
+        ["owner-1", "owner"],
+        ["manager-1", "manager"],
+      ]),
+    );
+
+    await updateOrganizationTimezone(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "owner-1",
+      timezone: "America/New_York",
+    });
+
+    await updateOrganizationTimezone(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "manager-1",
+      timezone: "Europe/London",
+    });
+
+    expect(testContext.operations).toContain("timezone:America/New_York");
+    expect(testContext.operations).toContain("timezone:Europe/London");
+    expect(testContext.operations).toContain(
+      "audit:organization.timezone.updated",
+    );
+  });
+
+  it("rejects timezone updates from non-managers", async () => {
+    const testContext = createTestUnitOfWork(
+      new Map([
+        ["viewer-1", "viewer"],
+        ["athlete-1", "athlete"],
+      ]),
+    );
+
+    await expect(
+      updateOrganizationTimezone(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "viewer-1",
+        timezone: "America/New_York",
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+
+    await expect(
+      updateOrganizationTimezone(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "athlete-1",
+        timezone: "America/New_York",
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("rejects invalid timezone identifiers", async () => {
+    const testContext = createTestUnitOfWork(new Map([["owner-1", "owner"]]));
+
+    await expect(
+      updateOrganizationTimezone(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "owner-1",
+        timezone: "",
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    await expect(
+      updateOrganizationTimezone(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "owner-1",
+        timezone: "Not/A_Real_Timezone",
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
   });
 
   it("creates an organization invitation for managers and owners", async () => {

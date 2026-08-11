@@ -76,6 +76,34 @@ describe("tenant schema", () => {
     ).rejects.toThrow(/organization_memberships_single_owner_idx/);
   });
 
+  it("defaults organization timezone to UTC", async () => {
+    await database.exec(`
+      INSERT INTO organizations (id, name)
+      VALUES ('10000000-0000-0000-0000-000000000099', 'West High');
+    `);
+
+    const result = await database.query<{ timezone: string }>(`
+      SELECT timezone
+      FROM organizations
+      WHERE id = '10000000-0000-0000-0000-000000000099';
+    `);
+
+    expect(result.rows[0]?.timezone).toBe("UTC");
+  });
+
+  it("rejects null organization timezone", async () => {
+    await expect(
+      database.exec(`
+        INSERT INTO organizations (id, name, timezone)
+        VALUES (
+          '10000000-0000-0000-0000-000000000098',
+          'East High',
+          NULL
+        );
+      `),
+    ).rejects.toThrow(/timezone/);
+  });
+
   it("rejects a team membership using another organization's membership", async () => {
     await database.exec(`
       INSERT INTO organization_memberships (organization_id, user_id, role)

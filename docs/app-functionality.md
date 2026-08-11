@@ -33,6 +33,7 @@ Reference: [access-control.md](access-control.md)
 - Transfer ownership transactionally.
 - Manage organization members and roles.
 - Remove organization members and dependent access safely.
+- Configure organization timezone used for scheduling and assignment delivery.
 - Operational management actions are centralized in a dedicated admin interface.
 
 ### 2.1) Performance Dashboard And Admin Split
@@ -93,6 +94,7 @@ Reference: [access-control.md](access-control.md)
 
 - Athletes can record and update their own results.
 - Staff can review results based on scope and role.
+- Staff with assignment-management scope can append operational comments to submitted athlete results.
 - Athletes must not access other athletes' private result data.
 
 ### 8) Compliance and Audit-Safe Operations

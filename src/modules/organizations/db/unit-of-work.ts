@@ -87,6 +87,12 @@ export function createOrganizationUnitOfWork(
                 ),
               );
           },
+          async updateOrganizationTimezone(organizationId, timezone) {
+            await databaseTransaction
+              .update(organizations)
+              .set({ timezone, updatedAt: new Date() })
+              .where(eq(organizations.id, organizationId));
+          },
           async findPendingInvitationByEmail(organizationId, invitedEmail) {
             const [invitation] = await databaseTransaction
               .select({

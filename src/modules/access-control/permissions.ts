@@ -20,6 +20,7 @@ export const permissions = [
   "workout.assign.organization",
   "workout.assign.team",
   "results.read.all",
+  "results.comment",
   "results.read.own",
   "results.write.own",
 ] as const;
@@ -47,6 +48,7 @@ const organizationPermissions: Record<OrganizationRole, readonly Permission[]> =
       "workout.assign.organization",
       "workout.assign.team",
       "results.read.all",
+      "results.comment",
     ],
     viewer: [
       "organization.read",
@@ -77,6 +79,7 @@ const teamPermissions: Record<TeamRole, readonly Permission[]> = {
     "workout.manage",
     "workout.assign.team",
     "results.read.all",
+    "results.comment",
   ],
   viewer: [
     "team.read",
