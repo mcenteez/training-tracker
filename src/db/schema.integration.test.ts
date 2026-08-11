@@ -423,6 +423,103 @@ describe("tenant schema", () => {
     ).rejects.toThrow(/exercises_active_name_unique/);
   });
 
+  it("rejects a plan schedule slot using a workout from another organization", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'Org 2 Push');
+
+      INSERT INTO plans (id, organization_id, name)
+      VALUES ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Org 1 Weekly Plan');
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO plan_schedule_slots (
+          organization_id,
+          plan_id,
+          workout_id,
+          cycle_week,
+          day_of_week,
+          position,
+          label
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '60000000-0000-0000-0000-000000000001',
+          '40000000-0000-0000-0000-000000000002',
+          1,
+          'monday',
+          0,
+          'Primary session'
+        );
+      `),
+    ).rejects.toThrow(/plan_schedule_slots_workout_fk/);
+  });
+
+  it("allows archived plan names to be reused while active names stay unique", async () => {
+    await database.exec(`
+      INSERT INTO plans (organization_id, name, status, archived_at)
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        'Fall Strength',
+        'archived',
+        now()
+      );
+
+      INSERT INTO plans (organization_id, name)
+      VALUES ('10000000-0000-0000-0000-000000000001', 'fall strength');
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO plans (organization_id, name)
+        VALUES ('10000000-0000-0000-0000-000000000001', 'FALL STRENGTH');
+      `),
+    ).rejects.toThrow(/plans_unarchived_name_unique/);
+  });
+
+  it("cascades plan deletion through schedule slots", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Org 1 Push');
+
+      INSERT INTO plans (id, organization_id, name)
+      VALUES ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Org 1 Weekly Plan');
+
+      INSERT INTO plan_schedule_slots (
+        id,
+        organization_id,
+        plan_id,
+        workout_id,
+        cycle_week,
+        day_of_week,
+        position,
+        label
+      )
+      VALUES (
+        '70000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '60000000-0000-0000-0000-000000000001',
+        '40000000-0000-0000-0000-000000000001',
+        1,
+        'monday',
+        0,
+        'Primary session'
+      );
+
+      DELETE FROM plans
+      WHERE id = '60000000-0000-0000-0000-000000000001';
+    `);
+
+    const result = await database.query<{ count: number }>(`
+      SELECT count(*)::int AS count
+      FROM plan_schedule_slots
+      WHERE id = '70000000-0000-0000-0000-000000000001';
+    `);
+
+    expect(result.rows[0]?.count).toBe(0);
+  });
+
   it("cascades organization deletion through the workout graph", async () => {
     await database.exec(`
       INSERT INTO exercises (id, organization_id, name)
