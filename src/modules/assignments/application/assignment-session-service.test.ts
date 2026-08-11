@@ -97,6 +97,7 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
       workoutSnapshotId: ids.workoutSnapshotId,
     })),
     listPlanSlotSnapshots: vi.fn(async () => []),
+    lockPlanSlotForAthlete: vi.fn(async () => undefined),
     listAthleteSessions: vi.fn(async () => []),
     findSessionForAthlete: vi.fn(async () => null),
     createSession: vi.fn(async () => makeSession()),
@@ -491,6 +492,34 @@ describe("assignment session service", () => {
           scheduledDate: "2026-08-18",
         }),
       );
+    });
+
+    it("locks the plan slot before counting weekly sessions", async () => {
+      const callOrder: string[] = [];
+      const { transaction, unitOfWork } = planSetup({
+        lockPlanSlotForAthlete: vi.fn(async () => {
+          callOrder.push("lock");
+        }),
+        listAthleteSessions: vi.fn(async () => {
+          callOrder.push("count");
+          return [];
+        }),
+      });
+
+      await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: flexSlotId,
+        now,
+      });
+
+      expect(transaction.lockPlanSlotForAthlete).toHaveBeenCalledWith({
+        planSlotSnapshotId: flexSlotId,
+        athleteUserId: ids.athleteUserId,
+      });
+      expect(callOrder.at(-2)).toBe("lock");
+      expect(callOrder.at(-1)).toBe("count");
     });
 
     it("rejects unknown plan slot snapshot ids", async () => {

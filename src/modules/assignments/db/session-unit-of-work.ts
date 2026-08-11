@@ -107,6 +107,15 @@ export function createAssignmentSessionUnitOfWork(
               )
               .orderBy(asc(assignmentPlanSlotSnapshots.position));
           },
+          async lockPlanSlotForAthlete(input) {
+            // Serializes weekly-target checks per slot and athlete within the transaction.
+            await databaseTransaction.execute(
+              sql`SELECT pg_advisory_xact_lock(
+                hashtext(${input.planSlotSnapshotId}::text),
+                hashtext(${input.athleteUserId}::text)
+              )`,
+            );
+          },
           async listAthleteSessions(
             organizationId,
             assignmentId,

@@ -90,6 +90,10 @@ export interface AssignmentSessionTransaction {
     organizationId: string,
     assignmentId: string,
   ): Promise<readonly PlanSlotSnapshotRecord[]>;
+  lockPlanSlotForAthlete(input: {
+    planSlotSnapshotId: string;
+    athleteUserId: string;
+  }): Promise<void>;
   listAthleteSessions(
     organizationId: string,
     assignmentId: string,
@@ -486,8 +490,18 @@ async function startPlanOccurrenceSession(
   }
 
   if (slot.scheduleType === "weekly_frequency") {
+    await transaction.lockPlanSlotForAthlete({
+      planSlotSnapshotId: slot.id,
+      athleteUserId: input.athleteUserId,
+    });
+
     const target = slot.targetSessionsPerWeek ?? 1;
-    const countedThisWeek = sessions.filter(
+    const lockedSessions = await transaction.listAthleteSessions(
+      input.organizationId,
+      input.assignmentId,
+      input.athleteUserId,
+    );
+    const countedThisWeek = lockedSessions.filter(
       (session) =>
         session.planSlotSnapshotId === slot.id &&
         compareDates(session.scheduledDate, weekStart) >= 0 &&

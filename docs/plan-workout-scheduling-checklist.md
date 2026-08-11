@@ -241,26 +241,26 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Remove exercise fields and logging actions from the plan overview route.
-- [ ] Keep plan name, assignment dates, status, and return navigation.
-- [ ] Add a current-week schedule section.
-- [ ] Show fixed-day rows with weekday and full date.
-- [ ] Show flexible rows with target and weekly progress.
-- [ ] Show workout name, optional slot label, and occurrence status.
-- [ ] Make the whole workout row a semantic link.
-- [ ] Highlight the next actionable workout without relying on color alone.
-- [ ] Show submitted occurrences as viewable, not actionable for edits.
-- [ ] Add clear empty and assignment-complete states.
-- [ ] Preserve useful canceled-assignment messaging and completed history.
+- [x] Remove exercise fields and logging actions from the plan overview route.
+- [x] Keep plan name, assignment dates, status, and return navigation.
+- [x] Add a current-week schedule section.
+- [x] Show fixed-day rows with weekday and full date.
+- [x] Show flexible rows with target and weekly progress.
+- [x] Show workout name, optional slot label, and occurrence status.
+- [x] Make the whole workout row a semantic link.
+- [x] Highlight the next actionable workout without relying on color alone.
+- [x] Show submitted occurrences as viewable, not actionable for edits.
+- [x] Add clear empty and assignment-complete states.
+- [x] Preserve useful canceled-assignment messaging and completed history.
 - [ ] Verify mobile layout, keyboard focus, and accessible names.
 
 ### Acceptance Criteria
 
-- [ ] No exercise metric inputs or session mutation buttons appear on the overview.
-- [ ] Athletes can see all plan workouts and their scheduling rules.
-- [ ] Athletes can see current-week progress for frequency targets.
-- [ ] Clicking a row opens the correct workout snapshot and date.
-- [ ] The overview remains useful after every current-week workout is submitted.
+- [x] No exercise metric inputs or session mutation buttons appear on the overview.
+- [x] Athletes can see all plan workouts and their scheduling rules.
+- [x] Athletes can see current-week progress for frequency targets.
+- [x] Clicking a row opens the correct workout snapshot and date.
+- [x] The overview remains useful after every current-week workout is submitted.
 
 ## Milestone 6: Dedicated Workout Logging Route
 
@@ -272,26 +272,26 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Add the nested workout occurrence route.
-- [ ] Read promised route params using installed Next.js conventions.
-- [ ] Load assignment, plan slot snapshot, workout snapshot, occurrence, and athlete session server-side.
-- [ ] Query exercise items by the selected workout snapshot rather than the first snapshot.
-- [ ] Add breadcrumb or back link to the plan overview.
-- [ ] Show workout name, optional slot label, weekday/date, and session status.
-- [ ] Move Start Workout to the logging page.
-- [ ] Move exercise completion, actual metrics, notes, and Save Progress to the logging page.
-- [ ] Move Complete Session and Reset Session to the logging page.
-- [ ] Keep submitted sessions readable and immutable.
+- [x] Add the nested workout occurrence route.
+- [x] Read promised route params using installed Next.js conventions.
+- [x] Load assignment, plan slot snapshot, workout snapshot, occurrence, and athlete session server-side.
+- [x] Query exercise items by the selected workout snapshot rather than the first snapshot.
+- [x] Add breadcrumb or back link to the plan overview.
+- [x] Show workout name, optional slot label, weekday/date, and session status.
+- [x] Move Start Workout to the logging page.
+- [x] Move exercise completion, actual metrics, notes, and Save Progress to the logging page.
+- [x] Move Complete Session and Reset Session to the logging page.
+- [x] Keep submitted sessions readable and immutable.
 - [ ] Add loading, unavailable, not-found, canceled, and submitted states.
-- [ ] Redirect workout-only assignments to their single logging occurrence when appropriate.
+- [x] Redirect workout-only assignments to their single logging occurrence when appropriate.
 
 ### Acceptance Criteria
 
-- [ ] The route never displays items from another workout snapshot.
-- [ ] A submitted occurrence remains readable from its original URL.
-- [ ] Pending completion changes persist when Complete Session is used.
-- [ ] Returning to the plan overview shows updated progress.
-- [ ] Direct URL manipulation cannot access another athlete's occurrence.
+- [x] The route never displays items from another workout snapshot.
+- [x] A submitted occurrence remains readable from its original URL.
+- [x] Pending completion changes persist when Complete Session is used.
+- [x] Returning to the plan overview shows updated progress.
+- [x] Direct URL manipulation cannot access another athlete's occurrence.
 
 ## Milestone 7: Occurrence-Aware Session Lifecycle
 
@@ -310,7 +310,7 @@ Each plan workout slot uses exactly one scheduling mode:
 - [x] Validate flexible dates against assignment range and assignment-local current week.
 - [x] Persist `planSlotSnapshotId` on plan sessions.
 - [x] Replace latest-session lookup with exact occurrence lookup.
-- [ ] Replace primary-workout item lookup with selected-workout item lookup.
+- [x] Replace primary-workout item lookup with selected-workout item lookup.
 - [x] Preserve standalone workout assignment behavior with a null plan slot snapshot.
 - [x] Keep autosave item allow-list scoped to the session workout snapshot.
 - [x] Keep reset transactional and occurrence-scoped.
@@ -340,8 +340,8 @@ Each plan workout slot uses exactly one scheduling mode:
 - [x] Prevent duplicate same-date starts with existing session uniqueness.
 - [ ] Add transaction-safe or constraint-backed protection against concurrent over-target starts.
 - [ ] Define UI behavior for an abandoned in-progress occurrence.
-- [ ] Show remaining sessions on overview and logging pages.
-- [ ] Show target-met state with links to completed occurrences.
+- [x] Show remaining sessions on overview and logging pages.
+- [x] Show target-met state with links to completed occurrences.
 - [ ] Add concurrency and retry tests.
 - [x] Add week rollover tests.
 
@@ -460,8 +460,8 @@ Each plan workout slot uses exactly one scheduling mode:
 2. [x] Slice B: Plan input, builder, repository, and library views.
 3. [x] Slice C: Assignment snapshot publication for both schedule modes.
 4. [x] Slice D: Date utilities, occurrence read model, and progress queries.
-5. [ ] Slice E: Plan-only athlete overview with clickable workouts.
-6. [ ] Slice F: Dedicated workout logging route and selected-snapshot reads.
+5. [x] Slice E: Plan-only athlete overview with clickable workouts.
+6. [x] Slice F: Dedicated workout logging route and selected-snapshot reads.
 7. [x] Slice G: Occurrence-aware session start, save, reset, and complete.
 8. [ ] Slice H: Weekly target enforcement and concurrency protection.
 9. [ ] Slice I: Dashboard integration, failure states, accessibility, and documentation.
