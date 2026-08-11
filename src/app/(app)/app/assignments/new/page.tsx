@@ -6,47 +6,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
 import { AssignmentTargetFields } from "@/components/assignments/assignment-target-fields";
+import { buildAthleteTargetOptions } from "@/components/assignments/assignment-target-options";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { createAssignmentAction } from "@/app/(app)/app/assignments/actions";
 import { listPlansForOrganization } from "@/modules/plans/db/queries";
 import { listTeamsByOrganizationId } from "@/modules/teams/db/queries";
 import { listOrganizationMembersByOrganizationId } from "@/modules/teams/db/queries";
+import { listTeamMembersByOrganizationId } from "@/modules/teams/db/queries";
 import { listTeamMembershipsForUserInOrganization } from "@/modules/teams/db/queries";
 import { listWorkoutsForOrganization } from "@/modules/workouts/db/queries";
 
 export default async function NewAssignmentPage() {
   const context = await loadActiveAppContext();
 
-  const [teamMemberships, plans, workouts, teams, members] = await Promise.all([
-    withDatabase((database) =>
-      listTeamMembershipsForUserInOrganization(database, {
-        organizationId: context.membership.organizationId,
-        userId: context.user.id,
-      }),
-    ),
-    withDatabase((database) =>
-      listPlansForOrganization(database, {
-        organizationId: context.membership.organizationId,
-        status: "active",
-      }),
-    ),
-    withDatabase((database) =>
-      listWorkoutsForOrganization(database, {
-        organizationId: context.membership.organizationId,
-        status: "active",
-      }),
-    ),
-    withDatabase((database) =>
-      listTeamsByOrganizationId(database, context.membership.organizationId),
-    ),
-    withDatabase((database) =>
-      listOrganizationMembersByOrganizationId(
-        database,
-        context.membership.organizationId,
+  const [teamMemberships, plans, workouts, teams, members, teamMembers] =
+    await Promise.all([
+      withDatabase((database) =>
+        listTeamMembershipsForUserInOrganization(database, {
+          organizationId: context.membership.organizationId,
+          userId: context.user.id,
+        }),
       ),
-    ),
-  ]);
+      withDatabase((database) =>
+        listPlansForOrganization(database, {
+          organizationId: context.membership.organizationId,
+          status: "active",
+        }),
+      ),
+      withDatabase((database) =>
+        listWorkoutsForOrganization(database, {
+          organizationId: context.membership.organizationId,
+          status: "active",
+        }),
+      ),
+      withDatabase((database) =>
+        listTeamsByOrganizationId(database, context.membership.organizationId),
+      ),
+      withDatabase((database) =>
+        listOrganizationMembersByOrganizationId(
+          database,
+          context.membership.organizationId,
+        ),
+      ),
+      withDatabase((database) =>
+        listTeamMembersByOrganizationId(
+          database,
+          context.membership.organizationId,
+        ),
+      ),
+    ]);
 
   const canAssignOrganization = hasPermission(
     { organizationRole: context.membership.organizationRole },
@@ -97,12 +106,11 @@ export default async function NewAssignmentPage() {
                 id: team.id,
                 label: team.name,
               }))}
-              athletes={members
-                .filter((member) => member.organizationRole === "athlete")
-                .map((member) => ({
-                  id: member.userId,
-                  label: member.fullName ?? member.email,
-                }))}
+              athletes={buildAthleteTargetOptions({
+                members,
+                teamMemberships: teamMembers,
+                teams,
+              })}
             />
           </CardContent>
         </Card>
