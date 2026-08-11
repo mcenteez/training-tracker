@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AuthorizationError,
+  DomainInvariantError,
   ResourceNotFoundError,
 } from "@/modules/access-control/errors";
 import type {
@@ -223,6 +224,42 @@ describe("team service", () => {
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
+  it("prevents a Team Manager from demoting themselves", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "athlete"]]),
+      teamRoles: new Map([["manager-1", "manager"]]),
+    });
+
+    await expect(
+      addOrUpdateTeamMember(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        teamId: "team-1",
+        actorUserId: "manager-1",
+        targetUserId: "manager-1",
+        role: "viewer",
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("allows an Organization Manager to change their own Team role", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "manager"]]),
+      teamRoles: new Map([["manager-1", "manager"]]),
+    });
+
+    await addOrUpdateTeamMember(testContext.unitOfWork, {
+      organizationId: "organization-1",
+      teamId: "team-1",
+      actorUserId: "manager-1",
+      targetUserId: "manager-1",
+      role: "viewer",
+    });
+
+    expect(testContext.operations).toEqual([
+      "upsert-team-member:manager-1:viewer",
+    ]);
+  });
+
   it("removes team membership without removing organization membership", async () => {
     const testContext = createTestUnitOfWork({
       organizationRoles: new Map([
@@ -241,5 +278,21 @@ describe("team service", () => {
 
     expect(testContext.operations).toEqual(["delete-team-member:athlete-1"]);
     expect(testContext.organizationRoles.get("athlete-1")).toBe("athlete");
+  });
+
+  it("prevents a Team Manager from removing themselves", async () => {
+    const testContext = createTestUnitOfWork({
+      organizationRoles: new Map([["manager-1", "athlete"]]),
+      teamRoles: new Map([["manager-1", "manager"]]),
+    });
+
+    await expect(
+      removeTeamMember(testContext.unitOfWork, {
+        organizationId: "organization-1",
+        teamId: "team-1",
+        actorUserId: "manager-1",
+        targetUserId: "manager-1",
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
   });
 });

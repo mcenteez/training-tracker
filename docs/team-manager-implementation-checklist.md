@@ -49,7 +49,7 @@ A Team Manager must not be able to:
 
 - [x] Dedicated team operations routes for Team Managers.
 - [x] Team update service and UI.
-- [ ] Team-scoped roster UI and server actions.
+- [x] Team-scoped roster UI and server actions.
 - [ ] Team invitation and acceptance flow for people who are not already organization members.
 - [x] Assignment-authoring options scoped to managed teams and their athletes.
 - [ ] Team assignment and compliance read models.
@@ -196,25 +196,25 @@ Every team route, query, and mutation must request the specific permission it ne
 
 ### Implementation Checklist
 
-- [ ] Add a roster section to `/app/teams/[teamId]`.
-- [ ] List only members of the selected team.
-- [ ] Add a scoped lookup for eligible existing organization members without exposing the full organization directory by default.
-- [ ] Reuse or adapt `addOrUpdateTeamMember` for the team route.
-- [ ] Reuse or adapt `removeTeamMember` for the team route.
-- [ ] Add route-local Zod schemas and server actions.
-- [ ] Allow only valid Team roles: Manager, Viewer, Athlete.
-- [ ] Confirm whether self-demotion and self-removal are allowed; encode the decision in service invariants and tests.
-- [ ] Add confirmation UI for removal and role changes.
-- [ ] Ensure removing the final team membership does not remove the organization membership.
-- [ ] Add service, action, and integration tests for add, role update, and removal.
+- [x] Add a roster section to `/app/teams/[teamId]`.
+- [x] List only members of the selected team.
+- [x] Add a scoped lookup for eligible existing organization members without exposing the full organization directory by default.
+- [x] Reuse or adapt `addOrUpdateTeamMember` for the team route.
+- [x] Reuse or adapt `removeTeamMember` for the team route.
+- [x] Add route-local Zod schemas and server actions.
+- [x] Allow only valid Team roles: Manager, Viewer, Athlete.
+- [x] Confirm whether self-demotion and self-removal are allowed; encode the decision in service invariants and tests.
+- [x] Add confirmation UI for removal and role changes.
+- [x] Ensure removing the final team membership does not remove the organization membership.
+- [x] Add service, action, and integration tests for add, role update, and removal.
 
 ### Acceptance Criteria
 
-- [ ] A Team Manager can add an eligible existing user to a managed team.
-- [ ] A Team Manager can change a managed team member's Team role.
-- [ ] A Team Manager can remove a member from a managed team.
-- [ ] No operation changes the target user's organization role.
-- [ ] Every operation rejects unmanaged and foreign teams.
+- [x] A Team Manager can add an eligible existing user to a managed team.
+- [x] A Team Manager can change a managed team member's Team role.
+- [x] A Team Manager can remove a member from a managed team.
+- [x] No operation changes the target user's organization role.
+- [x] Every operation rejects unmanaged and foreign teams.
 
 ## Milestone 4: Team Invitations and Athlete Onboarding
 
@@ -376,7 +376,7 @@ Every team route, query, and mutation must request the specific permission it ne
 
 - [x] Slice A: Team access resolver, tests, and assignment option scoping.
 - [x] Slice B: Team operations portfolio, settings service, actions, and tests.
-- [ ] Slice C: Existing-member roster management UI and action tests.
+- [x] Slice C: Existing-member roster management UI and action tests.
 - [ ] Slice D: Team invitation schema, service, acceptance flow, and tests.
 - [ ] Slice E: Team assignment/compliance read models and dashboard UI.
 - [ ] Slice F: Submitted result detail and session comments.

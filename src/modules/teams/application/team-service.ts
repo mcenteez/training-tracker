@@ -1,4 +1,7 @@
-import { ResourceNotFoundError } from "@/modules/access-control/errors";
+import {
+  DomainInvariantError,
+  ResourceNotFoundError,
+} from "@/modules/access-control/errors";
 import {
   requireOrganizationRoleAtLeast,
   requireTeamAccess,
@@ -145,6 +148,18 @@ export async function addOrUpdateTeamMember(
 
     requireTeamAccess({ organizationRole, teamRole }, "team.members.manage");
 
+    if (
+      input.actorUserId === input.targetUserId &&
+      teamRole === "manager" &&
+      organizationRole !== "owner" &&
+      organizationRole !== "manager" &&
+      input.role !== "manager"
+    ) {
+      throw new DomainInvariantError(
+        "Team Managers cannot demote themselves from a managed team.",
+      );
+    }
+
     const targetOrganizationRole = await transaction.findOrganizationRole(
       input.organizationId,
       input.targetUserId,
@@ -195,6 +210,17 @@ export async function removeTeamMember(
     );
 
     requireTeamAccess({ organizationRole, teamRole }, "team.members.manage");
+
+    if (
+      input.actorUserId === input.targetUserId &&
+      teamRole === "manager" &&
+      organizationRole !== "owner" &&
+      organizationRole !== "manager"
+    ) {
+      throw new DomainInvariantError(
+        "Team Managers cannot remove themselves from a managed team.",
+      );
+    }
 
     await transaction.deleteTeamMembership(
       input.organizationId,

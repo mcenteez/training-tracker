@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import type {
@@ -127,6 +127,30 @@ export async function listOrganizationMembersByOrganizationId(
     .innerJoin(users, eq(users.id, organizationMemberships.userId))
     .where(eq(organizationMemberships.organizationId, organizationId))
     .orderBy(asc(users.email));
+}
+
+export async function findOrganizationMemberByEmail(
+  database: Database,
+  input: { organizationId: string; email: string },
+): Promise<OrganizationMemberListItem | null> {
+  const [member] = await database
+    .select({
+      userId: organizationMemberships.userId,
+      email: users.email,
+      fullName: users.fullName,
+      organizationRole: organizationMemberships.role,
+    })
+    .from(organizationMemberships)
+    .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    .where(
+      and(
+        eq(organizationMemberships.organizationId, input.organizationId),
+        sql`lower(${users.email}) = ${input.email.trim().toLowerCase()}`,
+      ),
+    )
+    .limit(1);
+
+  return member ?? null;
 }
 
 export interface TeamMemberListItem {
