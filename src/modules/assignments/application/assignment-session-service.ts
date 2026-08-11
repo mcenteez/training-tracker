@@ -16,6 +16,7 @@ interface AssignmentRecipientRecord {
   assignmentId: string;
   recipientId: string;
   sourceType: "plan" | "workout";
+  status: "published" | "canceled";
   timezone: string;
   scheduledDate: string | null;
   availableFrom: Date | null;
@@ -49,7 +50,7 @@ interface AssignmentSessionResultInput {
 }
 
 export interface AssignmentSessionTransaction {
-  findPublishedRecipientAssignment(
+  findRecipientAssignment(
     organizationId: string,
     assignmentId: string,
     athleteUserId: string,
@@ -223,7 +224,7 @@ export async function startAssignmentSession(
 ): Promise<AssignmentSession> {
   return unitOfWork.transaction(async (transaction) => {
     const now = input.now ?? new Date();
-    const assignment = await transaction.findPublishedRecipientAssignment(
+    const assignment = await transaction.findRecipientAssignment(
       input.organizationId,
       input.assignmentId,
       input.athleteUserId,
@@ -259,6 +260,12 @@ export async function startAssignmentSession(
       }
 
       return existing as AssignmentSession;
+    }
+
+    if (assignment.status !== "published") {
+      throw new DomainInvariantError(
+        "Canceled assignments cannot start new sessions.",
+      );
     }
 
     const primaryWorkoutSnapshot = await transaction.findPrimaryWorkoutSnapshot(

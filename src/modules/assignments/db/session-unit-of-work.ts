@@ -25,7 +25,7 @@ export function createAssignmentSessionUnitOfWork(
     transaction: (operation) =>
       database.transaction(async (databaseTransaction) => {
         const transaction: AssignmentSessionTransaction = {
-          async findPublishedRecipientAssignment(
+          async findRecipientAssignment(
             organizationId,
             assignmentId,
             athleteUserId,
@@ -38,6 +38,7 @@ export function createAssignmentSessionUnitOfWork(
                   WHEN ${assignments.sourcePlanId} IS NOT NULL THEN 'plan'
                   ELSE 'workout'
                 END`,
+                status: sql<"published" | "canceled">`${assignments.status}`,
                 timezone: assignments.timezone,
                 scheduledDate: assignments.scheduledDate,
                 availableFrom: assignments.availableFrom,
@@ -59,7 +60,6 @@ export function createAssignmentSessionUnitOfWork(
                   eq(assignmentRecipients.organizationId, organizationId),
                   eq(assignmentRecipients.assignmentId, assignmentId),
                   eq(assignmentRecipients.athleteUserId, athleteUserId),
-                  eq(assignments.status, "published"),
                 ),
               )
               .limit(1);

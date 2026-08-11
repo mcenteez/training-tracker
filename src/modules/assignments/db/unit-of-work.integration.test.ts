@@ -7,10 +7,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/client";
 import {
+  cancelAssignment,
   createAssignment,
   publishAssignment,
 } from "@/modules/assignments/application/assignment-service";
-import { listAssignmentsForOrganization } from "@/modules/assignments/db/queries";
+import { startAssignmentSession } from "@/modules/assignments/application/assignment-session-service";
+import {
+  findPublishedAssignmentForAthlete,
+  listAssignmentsForOrganization,
+  listPublishedAssignmentsForAthlete,
+} from "@/modules/assignments/db/queries";
+import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
 import { createAssignmentUnitOfWork } from "@/modules/assignments/db/unit-of-work";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
@@ -227,5 +234,66 @@ describe("assignment unit of work", () => {
       "60000000-0000-4000-8000-000000000001",
       "60000000-0000-4000-8000-000000000003",
     ]);
+  });
+
+  it("keeps a canceled assignment visible when the athlete has a session", async () => {
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    const published = await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    await startAssignmentSession(createAssignmentSessionUnitOfWork(database), {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      now: new Date("2026-08-12T12:00:00.000Z"),
+    });
+    await cancelAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: published.version,
+    });
+
+    const athleteAssignments = await listPublishedAssignmentsForAthlete(
+      database,
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+      },
+    );
+    const detail = await findPublishedAssignmentForAthlete(database, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+    });
+
+    expect(athleteAssignments).toEqual([
+      expect.objectContaining({ id: draft.id, status: "canceled" }),
+    ]);
+    expect(detail).toEqual(
+      expect.objectContaining({ id: draft.id, status: "canceled" }),
+    );
   });
 });

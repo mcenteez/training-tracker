@@ -41,7 +41,7 @@ export interface AthleteAssignmentListItem {
   id: string;
   sourceName: string;
   sourceType: "plan" | "workout";
-  status: "published";
+  status: "published" | "canceled";
   startDate: string | null;
   endDate: string | null;
   scheduledDate: string | null;
@@ -265,6 +265,7 @@ export async function listPublishedAssignmentsForAthlete(
       startDate: assignments.startDate,
       endDate: assignments.endDate,
       scheduledDate: assignments.scheduledDate,
+      status: assignments.status,
       publishedAt: assignments.publishedAt,
       planName: plans.name,
       workoutName: workouts.name,
@@ -295,7 +296,18 @@ export async function listPublishedAssignmentsForAthlete(
       and(
         eq(assignmentRecipients.organizationId, input.organizationId),
         eq(assignmentRecipients.athleteUserId, input.athleteUserId),
-        eq(assignments.status, "published"),
+        sql`(
+          ${assignments.status} = 'published'
+          or (
+            ${assignments.status} = 'canceled'
+            and exists (
+              select 1 from ${assignmentSessions}
+              where ${assignmentSessions.organizationId} = ${assignments.organizationId}
+                and ${assignmentSessions.assignmentId} = ${assignments.id}
+                and ${assignmentSessions.athleteUserId} = ${input.athleteUserId}
+            )
+          )
+        )`,
       ),
     )
     .orderBy(asc(assignments.publishedAt), asc(assignments.createdAt));
@@ -304,7 +316,7 @@ export async function listPublishedAssignmentsForAthlete(
     id: row.id,
     sourceName: row.planName ?? row.workoutName ?? "Unknown",
     sourceType: row.sourcePlanId ? "plan" : "workout",
-    status: "published",
+    status: row.status as "published" | "canceled",
     startDate: row.startDate,
     endDate: row.endDate,
     scheduledDate: row.scheduledDate,
@@ -331,6 +343,7 @@ export async function findPublishedAssignmentForAthlete(
       scheduledDate: assignments.scheduledDate,
       availableFrom: assignments.availableFrom,
       availableUntil: assignments.availableUntil,
+      status: assignments.status,
       publishedAt: assignments.publishedAt,
       planName: plans.name,
       workoutName: workouts.name,
@@ -371,7 +384,18 @@ export async function findPublishedAssignmentForAthlete(
       and(
         eq(assignments.organizationId, input.organizationId),
         eq(assignments.id, input.assignmentId),
-        eq(assignments.status, "published"),
+        sql`(
+          ${assignments.status} = 'published'
+          or (
+            ${assignments.status} = 'canceled'
+            and exists (
+              select 1 from ${assignmentSessions}
+              where ${assignmentSessions.organizationId} = ${assignments.organizationId}
+                and ${assignmentSessions.assignmentId} = ${assignments.id}
+                and ${assignmentSessions.athleteUserId} = ${input.athleteUserId}
+            )
+          )
+        )`,
         eq(assignmentRecipients.athleteUserId, input.athleteUserId),
       ),
     )
@@ -385,7 +409,7 @@ export async function findPublishedAssignmentForAthlete(
     id: assignment.id,
     sourceName: assignment.planName ?? assignment.workoutName ?? "Unknown",
     sourceType: assignment.sourcePlanId ? "plan" : "workout",
-    status: "published",
+    status: assignment.status as "published" | "canceled",
     timezone: assignment.timezone,
     startDate: assignment.startDate,
     endDate: assignment.endDate,

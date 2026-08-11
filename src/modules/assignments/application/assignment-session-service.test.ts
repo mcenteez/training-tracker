@@ -78,10 +78,11 @@ function makeResult(
 
 function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
   const transaction: AssignmentSessionTransaction = {
-    findPublishedRecipientAssignment: vi.fn(async () => ({
+    findRecipientAssignment: vi.fn(async () => ({
       assignmentId: ids.assignmentId,
       recipientId: ids.recipientId,
       sourceType: "workout" as const,
+      status: "published" as const,
       timezone: "UTC",
       scheduledDate: "2026-08-11",
       availableFrom: new Date("2026-08-11T12:00:00.000Z"),
@@ -121,10 +122,11 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
 describe("assignment session service", () => {
   it("uses the scheduled local day when availability bounds are omitted", async () => {
     const { transaction, unitOfWork } = setup({
-      findPublishedRecipientAssignment: vi.fn(async () => ({
+      findRecipientAssignment: vi.fn(async () => ({
         assignmentId: ids.assignmentId,
         recipientId: ids.recipientId,
         sourceType: "workout" as const,
+        status: "published" as const,
         timezone: "America/New_York",
         scheduledDate: "2026-08-11",
         availableFrom: null,
@@ -150,10 +152,11 @@ describe("assignment session service", () => {
 
   it("preserves the full scheduled local day across daylight-saving changes", async () => {
     const { transaction, unitOfWork } = setup({
-      findPublishedRecipientAssignment: vi.fn(async () => ({
+      findRecipientAssignment: vi.fn(async () => ({
         assignmentId: ids.assignmentId,
         recipientId: ids.recipientId,
         sourceType: "workout" as const,
+        status: "published" as const,
         timezone: "America/New_York",
         scheduledDate: "2026-11-01",
         availableFrom: null,
@@ -178,7 +181,7 @@ describe("assignment session service", () => {
 
   it("denies starting a session when athlete is not a recipient", async () => {
     const { unitOfWork } = setup({
-      findPublishedRecipientAssignment: vi.fn(async () => null),
+      findRecipientAssignment: vi.fn(async () => null),
     });
 
     await expect(
@@ -189,6 +192,60 @@ describe("assignment session service", () => {
         now,
       }),
     ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("prevents canceled assignments from starting new sessions", async () => {
+    const { transaction, unitOfWork } = setup({
+      findRecipientAssignment: vi.fn(async () => ({
+        assignmentId: ids.assignmentId,
+        recipientId: ids.recipientId,
+        sourceType: "workout" as const,
+        status: "canceled" as const,
+        timezone: "UTC",
+        scheduledDate: "2026-08-11",
+        availableFrom: null,
+        availableUntil: null,
+      })),
+    });
+
+    await expect(
+      startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        now,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.findPrimaryWorkoutSnapshot).not.toHaveBeenCalled();
+    expect(transaction.createSession).not.toHaveBeenCalled();
+  });
+
+  it("keeps existing sessions accessible after assignment cancellation", async () => {
+    const existingSession = makeSession({ status: "in_progress" });
+    const { unitOfWork } = setup({
+      findRecipientAssignment: vi.fn(async () => ({
+        assignmentId: ids.assignmentId,
+        recipientId: ids.recipientId,
+        sourceType: "workout" as const,
+        status: "canceled" as const,
+        timezone: "UTC",
+        scheduledDate: "2026-08-11",
+        availableFrom: null,
+        availableUntil: null,
+      })),
+      findSessionForAthlete: vi.fn(async () => existingSession),
+      findSessionByIdForAthlete: vi.fn(async () => existingSession),
+    });
+
+    const session = await startAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      now,
+    });
+
+    expect(session.status).toBe("in_progress");
   });
 
   it("treats duplicate mutation autosave as idempotent", async () => {

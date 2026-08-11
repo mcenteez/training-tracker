@@ -101,7 +101,7 @@ export default async function AthleteDashboardPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Workouts</CardTitle>
           <CardDescription>
-            Published assignments available to complete.
+            Current assignments and sessions already in progress.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,6 +126,11 @@ export default async function AthleteDashboardPage() {
                       <p className="text-xs text-muted-foreground">
                         Published: {formatDate(assignment.publishedAt)}
                       </p>
+                      {assignment.status === "canceled" ? (
+                        <p className="text-xs font-medium text-destructive">
+                          Canceled · Existing session available
+                        </p>
+                      ) : null}
                     </div>
 
                     <Button asChild size="sm" variant="outline">
@@ -139,7 +144,7 @@ export default async function AthleteDashboardPage() {
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No published assignments are available yet.
+              No assignments are available yet.
             </p>
           )}
         </CardContent>

@@ -105,7 +105,10 @@ export default async function AthleteAssignmentDetailPage({
     existingResults.map((result) => [result.itemSnapshotId, result]),
   );
 
-  const canStartSession = session === null && workoutItems.length > 0;
+  const canStartSession =
+    assignment.status === "published" &&
+    session === null &&
+    workoutItems.length > 0;
   const canEditSession =
     session !== null &&
     session.status !== "submitted" &&
@@ -144,6 +147,15 @@ export default async function AthleteAssignmentDetailPage({
                 : submitted
                   ? "Session submitted."
                   : "Unable to complete that session action."}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {assignment.status === "canceled" ? (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="pt-6 text-sm">
+            This assignment was canceled. Your existing session and results
+            remain available.
           </CardContent>
         </Card>
       ) : null}
