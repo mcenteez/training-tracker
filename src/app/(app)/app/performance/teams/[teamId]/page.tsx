@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
+import { hasPermission } from "@/modules/access-control/permissions";
 import { listTeamAssignmentCompliance } from "@/modules/assignments/db/team-compliance-queries";
 import { listTeamMembersByTeamId } from "@/modules/teams/db/queries";
 
@@ -39,7 +40,7 @@ export default async function TeamPerformancePage({
   const { teamId } = await params;
   const filters = await searchParams;
   const windowDays = parseWindowDays(filters.window);
-  const context = await loadAuthorizedTeamContext(teamId, "team.read");
+  const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const organizationId = context.membership.organizationId;
   const [members, assignmentCompliance] = await withDatabase((database) =>
     Promise.all([
@@ -51,6 +52,8 @@ export default async function TeamPerformancePage({
       }),
     ]),
   );
+  const canManageTeam = hasPermission(context.access, "team.update");
+  const canAssignTeam = hasPermission(context.access, "workout.assign.team");
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -68,6 +71,22 @@ export default async function TeamPerformancePage({
           </CardDescription>
         </CardHeader>
       </Card>
+
+      <nav aria-label="Team workflows" className="flex flex-wrap gap-2">
+        {canManageTeam ? (
+          <Button asChild variant="outline">
+            <Link href={`/app/teams/${teamId}`}>Manage team</Link>
+          </Button>
+        ) : null}
+        {canAssignTeam ? (
+          <Button asChild variant="outline">
+            <Link href="/app/assignments">Assignments</Link>
+          </Button>
+        ) : null}
+        <Button asChild variant="outline">
+          <Link href="/app/library">Library</Link>
+        </Button>
+      </nav>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>

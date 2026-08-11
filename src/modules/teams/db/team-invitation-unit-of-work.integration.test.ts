@@ -10,7 +10,13 @@ import {
   acceptTeamInvitation,
   createTeamInvitation,
 } from "@/modules/teams/application/team-invitation-service";
+import {
+  addOrUpdateTeamMember,
+  removeTeamMember,
+  updateTeam,
+} from "@/modules/teams/application/team-service";
 import { createTeamInvitationUnitOfWork } from "@/modules/teams/db/team-invitation-unit-of-work";
+import { createTeamUnitOfWork } from "@/modules/teams/db/unit-of-work";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
@@ -163,5 +169,69 @@ describe("team invitation unit of work", () => {
       WHERE action IN ('team.invite.created', 'team.invite.accepted');
     `);
     expect(auditEvents.rows[0]?.count).toBe(4);
+  });
+
+  it("records sanitized team settings and roster events transactionally", async () => {
+    const unitOfWork = createTeamUnitOfWork(database);
+
+    await updateTeam(unitOfWork, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      actorUserId: ids.manager,
+      name: "Varsity Strength",
+    });
+    await addOrUpdateTeamMember(unitOfWork, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      actorUserId: ids.manager,
+      targetUserId: ids.viewer,
+      role: "viewer",
+    });
+    await removeTeamMember(unitOfWork, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      actorUserId: ids.manager,
+      targetUserId: ids.viewer,
+    });
+
+    const auditEvents = await client.query<{
+      action: string;
+      target_user_id: string | null;
+      details: Record<string, string>;
+    }>(`
+      SELECT action, target_user_id, details
+      FROM organization_audit_events
+      WHERE action IN (
+        'team.updated',
+        'team.member.upserted',
+        'team.member.removed'
+      )
+      ORDER BY occurred_at, action;
+    `);
+
+    expect(auditEvents.rows).toHaveLength(3);
+    expect(auditEvents.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "team.updated",
+          target_user_id: null,
+          details: { teamId: ids.team },
+        }),
+        expect.objectContaining({
+          action: "team.member.upserted",
+          target_user_id: ids.viewer,
+          details: { teamId: ids.team, role: "viewer" },
+        }),
+        expect.objectContaining({
+          action: "team.member.removed",
+          target_user_id: ids.viewer,
+          details: { teamId: ids.team },
+        }),
+      ]),
+    );
+    expect(JSON.stringify(auditEvents.rows)).not.toContain(
+      "viewer@example.com",
+    );
+    expect(JSON.stringify(auditEvents.rows)).not.toContain("Varsity Strength");
   });
 });

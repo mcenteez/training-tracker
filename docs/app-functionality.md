@@ -41,7 +41,8 @@ Reference: [access-control.md](access-control.md)
 - `/app` dispatches each user to the highest applicable organization, team, or athlete landing surface.
 - `/app/performance/organization` is the read-focused organization Performance Dashboard for Owners, Managers, and Organization Viewers.
 - `/app/performance/teams` is a portfolio of managed teams, or viewed teams when the user manages none.
-- `/app/performance/teams/[teamId]` is the canonical team Performance Dashboard and independently enforces team and organization scope.
+- `/app/performance/teams/[teamId]` is the canonical staff Team Performance Dashboard and independently requires team-scoped result-read access.
+- Team assignment drill-downs show team recipients, occurrence status, and submitted-session review links using immutable publish-time team scope.
 - `/app/athlete` focuses athletes on their teams and assigned workouts.
 - `/app/organizations` lets multi-organization users choose an active organization; the saved preference is always revalidated against membership.
 - Only owners and managers can access the admin interface for operational changes.
@@ -49,9 +50,12 @@ Reference: [access-control.md](access-control.md)
 
 ### 3) Team Management
 
-- Create, update, and archive/delete teams (per policy and authorization).
-- Assign and manage team members with team roles.
-- Ensure team access remains scoped to the parent organization.
+- `/app/teams` gives Team Managers a portfolio of only the teams they manage.
+- `/app/teams/[teamId]` supports team naming, existing-member roster changes, and pending invitation management.
+- Team Managers can add, update, and remove team memberships without changing organization roles or entering organization Admin.
+- Team invitations support new and existing users, secure hash-only single-use tokens, expiration/revocation, and minimum Organization Athlete onboarding.
+- Organization Owners and Managers can use the same team routes across every team in the active organization.
+- Team settings, roster changes, and invitation lifecycle mutations are transactional and audit logged.
 
 ### 4) Athlete Management
 
@@ -98,8 +102,11 @@ Reference: [access-control.md](access-control.md)
 ### 7) Results and Progress Tracking
 
 - Athletes can record and update their own results.
-- Staff can review results based on scope and role.
-- Staff with assignment-management scope can append operational comments to submitted athlete results.
+- Team Performance summarizes assigned, in-progress, submitted, missed, and upcoming occurrences over 30-day, 90-day, or all-time windows.
+- Authorized staff can drill into a team assignment, recipient occurrences, and submitted exercise metrics in workout order.
+- Team Managers and organization-wide result managers can append operational comments to submitted athlete results. Team Viewers have read-only access.
+- Comments are append-only and display staff author, body, and timestamp to authorized staff.
+- Historical team result visibility uses recipient-to-team scope captured when the assignment was published, so later roster changes do not broaden or erase history.
 - Athletes must not access other athletes' private result data.
 
 ### 8) Compliance and Audit-Safe Operations
@@ -107,6 +114,8 @@ Reference: [access-control.md](access-control.md)
 - Server-side authorization for all mutations.
 - Transactional handling for critical membership and ownership operations.
 - Explicit error handling for authorization, invariants, and missing resources.
+- Sanitized audit events for team settings, roster changes, invitations, and submitted-session comments.
+- Audit events never contain raw result metrics, comment bodies, invitation tokens, or invited email addresses.
 
 ## Key Functional Rules
 
@@ -131,7 +140,7 @@ Reference: [access-control.md](access-control.md)
 4. Create and maintain exercise and workout libraries.
 5. Assign workouts to athletes by selecting an existing organization workout or creating a new one and assigning it.
 6. Customize assigned workouts when needed by forking from an existing library workout template and saving as a new library workout.
-7. Monitor athlete submissions and progress.
+7. Monitor team compliance, open submitted sessions, and append staff comments.
 
 ### Athlete Flow
 
@@ -149,4 +158,4 @@ Reference: [access-control.md](access-control.md)
 
 ## Implementation Status Note
 
-This document describes the intended product functionality and operating model. Some areas may be partially implemented in the current codebase and should be treated as roadmap-aligned targets when building upcoming features.
+The team-manager operating flow described here is implemented. Data export remains intentionally unavailable to every role.

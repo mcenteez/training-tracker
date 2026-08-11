@@ -52,7 +52,10 @@ An Athlete organization membership represents a user who participates as an athl
 ### Manager
 
 - Manages the assigned team.
-- Manages team athletes, workouts, assignments, and results.
+- Updates team settings and manages the roster without receiving organization administration access.
+- Invites new athletes or staff directly to the team; acceptance creates only an Organization Athlete membership when none exists.
+- Manages the shared organization training library and assignments restricted to managed teams and their athletes.
+- Reviews team assignment compliance and submitted results.
 - Can comment on athlete-submitted results within managed teams.
 - Cannot assign workouts organization-wide.
 - Cannot manage teams to which they have not been assigned unless an organization role grants that access.
@@ -105,6 +108,17 @@ The organization training library is distinct from assigned workout access:
 
 Library routes and every library mutation independently revalidate the active organization, current memberships, and requested resource ownership on the server. Exercise, workout, and plan identifiers supplied by clients never establish organization scope.
 
+## Team Operations And Results
+
+- `/app/teams` lists only teams the actor may manage. `/app/teams/[teamId]` independently revalidates team update and roster permissions.
+- Team Managers may add, update, or remove Team Manager, Viewer, and Athlete memberships. These operations never change an existing organization role.
+- A Team Manager cannot demote or remove their own Manager membership; an Organization Owner or Manager may manage any team in the active organization.
+- `/app/performance/teams/[teamId]` and its assignment/session drill-downs require `results.read.all`. Team Athletes use their own athlete routes and cannot use staff result routes.
+- Published assignments persist every recipient's team scope. Historical compliance and result reads use that publish-time provenance rather than mutable current membership.
+- Team Managers may append comments only to submitted sessions within a currently managed team. Team Viewers can read the same authorized submitted results and comments but cannot append comments.
+- Staff comments are append-only. Comment reads and writes verify organization, team, assignment, recipient, session, submitted status, and current actor access on the server.
+- Team settings, roster changes, invitation lifecycle changes, and result comments emit transactional audit events. Events contain identifiers and roles only; invitation secrets, result payloads, and comment bodies are never logged.
+
 ## Landing Resolution
 
 `/app` dynamically selects the user's default destination within the active organization using the effective-access hierarchy:
@@ -147,6 +161,9 @@ Authorization tests should verify at least:
 - Team roles do not grant access to other teams.
 - Organization roles apply to all teams in the same organization.
 - No membership grants access to another organization.
+- Team Athletes cannot access staff compliance or result-review routes.
+- Team Viewers can read submitted results but cannot append comments.
+- Removed Team Managers lose access on the next sensitive request.
 - Removing organization membership removes all dependent team memberships.
 - Ownership transfer preserves exactly one Owner.
 - No role can export data.

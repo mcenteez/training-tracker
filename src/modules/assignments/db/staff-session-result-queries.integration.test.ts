@@ -205,6 +205,27 @@ describe("staff session result queries", () => {
         body: "Good control through both rounds.",
       }),
     ]);
+    const auditEvents = await client.query<{
+      action: string;
+      details: Record<string, string>;
+    }>(`
+      SELECT action, details
+      FROM organization_audit_events
+      WHERE action = 'assignment.session.comment.created';
+    `);
+    expect(auditEvents.rows).toEqual([
+      expect.objectContaining({
+        action: "assignment.session.comment.created",
+        details: expect.objectContaining({
+          teamId: ids.team,
+          assignmentId: ids.assignment,
+          sessionId: ids.session,
+        }),
+      }),
+    ]);
+    expect(JSON.stringify(auditEvents.rows)).not.toContain(
+      "Good control through both rounds.",
+    );
   });
 
   it("returns no staff detail for a non-submitted session", async () => {

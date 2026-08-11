@@ -12,7 +12,10 @@ import {
   assignmentSessionComments,
   assignmentSessions,
 } from "@/modules/assignments/db/schema";
-import { organizationMemberships } from "@/modules/organizations/db/schema";
+import {
+  organizationAuditEvents,
+  organizationMemberships,
+} from "@/modules/organizations/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
 
 export function createSessionCommentUnitOfWork(
@@ -94,6 +97,14 @@ export function createSessionCommentUnitOfWork(
               });
             if (!comment) throw new Error("Failed to insert session comment");
             return comment;
+          },
+          async recordAuditEvent(event) {
+            await databaseTransaction.insert(organizationAuditEvents).values({
+              organizationId: event.organizationId,
+              actorUserId: event.actorUserId,
+              action: event.action,
+              details: event.details,
+            });
           },
         };
 

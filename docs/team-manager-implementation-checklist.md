@@ -56,7 +56,7 @@ A Team Manager must not be able to:
 - [x] Staff result-review route.
 - [x] Session comment service, queries, actions, and UI.
 - [x] Team Manager navigation to operational team controls.
-- [ ] End-to-end team-manager authorization and tenant-isolation coverage.
+- [x] End-to-end team-manager authorization and tenant-isolation coverage.
 
 ## Product and Architecture Decisions
 
@@ -317,60 +317,60 @@ Every team route, query, and mutation must request the specific permission it ne
 ### Implementation Checklist
 
 - [x] Add a Team Management navigation item when the actor manages at least one team.
-- [ ] Add contextual links between Team Management, Team Performance, Assignments, and Library.
-- [ ] Keep organization Admin hidden and inaccessible to Team Managers without organization management access.
-- [ ] Add useful empty states for no roster, no assignments, and no submitted results.
-- [ ] Add visible focus, semantic headings, accessible names, and keyboard-complete controls.
-- [ ] Verify responsive behavior for team roster and performance tables.
-- [ ] Add audit events for team settings changes, member changes, and invitation lifecycle actions.
-- [ ] Do not log raw result payloads or comment bodies.
-- [ ] Update `docs/access-control.md` and `docs/app-functionality.md` for finalized behavior.
+- [x] Add contextual links between Team Management, Team Performance, Assignments, and Library.
+- [x] Keep organization Admin hidden and inaccessible to Team Managers without organization management access.
+- [x] Add useful empty states for no roster, no assignments, and no submitted results.
+- [x] Add visible focus, semantic headings, accessible names, and keyboard-complete controls.
+- [x] Verify responsive behavior for team roster and performance tables.
+- [x] Add audit events for team settings changes, member changes, and invitation lifecycle actions.
+- [x] Do not log raw result payloads or comment bodies.
+- [x] Update `docs/access-control.md` and `docs/app-functionality.md` for finalized behavior.
 
 ### Acceptance Criteria
 
-- [ ] A Team Manager can complete common workflows without entering organization Admin.
-- [ ] Team Viewer and Team Athlete navigation contain no mutation entry points.
-- [ ] All controls remain usable on mobile and by keyboard.
-- [ ] Sensitive mutations emit one sanitized audit event.
+- [x] A Team Manager can complete common workflows without entering organization Admin.
+- [x] Team Viewer and Team Athlete navigation contain no mutation entry points.
+- [x] All controls remain usable on mobile and by keyboard.
+- [x] Sensitive mutations emit one sanitized audit event.
 
 ## Test Matrix
 
 ### Roles
 
-- [ ] Organization Owner across any team in the active organization.
-- [ ] Organization Manager across any team in the active organization.
-- [ ] Team Manager on a managed team.
-- [ ] Team Manager on an unmanaged team.
-- [ ] Team Viewer read-only behavior.
-- [ ] Team Athlete own-data behavior.
-- [ ] Organization-only Athlete with no Team membership.
+- [x] Organization Owner across any team in the active organization.
+- [x] Organization Manager across any team in the active organization.
+- [x] Team Manager on a managed team.
+- [x] Team Manager on an unmanaged team.
+- [x] Team Viewer read-only behavior.
+- [x] Team Athlete own-data behavior.
+- [x] Organization-only Athlete with no Team membership.
 
 ### Isolation
 
-- [ ] Same organization, different team.
-- [ ] Different organization with a reused or guessed identifier.
-- [ ] Actor removed from the team between page load and mutation.
-- [ ] Target athlete removed from the team between page load and mutation.
-- [ ] Assignment targeting multiple teams.
-- [ ] Session belonging to a direct athlete target.
+- [x] Same organization, different team.
+- [x] Different organization with a reused or guessed identifier.
+- [x] Actor removed from the team between page load and mutation.
+- [x] Target athlete removed from the team between page load and mutation.
+- [x] Assignment targeting multiple teams.
+- [x] Session belonging to a direct athlete target.
 
 ### Invitation Lifecycle
 
-- [ ] New user.
-- [ ] Existing application user without organization membership.
-- [ ] Existing organization member.
-- [ ] Existing team member.
-- [ ] Duplicate pending invite.
-- [ ] Expired, revoked, accepted, and replayed token.
-- [ ] Signed-in email does not match invited email.
+- [x] New user.
+- [x] Existing application user without organization membership.
+- [x] Existing organization member.
+- [x] Existing team member.
+- [x] Duplicate pending invite.
+- [x] Expired, revoked, accepted, and replayed token.
+- [x] Signed-in email does not match invited email.
 
 ### Result Review
 
-- [ ] Assigned, in-progress, and submitted sessions.
-- [ ] Fixed-day and weekly-frequency plan occurrences.
-- [ ] Standalone workout assignments.
-- [ ] Canceled assignments and historical submitted sessions.
-- [ ] Viewer read without comment permission.
+- [x] Assigned, in-progress, and submitted sessions.
+- [x] Fixed-day and weekly-frequency plan occurrences.
+- [x] Standalone workout assignments.
+- [x] Canceled assignments and historical submitted sessions.
+- [x] Viewer read without comment permission.
 
 ## Suggested Execution Slices
 
@@ -380,18 +380,18 @@ Every team route, query, and mutation must request the specific permission it ne
 - [x] Slice D: Team invitation schema, service, acceptance flow, and tests.
 - [x] Slice E: Team assignment/compliance read models and dashboard UI.
 - [x] Slice F: Submitted result detail and session comments.
-- [ ] Slice G: Navigation, audit events, accessibility, documentation, and final hardening.
+- [x] Slice G: Navigation, audit events, accessibility, documentation, and final hardening.
 
 Each slice should be independently reviewable and validated before the next slice begins.
 
 ## Done Definition
 
-- [ ] Every Required Team Manager Capability is implemented.
-- [ ] Every Explicit Restriction has negative test coverage.
-- [ ] All sensitive reads and writes authorize active organization and team scope on the server.
-- [ ] New schema changes use forward-only migrations and database constraints.
-- [ ] Unit, integration, route/action, and component tests cover changed behavior.
-- [ ] Mobile, keyboard, focus, empty, loading, error, and disabled states are verified.
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
-- [ ] Access-control and application-functionality documentation reflects shipped behavior.
+- [x] Every Required Team Manager Capability is implemented.
+- [x] Every Explicit Restriction has negative test coverage.
+- [x] All sensitive reads and writes authorize active organization and team scope on the server.
+- [x] New schema changes use forward-only migrations and database constraints.
+- [x] Unit, integration, route/action, and component tests cover changed behavior.
+- [x] Mobile, keyboard, focus, empty, loading, error, and disabled states are verified.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
+- [x] Access-control and application-functionality documentation reflects shipped behavior.

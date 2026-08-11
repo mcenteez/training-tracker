@@ -34,6 +34,7 @@ function setup(options?: {
       body: input.body,
       createdAt: new Date("2026-08-12T12:00:00.000Z"),
     })),
+    recordAuditEvent: vi.fn(async () => undefined),
   };
   const unitOfWork: SessionCommentUnitOfWork = {
     transaction: vi.fn(async (operation) => operation(transaction)),
@@ -64,6 +65,20 @@ describe("appendSessionComment", () => {
       actorUserId: input.actorUserId,
       body: "Keep the tempo consistent.",
     });
+    expect(context.transaction.recordAuditEvent).toHaveBeenCalledWith({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "assignment.session.comment.created",
+      details: {
+        teamId: input.teamId,
+        assignmentId: input.assignmentId,
+        sessionId: input.sessionId,
+        commentId: "comment-1",
+      },
+    });
+    expect(context.transaction.recordAuditEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.anything() }),
+    );
   });
 
   it("allows an Organization Manager without a Team role", async () => {

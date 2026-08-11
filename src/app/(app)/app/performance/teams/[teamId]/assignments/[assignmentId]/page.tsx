@@ -29,7 +29,7 @@ export default async function TeamAssignmentPerformancePage({
   const { teamId, assignmentId } = await params;
   const filters = await searchParams;
   const windowDays = parseWindowDays(filters.window);
-  const context = await loadAuthorizedTeamContext(teamId, "team.read");
+  const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const assignment = await withDatabase((database) =>
     findTeamAssignmentCompliance(database, {
       organizationId: context.membership.organizationId,

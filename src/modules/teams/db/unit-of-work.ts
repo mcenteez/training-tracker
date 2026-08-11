@@ -7,7 +7,10 @@ import type {
   TeamTransaction,
   TeamUnitOfWork,
 } from "@/modules/teams/application/team-service";
-import { organizationMemberships } from "@/modules/organizations/db/schema";
+import {
+  organizationAuditEvents,
+  organizationMemberships,
+} from "@/modules/organizations/db/schema";
 import { teamMemberships, teams } from "@/modules/teams/db/schema";
 
 export function createTeamUnitOfWork(database: Database): TeamUnitOfWork {
@@ -122,6 +125,15 @@ export function createTeamUnitOfWork(database: Database): TeamUnitOfWork {
                   eq(teamMemberships.userId, userId),
                 ),
               );
+          },
+          async recordAuditEvent(event) {
+            await databaseTransaction.insert(organizationAuditEvents).values({
+              organizationId: event.organizationId,
+              actorUserId: event.actorUserId,
+              targetUserId: event.targetUserId ?? null,
+              action: event.action,
+              details: event.details,
+            });
           },
         };
 

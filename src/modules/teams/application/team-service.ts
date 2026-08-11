@@ -17,6 +17,18 @@ export interface TeamRecord {
   name: string;
 }
 
+export interface TeamAuditEventInput {
+  organizationId: string;
+  actorUserId: string;
+  targetUserId?: string | null;
+  action:
+    | "team.created"
+    | "team.updated"
+    | "team.member.upserted"
+    | "team.member.removed";
+  details: { teamId: string; role?: TeamRole };
+}
+
 export interface TeamTransaction {
   createTeam(organizationId: string, name: string): Promise<TeamRecord>;
   updateTeam(
@@ -46,6 +58,7 @@ export interface TeamTransaction {
     teamId: string,
     userId: string,
   ): Promise<void>;
+  recordAuditEvent(event: TeamAuditEventInput): Promise<void>;
 }
 
 export interface TeamUnitOfWork {
@@ -69,7 +82,14 @@ export async function createTeam(
 
     requireTeamAccess({ organizationRole }, "team.create");
 
-    return transaction.createTeam(input.organizationId, input.name);
+    const team = await transaction.createTeam(input.organizationId, input.name);
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "team.created",
+      details: { teamId: team.id },
+    });
+    return team;
   });
 }
 
@@ -112,6 +132,13 @@ export async function updateTeam(
     if (!team) {
       throw new ResourceNotFoundError("Team");
     }
+
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "team.updated",
+      details: { teamId: team.id },
+    });
 
     return team;
   });
@@ -178,6 +205,13 @@ export async function addOrUpdateTeamMember(
       input.targetUserId,
       input.role,
     );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      action: "team.member.upserted",
+      details: { teamId: input.teamId, role: input.role },
+    });
   });
 }
 
@@ -227,5 +261,12 @@ export async function removeTeamMember(
       input.teamId,
       input.targetUserId,
     );
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      action: "team.member.removed",
+      details: { teamId: input.teamId },
+    });
   });
 }

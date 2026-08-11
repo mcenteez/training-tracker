@@ -17,6 +17,18 @@ export interface SessionCommentRecord {
   createdAt: Date;
 }
 
+export interface SessionCommentAuditEventInput {
+  organizationId: string;
+  actorUserId: string;
+  action: "assignment.session.comment.created";
+  details: {
+    teamId: string;
+    assignmentId: string;
+    sessionId: string;
+    commentId: string;
+  };
+}
+
 export interface SessionCommentTransaction {
   findOrganizationRole(
     organizationId: string,
@@ -40,6 +52,7 @@ export interface SessionCommentTransaction {
     actorUserId: string;
     body: string;
   }): Promise<SessionCommentRecord>;
+  recordAuditEvent(event: SessionCommentAuditEventInput): Promise<void>;
 }
 
 export interface SessionCommentUnitOfWork {
@@ -91,12 +104,24 @@ export async function appendSessionComment(
       throw new ResourceNotFoundError("Submitted team session");
     }
 
-    return transaction.insertComment({
+    const comment = await transaction.insertComment({
       organizationId: input.organizationId,
       assignmentId: input.assignmentId,
       sessionId: input.sessionId,
       actorUserId: input.actorUserId,
       body,
     });
+    await transaction.recordAuditEvent({
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      action: "assignment.session.comment.created",
+      details: {
+        teamId: input.teamId,
+        assignmentId: input.assignmentId,
+        sessionId: input.sessionId,
+        commentId: comment.id,
+      },
+    });
+    return comment;
   });
 }

@@ -76,11 +76,19 @@ export default async function TeamOperationsDetailPage({
             {members.length === 1 ? "member" : "members"}
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/app/performance/teams/${teamId}`}>
-            View performance
-          </Link>
-        </Button>
+        <nav aria-label="Team workflows" className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/app/performance/teams/${teamId}`}>
+              View performance
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/app/assignments">Assignments</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/app/library">Library</Link>
+          </Button>
+        </nav>
       </section>
 
       {feedback.updated === "1" ? (

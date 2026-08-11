@@ -71,7 +71,12 @@ export function AppHeaderClient({
                     isActive && "ring-1 ring-primary/20 shadow-sm",
                   )}
                 >
-                  <Link href={item.href}>{item.label}</Link>
+                  <Link
+                    href={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
                 </Button>
               );
             })}
@@ -91,6 +96,35 @@ export function AppHeaderClient({
           />
         </div>
       </div>
+      {navigationItems.length > 0 ? (
+        <nav
+          aria-label="Primary mobile"
+          className="mx-auto flex w-full max-w-6xl gap-1.5 overflow-x-auto px-4 pb-3 sm:hidden"
+        >
+          {navigationItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/app" && pathname.startsWith(item.href));
+
+            return (
+              <Button
+                key={item.href}
+                asChild
+                variant={isActive ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8"
+              >
+                <Link
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              </Button>
+            );
+          })}
+        </nav>
+      ) : null}
     </header>
   );
 }

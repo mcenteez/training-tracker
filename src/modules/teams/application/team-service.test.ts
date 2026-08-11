@@ -57,6 +57,9 @@ function createTestUnitOfWork(options?: {
       operations.push(`delete-team-member:${userId}`);
       teamRoles.delete(userId);
     }),
+    recordAuditEvent: vi.fn(async (event) => {
+      operations.push(`audit:${event.action}`);
+    }),
   };
   const unitOfWork: TeamUnitOfWork = {
     transaction: vi.fn(async (operation) => operation(transaction)),
@@ -114,6 +117,7 @@ describe("team service", () => {
     expect(team.name).toBe("Varsity Strength");
     expect(testContext.operations).toEqual([
       "update-team:team-1:Varsity Strength",
+      "audit:team.updated",
     ]);
   });
 
@@ -131,6 +135,7 @@ describe("team service", () => {
 
     expect(testContext.operations).toEqual([
       "update-team:team-1:Varsity Strength",
+      "audit:team.updated",
     ]);
   });
 
@@ -183,6 +188,7 @@ describe("team service", () => {
     expect(testContext.operations).toEqual([
       "add-organization-athlete:athlete-1",
       "upsert-team-member:athlete-1:athlete",
+      "audit:team.member.upserted",
     ]);
   });
 
@@ -204,6 +210,7 @@ describe("team service", () => {
 
     expect(testContext.operations).toEqual([
       "upsert-team-member:viewer-1:athlete",
+      "audit:team.member.upserted",
     ]);
     expect(testContext.organizationRoles.get("viewer-1")).toBe("viewer");
   });
@@ -257,6 +264,7 @@ describe("team service", () => {
 
     expect(testContext.operations).toEqual([
       "upsert-team-member:manager-1:viewer",
+      "audit:team.member.upserted",
     ]);
   });
 
@@ -276,7 +284,10 @@ describe("team service", () => {
       targetUserId: "athlete-1",
     });
 
-    expect(testContext.operations).toEqual(["delete-team-member:athlete-1"]);
+    expect(testContext.operations).toEqual([
+      "delete-team-member:athlete-1",
+      "audit:team.member.removed",
+    ]);
     expect(testContext.organizationRoles.get("athlete-1")).toBe("athlete");
   });
 
