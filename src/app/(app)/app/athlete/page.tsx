@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,7 +11,19 @@ import {
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
+import { listPublishedAssignmentsForAthlete } from "@/modules/assignments/db/queries";
 import { listTeamMembershipsForUserInOrganization } from "@/modules/teams/db/queries";
+
+function formatDate(value: Date | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
+}
 
 export default async function AthleteDashboardPage() {
   const context = await loadActiveAppContext();
@@ -18,12 +32,20 @@ export default async function AthleteDashboardPage() {
     redirect("/app");
   }
 
-  const teams = await withDatabase((database) =>
-    listTeamMembershipsForUserInOrganization(database, {
-      organizationId: context.membership.organizationId,
-      userId: context.user.id,
-    }),
-  );
+  const [teams, assignments] = await Promise.all([
+    withDatabase((database) =>
+      listTeamMembershipsForUserInOrganization(database, {
+        organizationId: context.membership.organizationId,
+        userId: context.user.id,
+      }),
+    ),
+    withDatabase((database) =>
+      listPublishedAssignmentsForAthlete(database, {
+        organizationId: context.membership.organizationId,
+        athleteUserId: context.user.id,
+      }),
+    ),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -79,14 +101,47 @@ export default async function AthleteDashboardPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Workouts</CardTitle>
           <CardDescription>
-            Your assigned workout list will appear here.
+            Published assignments available to complete.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No workout assignments are available yet. This area will support
-            workout logging when the workout domain is implemented.
-          </p>
+          {assignments.length > 0 ? (
+            <ul className="space-y-3">
+              {assignments.map((assignment) => (
+                <li
+                  key={assignment.id}
+                  className="rounded-lg border border-border/70 bg-background/70 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {assignment.sourceName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {assignment.sourceType === "plan" ? "Plan" : "Workout"}
+                        {assignment.sourceType === "plan"
+                          ? ` · ${assignment.startDate} to ${assignment.endDate}`
+                          : ` · Scheduled ${assignment.scheduledDate}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Published: {formatDate(assignment.publishedAt)}
+                      </p>
+                    </div>
+
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/app/athlete/assignments/${assignment.id}`}>
+                        Open
+                      </Link>
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No published assignments are available yet.
+            </p>
+          )}
         </CardContent>
       </Card>
     </main>
