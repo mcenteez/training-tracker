@@ -38,7 +38,6 @@ const initialState: PlanActionState = {};
 const emptySlot = (workoutId = ""): BuilderScheduleSlot => ({
   key: crypto.randomUUID(),
   workoutId,
-  cycleWeek: 1,
   dayOfWeek: "monday",
   label: null,
 });
@@ -64,7 +63,6 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
     description: description.trim() || null,
     scheduleSlots: scheduleSlots.map((slot) => ({
       workoutId: slot.workoutId,
-      cycleWeek: slot.cycleWeek,
       dayOfWeek: slot.dayOfWeek,
       label: slot.label,
     })),
@@ -142,7 +140,8 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
           <div>
             <h3 className="font-semibold">Scheduled sessions</h3>
             <p className="text-sm text-muted-foreground">
-              Build a weekly cadence by placing workout templates on cycle days.
+              Build a recurring weekly schedule by placing workout templates on
+              specific days.
             </p>
           </div>
           <Button
@@ -169,21 +168,9 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
             {scheduleSlots.map((slot, slotIndex) => (
               <section
                 key={slot.key}
-                className="grid gap-2 border border-border bg-muted/15 p-3 md:grid-cols-[7rem_10rem_minmax(14rem,1fr)_minmax(10rem,1fr)_auto]"
+                className="grid gap-2 border border-border bg-muted/15 p-3 md:grid-cols-[10rem_minmax(14rem,1fr)_minmax(10rem,1fr)_auto]"
                 aria-label={`Scheduled session ${slotIndex + 1}`}
               >
-                <Input
-                  aria-label="Cycle week"
-                  type="number"
-                  min={1}
-                  max={52}
-                  value={slot.cycleWeek}
-                  onChange={(event) =>
-                    updateScheduleSlot(slotIndex, {
-                      cycleWeek: Number(event.target.value),
-                    })
-                  }
-                />
                 <NativeSelect
                   aria-label="Day of week"
                   value={slot.dayOfWeek}

@@ -80,7 +80,6 @@ export const planScheduleSlots = pgTable(
     organizationId: uuid("organization_id").notNull(),
     planId: uuid("plan_id").notNull(),
     workoutId: uuid("workout_id").notNull(),
-    cycleWeek: integer("cycle_week").notNull(),
     dayOfWeek: planDayOfWeek("day_of_week").notNull(),
     position: integer().notNull(),
     label: text(),
@@ -95,9 +94,8 @@ export const planScheduleSlots = pgTable(
       table.planId,
       table.position,
     ),
-    unique("plan_schedule_slots_plan_week_day_position_unique").on(
+    unique("plan_schedule_slots_plan_day_position_unique").on(
       table.planId,
-      table.cycleWeek,
       table.dayOfWeek,
       table.position,
     ),
@@ -111,10 +109,6 @@ export const planScheduleSlots = pgTable(
       foreignColumns: [workouts.organizationId, workouts.id],
       name: "plan_schedule_slots_workout_fk",
     }),
-    check(
-      "plan_schedule_slots_cycle_week_positive",
-      sql`${table.cycleWeek} > 0`,
-    ),
     check(
       "plan_schedule_slots_position_nonnegative",
       sql`${table.position} >= 0`,

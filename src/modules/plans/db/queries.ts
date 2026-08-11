@@ -91,7 +91,6 @@ export async function findPlanWithSchedule(
       organizationId: planScheduleSlots.organizationId,
       planId: planScheduleSlots.planId,
       workoutId: planScheduleSlots.workoutId,
-      cycleWeek: planScheduleSlots.cycleWeek,
       dayOfWeek: planScheduleSlots.dayOfWeek,
       position: planScheduleSlots.position,
       label: planScheduleSlots.label,
@@ -112,11 +111,7 @@ export async function findPlanWithSchedule(
         eq(planScheduleSlots.planId, input.planId),
       ),
     )
-    .orderBy(
-      asc(planScheduleSlots.cycleWeek),
-      asc(planScheduleSlots.dayOfWeek),
-      asc(planScheduleSlots.position),
-    );
+    .orderBy(asc(planScheduleSlots.dayOfWeek), asc(planScheduleSlots.position));
 
   return {
     ...plan,

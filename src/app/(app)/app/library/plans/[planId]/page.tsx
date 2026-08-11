@@ -26,13 +26,6 @@ export default async function PlanDetailPage({
   );
   if (!plan) notFound();
 
-  const grouped = new Map<number, typeof plan.scheduleSlots>();
-  for (const slot of plan.scheduleSlots) {
-    const weekSlots = grouped.get(slot.cycleWeek) ?? [];
-    weekSlots.push(slot);
-    grouped.set(slot.cycleWeek, weekSlots);
-  }
-
   return (
     <div className="space-y-6 py-7">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -61,38 +54,32 @@ export default async function PlanDetailPage({
           This draft has no scheduled sessions yet.
         </div>
       ) : (
-        <div className="space-y-4">
-          {[...grouped.entries()]
-            .sort(([left], [right]) => left - right)
-            .map(([cycleWeek, slots]) => (
-              <section key={cycleWeek} className="border border-border bg-card">
-                <header className="border-b border-border bg-muted/30 px-4 py-3">
-                  <h3 className="font-semibold">Week {cycleWeek}</h3>
-                </header>
-                <div className="divide-y divide-border">
-                  {slots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className="grid gap-2 px-4 py-3 sm:grid-cols-[12rem_1fr]"
-                    >
-                      <div className="text-sm font-medium">
-                        {formatDay(slot.dayOfWeek)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>
-                          {slot.label || slot.workoutName}
-                          {slot.label ? ` · ${slot.workoutName}` : ""}
-                        </p>
-                        <p className="mt-1 text-xs capitalize">
-                          Workout status: {slot.workoutStatus}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+        <section className="border border-border bg-card">
+          <header className="border-b border-border bg-muted/30 px-4 py-3">
+            <h3 className="font-semibold">Weekly schedule</h3>
+          </header>
+          <div className="divide-y divide-border">
+            {plan.scheduleSlots.map((slot) => (
+              <div
+                key={slot.id}
+                className="grid gap-2 px-4 py-3 sm:grid-cols-[12rem_1fr]"
+              >
+                <div className="text-sm font-medium">
+                  {formatDay(slot.dayOfWeek)}
                 </div>
-              </section>
+                <div className="text-sm text-muted-foreground">
+                  <p>
+                    {slot.label || slot.workoutName}
+                    {slot.label ? ` · ${slot.workoutName}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs capitalize">
+                    Workout status: {slot.workoutStatus}
+                  </p>
+                </div>
+              </div>
             ))}
-        </div>
+          </div>
+        </section>
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PlanBuilder } from "@/components/library/plan-builder";
 
 describe("PlanBuilder", () => {
-  it("renders metadata fields and schedule controls", () => {
+  it("renders metadata fields and session controls", () => {
     render(
       <PlanBuilder
         action={vi.fn(async () => ({}))}
@@ -52,11 +52,11 @@ describe("PlanBuilder", () => {
 
     const graph = JSON.parse(graphInput.value) as {
       name: string;
-      scheduleSlots: Array<{ workoutId: string; cycleWeek: number }>;
+      scheduleSlots: Array<{ workoutId: string; dayOfWeek: string }>;
     };
 
     expect(graph.name).toBe("In-Season Strength");
     expect(graph.scheduleSlots.length).toBe(1);
-    expect(graph.scheduleSlots[0]?.cycleWeek).toBe(1);
+    expect(graph.scheduleSlots[0]?.dayOfWeek).toBe("monday");
   });
 });

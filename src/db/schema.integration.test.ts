@@ -438,7 +438,6 @@ describe("tenant schema", () => {
           organization_id,
           plan_id,
           workout_id,
-          cycle_week,
           day_of_week,
           position,
           label
@@ -447,7 +446,6 @@ describe("tenant schema", () => {
           '10000000-0000-0000-0000-000000000001',
           '60000000-0000-0000-0000-000000000001',
           '40000000-0000-0000-0000-000000000002',
-          1,
           'monday',
           0,
           'Primary session'
@@ -491,7 +489,6 @@ describe("tenant schema", () => {
         organization_id,
         plan_id,
         workout_id,
-        cycle_week,
         day_of_week,
         position,
         label
@@ -501,7 +498,6 @@ describe("tenant schema", () => {
         '10000000-0000-0000-0000-000000000001',
         '60000000-0000-0000-0000-000000000001',
         '40000000-0000-0000-0000-000000000001',
-        1,
         'monday',
         0,
         'Primary session'

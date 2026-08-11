@@ -66,7 +66,6 @@ export default async function EditPlanPage({
               version: plan.version,
               scheduleSlots: plan.scheduleSlots.map((slot) => ({
                 workoutId: slot.workoutId,
-                cycleWeek: slot.cycleWeek,
                 dayOfWeek: slot.dayOfWeek,
                 label: slot.label,
               })),

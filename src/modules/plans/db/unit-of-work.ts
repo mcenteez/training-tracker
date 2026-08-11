@@ -28,7 +28,6 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
               organizationId,
               planId,
               workoutId: slot.workoutId,
-              cycleWeek: slot.cycleWeek,
               dayOfWeek: slot.dayOfWeek,
               position,
               label: slot.label,
@@ -177,7 +176,6 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
             const sourceSlots = await databaseTransaction
               .select({
                 workoutId: planScheduleSlots.workoutId,
-                cycleWeek: planScheduleSlots.cycleWeek,
                 dayOfWeek: planScheduleSlots.dayOfWeek,
                 label: planScheduleSlots.label,
               })

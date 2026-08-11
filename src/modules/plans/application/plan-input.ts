@@ -4,7 +4,6 @@ import { planDaysOfWeek } from "@/modules/plans/db/schema";
 
 export const planScheduleSlotInputSchema = z.object({
   workoutId: z.uuid(),
-  cycleWeek: z.number().int().positive().max(52),
   dayOfWeek: z.enum(planDaysOfWeek),
   label: z.string().trim().max(120).nullable(),
 });
