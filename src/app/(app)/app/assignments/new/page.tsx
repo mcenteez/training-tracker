@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 
 import { withDatabase } from "@/db/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
+import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { createAssignmentAction } from "@/app/(app)/app/assignments/actions";
@@ -82,53 +82,8 @@ export default async function NewAssignmentPage() {
           <CardHeader>
             <CardTitle>Source</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              Source Type
-              <NativeSelect name="sourceType" defaultValue="plan">
-                <option value="plan">Plan</option>
-                <option value="workout">Workout</option>
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Plan
-              <NativeSelect name="sourcePlanId" defaultValue="">
-                <option value="">Select plan...</option>
-                {plans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Workout
-              <NativeSelect name="sourceWorkoutId" defaultValue="">
-                <option value="">Select workout...</option>
-                {workouts.map((workout) => (
-                  <option key={workout.id} value={workout.id}>
-                    {workout.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Scheduled Date (workout)
-              <Input type="date" name="scheduledDate" />
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Start Date (plan)
-              <Input type="date" name="startDate" />
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              End Date (plan)
-              <Input type="date" name="endDate" />
-            </label>
+          <CardContent>
+            <AssignmentSourceFields plans={plans} workouts={workouts} />
           </CardContent>
         </Card>
 

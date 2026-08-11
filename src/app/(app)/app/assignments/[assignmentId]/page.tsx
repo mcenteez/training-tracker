@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { withDatabase } from "@/db/client";
+import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
@@ -145,80 +145,18 @@ export default async function AssignmentDetailPage({
           <CardHeader>
             <CardTitle>Source</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              Source Type
-              <NativeSelect
-                name="sourceType"
-                defaultValue={sourceType}
-                disabled={!isDraft}
-              >
-                <option value="plan">Plan</option>
-                <option value="workout">Workout</option>
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Plan
-              <NativeSelect
-                name="sourcePlanId"
-                defaultValue={assignment.sourcePlanId ?? ""}
-                disabled={!isDraft}
-              >
-                <option value="">Select plan...</option>
-                {plans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Workout
-              <NativeSelect
-                name="sourceWorkoutId"
-                defaultValue={assignment.sourceWorkoutId ?? ""}
-                disabled={!isDraft}
-              >
-                <option value="">Select workout...</option>
-                {workouts.map((workout) => (
-                  <option key={workout.id} value={workout.id}>
-                    {workout.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Scheduled Date
-              <Input
-                type="date"
-                name="scheduledDate"
-                defaultValue={assignment.scheduledDate ?? ""}
-                disabled={!isDraft}
-              />
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Start Date
-              <Input
-                type="date"
-                name="startDate"
-                defaultValue={assignment.startDate ?? ""}
-                disabled={!isDraft}
-              />
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              End Date
-              <Input
-                type="date"
-                name="endDate"
-                defaultValue={assignment.endDate ?? ""}
-                disabled={!isDraft}
-              />
-            </label>
+          <CardContent>
+            <AssignmentSourceFields
+              plans={plans}
+              workouts={workouts}
+              initialSourceType={sourceType}
+              initialPlanId={assignment.sourcePlanId ?? ""}
+              initialWorkoutId={assignment.sourceWorkoutId ?? ""}
+              initialScheduledDate={assignment.scheduledDate ?? ""}
+              initialStartDate={assignment.startDate ?? ""}
+              initialEndDate={assignment.endDate ?? ""}
+              disabled={!isDraft}
+            />
           </CardContent>
         </Card>
 
