@@ -81,13 +81,13 @@ Reference: [access-control.md](access-control.md)
 
 ### 6) Workout Assignment
 
-- A workout can be assigned to any athlete in the organization, subject to authorization.
-- When assigning a workout, managers select an existing organization workout from the library or create a new workout, then assign it.
-- After assignment, coaches/trainers can customize a library workout for an athlete by using the original workout as a template.
-- A customization creates a new workout in the organization library, which can then be assigned like any other library workout.
+- A plan will be the default assignment target for recurring training schedules.
+- Workout-only assignment remains available for one-off sessions when a full multi-session schedule is unnecessary.
+- When assigning training, managers select existing library templates first (plans or workouts), then create new templates only when needed.
+- After assignment, coaches/trainers can customize by forking from existing library templates to preserve reuse.
 - Assignment workflows should preserve library reuse (reuse first, create when needed).
 - Control assignment visibility and availability windows.
-- Assignments must snapshot workout programming so later library edits or archival cannot change historical or in-progress prescriptions.
+- Assignments must snapshot plan/workout programming so later library edits or archival cannot change historical or in-progress prescriptions.
 
 ### 7) Results and Progress Tracking
 
