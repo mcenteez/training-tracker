@@ -14,6 +14,7 @@ import {
 export interface UserOrganizationMembershipListItem {
   organizationId: string;
   organizationName: string;
+  organizationTimezone: string;
   organizationRole: OrganizationRole;
 }
 
@@ -25,6 +26,7 @@ export async function listOrganizationMembershipsForUser(
     .select({
       organizationId: organizationMemberships.organizationId,
       organizationName: organizations.name,
+      organizationTimezone: organizations.timezone,
       organizationRole: organizationMemberships.role,
     })
     .from(organizationMemberships)
@@ -44,6 +46,7 @@ export async function findOrganizationMembershipForUser(
     .select({
       organizationId: organizationMemberships.organizationId,
       organizationName: organizations.name,
+      organizationTimezone: organizations.timezone,
       organizationRole: organizationMemberships.role,
     })
     .from(organizationMemberships)

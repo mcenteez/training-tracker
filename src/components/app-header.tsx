@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { withDatabase } from "@/db/client";
 import { loadAuthenticatedUser } from "@/lib/app-context";
+import { hasPermission } from "@/modules/access-control/permissions";
 import { resolveLibraryAccess } from "@/modules/access-control/library-access";
 import { resolveLandingDestination } from "@/modules/access-control/landing";
 import {
@@ -18,6 +19,7 @@ function getNavigationItems(input: {
   landingHref: string;
   hasTeamPerformance: boolean;
   hasLibraryAccess: boolean;
+  hasAssignmentAccess: boolean;
 }): AppNavItem[] {
   const items: AppNavItem[] = [];
 
@@ -36,6 +38,10 @@ function getNavigationItems(input: {
 
   if (input.hasLibraryAccess) {
     items.push({ href: "/app/library", label: "Library" });
+  }
+
+  if (input.hasAssignmentAccess) {
+    items.push({ href: "/app/assignments", label: "Assignments" });
   }
 
   if (
@@ -91,6 +97,22 @@ export async function AppHeader() {
     (membership) =>
       membership.teamRole === "manager" || membership.teamRole === "viewer",
   );
+  const hasAssignmentAccess =
+    hasPermission(
+      { organizationRole: activeOrganization.membership.organizationRole },
+      "workout.assign.organization",
+    ) ||
+    teamMemberships.some(
+      (membership) =>
+        membership.teamRole === "manager" &&
+        hasPermission(
+          {
+            organizationRole: activeOrganization.membership.organizationRole,
+            teamRole: membership.teamRole,
+          },
+          "workout.assign.team",
+        ),
+    );
   const libraryAccess = resolveLibraryAccess({
     organizationRole: activeOrganization.membership.organizationRole,
     teamRoles: teamMemberships.map((membership) => membership.teamRole),
@@ -103,6 +125,7 @@ export async function AppHeader() {
         landingHref: destination.href,
         hasTeamPerformance,
         hasLibraryAccess: libraryAccess !== "none",
+        hasAssignmentAccess,
       })}
       activeOrganizationName={activeOrganization.membership.organizationName}
       canSwitchOrganization={activeOrganization.memberships.length > 1}
