@@ -2,7 +2,9 @@ name: Deploy
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [master]
 
 permissions:
@@ -15,6 +17,7 @@ concurrency:
 jobs:
   release:
     name: Release To Production
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
