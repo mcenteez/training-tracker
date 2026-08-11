@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const tabs = [
+  { href: "/app/library/plans", label: "Plans" },
   { href: "/app/library/workouts", label: "Workouts" },
   { href: "/app/library/exercises", label: "Exercises" },
 ];

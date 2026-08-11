@@ -23,6 +23,18 @@ import {
 } from "@/modules/exercises/application/exercise-service";
 import { createExerciseUnitOfWork } from "@/modules/exercises/db/unit-of-work";
 import {
+  planInputSchema,
+  updatePlanInputSchema,
+} from "@/modules/plans/application/plan-input";
+import {
+  archivePlan,
+  createPlan,
+  duplicatePlan,
+  restorePlan,
+  savePlan,
+} from "@/modules/plans/application/plan-service";
+import { createPlanUnitOfWork } from "@/modules/plans/db/unit-of-work";
+import {
   workoutGraphInputSchema,
   updateWorkoutGraphInputSchema,
 } from "@/modules/workouts/application/workout-input";
@@ -348,4 +360,174 @@ export async function archiveWorkoutAction(formData: FormData): Promise<void> {
 
 export async function restoreWorkoutAction(formData: FormData): Promise<void> {
   return changeWorkoutStatusAction(formData, restoreWorkout, "restored");
+}
+
+export interface PlanActionState {
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
+function parsePlanGraph(formData: FormData): unknown {
+  try {
+    return JSON.parse(String(formData.get("graph") ?? ""));
+  } catch {
+    return null;
+  }
+}
+
+function expectedPlanError(error: unknown): PlanActionState | null {
+  if (error instanceof DomainInvariantError) {
+    return { message: error.message };
+  }
+  if (
+    error instanceof AuthorizationError ||
+    error instanceof ResourceNotFoundError
+  ) {
+    return { message: "You cannot modify this plan." };
+  }
+  return null;
+}
+
+export async function createPlanAction(
+  _previousState: PlanActionState,
+  formData: FormData,
+): Promise<PlanActionState> {
+  const parsed = planInputSchema.safeParse(parsePlanGraph(formData));
+  const status = formData.get("intent") === "activate" ? "active" : "draft";
+  if (!parsed.success) {
+    return {
+      message:
+        "Review the plan schedule and complete the highlighted programming.",
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const context = await loadLibraryAppContext();
+  let planId: string;
+  try {
+    const plan = await withDatabase((database) =>
+      createPlan(createPlanUnitOfWork(database), {
+        organizationId: context.membership.organizationId,
+        actorUserId: context.user.id,
+        plan: parsed.data,
+        status,
+      }),
+    );
+    planId = plan.id;
+  } catch (error) {
+    const expected = expectedPlanError(error);
+    if (expected) return expected;
+    throw error;
+  }
+
+  revalidatePath("/app/library/plans");
+  redirect(`/app/library/plans/${planId}?saved=1`);
+}
+
+export async function updatePlanAction(
+  _previousState: PlanActionState,
+  formData: FormData,
+): Promise<PlanActionState> {
+  const graph = parsePlanGraph(formData);
+  const parsed = updatePlanInputSchema.safeParse({
+    ...(typeof graph === "object" && graph ? graph : {}),
+    planId: formData.get("planId"),
+    version: Number(formData.get("version")),
+  });
+  const status = formData.get("intent") === "activate" ? "active" : "draft";
+  if (!parsed.success) {
+    return {
+      message:
+        "Review the plan schedule and complete the highlighted programming.",
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const context = await loadLibraryAppContext();
+  try {
+    await withDatabase((database) =>
+      savePlan(createPlanUnitOfWork(database), {
+        organizationId: context.membership.organizationId,
+        actorUserId: context.user.id,
+        planId: parsed.data.planId,
+        expectedVersion: parsed.data.version,
+        plan: parsed.data,
+        status,
+      }),
+    );
+  } catch (error) {
+    const expected = expectedPlanError(error);
+    if (expected) return expected;
+    throw error;
+  }
+
+  revalidatePath("/app/library/plans");
+  redirect(`/app/library/plans/${parsed.data.planId}?saved=1`);
+}
+
+const planLifecycleSchema = exerciseLifecycleInputSchema.transform((value) => ({
+  planId: value.exerciseId,
+  version: value.version,
+}));
+
+export async function duplicatePlanAction(formData: FormData): Promise<void> {
+  const planId = formData.get("planId");
+  if (typeof planId !== "string") redirect("/app/library/plans");
+  const context = await loadLibraryAppContext();
+  try {
+    const duplicate = await withDatabase((database) =>
+      duplicatePlan(createPlanUnitOfWork(database), {
+        organizationId: context.membership.organizationId,
+        actorUserId: context.user.id,
+        planId,
+      }),
+    );
+    revalidatePath("/app/library/plans");
+    redirect(`/app/library/plans/${duplicate.id}/edit`);
+  } catch (error) {
+    if (expectedPlanError(error)) {
+      redirect("/app/library/plans?error=plan_conflict");
+    }
+    throw error;
+  }
+}
+
+async function changePlanStatusAction(
+  formData: FormData,
+  operation: typeof archivePlan,
+  success: string,
+): Promise<void> {
+  const parsed = planLifecycleSchema.safeParse({
+    exerciseId: formData.get("planId"),
+    version: Number(formData.get("version")),
+  });
+  if (!parsed.success) redirect("/app/library/plans?error=invalid_plan");
+  const context = await loadLibraryAppContext();
+
+  try {
+    await withDatabase((database) =>
+      operation(createPlanUnitOfWork(database), {
+        organizationId: context.membership.organizationId,
+        actorUserId: context.user.id,
+        planId: parsed.data.planId,
+        expectedVersion: parsed.data.version,
+      }),
+    );
+  } catch (error) {
+    if (expectedPlanError(error)) {
+      redirect("/app/library/plans?error=plan_conflict");
+    }
+    throw error;
+  }
+
+  revalidatePath("/app/library/plans");
+  redirect(`/app/library/plans?${success}=1`);
+}
+
+export async function archivePlanAction(formData: FormData): Promise<void> {
+  return changePlanStatusAction(formData, archivePlan, "archived");
+}
+
+export async function restorePlanAction(formData: FormData): Promise<void> {
+  return changePlanStatusAction(formData, restorePlan, "restored");
 }
