@@ -1,12 +1,17 @@
 import "server-only";
 
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
   assignments,
   assignmentRecipients,
+  assignmentSessionItemResults,
+  assignmentSessions,
   assignmentTargets,
+  assignmentWorkoutBlockSnapshots,
+  assignmentWorkoutItemSnapshots,
+  assignmentWorkoutSnapshots,
   type Assignment,
   type AssignmentTarget,
 } from "@/modules/assignments/db/schema";
@@ -49,6 +54,38 @@ export interface AthleteAssignmentDetail extends AthleteAssignmentListItem {
   availableUntil: Date | null;
   targetCount: number;
   recipientCount: number;
+}
+
+export interface AthleteAssignmentSessionSummary {
+  id: string;
+  status: "assigned" | "in_progress" | "submitted";
+  version: number;
+  startedAt: Date | null;
+  submittedAt: Date | null;
+  resultCount: number;
+}
+
+export interface AthleteWorkoutItemSnapshot {
+  id: string;
+  exerciseName: string;
+  blockLabel: string | null;
+  blockPosition: number;
+  itemPosition: number;
+  reps: number | null;
+  load: string | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+  notes: string | null;
+}
+
+export interface AthleteSessionResultItem {
+  itemSnapshotId: string;
+  roundNumber: number;
+  reps: number | null;
+  load: string | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+  notes: string | null;
 }
 
 export async function listAssignmentsForOrganization(
@@ -316,4 +353,156 @@ export async function findPublishedAssignmentForAthlete(
     targetCount: assignment.targetCount,
     recipientCount: assignment.recipientCount,
   };
+}
+
+export async function findLatestSessionForAthleteAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    athleteUserId: string;
+    assignmentId: string;
+  },
+): Promise<AthleteAssignmentSessionSummary | null> {
+  const [session] = await database
+    .select({
+      id: assignmentSessions.id,
+      status: assignmentSessions.status,
+      version: assignmentSessions.version,
+      startedAt: assignmentSessions.startedAt,
+      submittedAt: assignmentSessions.submittedAt,
+      resultCount: sql<number>`(
+          SELECT count(*)::int FROM ${assignmentSessionItemResults}
+          WHERE ${assignmentSessionItemResults.organizationId} = ${assignmentSessions.organizationId}
+            AND ${assignmentSessionItemResults.assignmentId} = ${assignmentSessions.assignmentId}
+            AND ${assignmentSessionItemResults.sessionId} = ${assignmentSessions.id}
+        )`.as("result_count"),
+    })
+    .from(assignmentSessions)
+    .where(
+      and(
+        eq(assignmentSessions.organizationId, input.organizationId),
+        eq(assignmentSessions.assignmentId, input.assignmentId),
+        eq(assignmentSessions.athleteUserId, input.athleteUserId),
+      ),
+    )
+    .orderBy(desc(assignmentSessions.createdAt))
+    .limit(1);
+
+  return session ?? null;
+}
+
+export async function listPrimaryWorkoutItemsForAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+  },
+): Promise<AthleteWorkoutItemSnapshot[]> {
+  const [workoutSnapshot] = await database
+    .select({ id: assignmentWorkoutSnapshots.id })
+    .from(assignmentWorkoutSnapshots)
+    .where(
+      and(
+        eq(assignmentWorkoutSnapshots.organizationId, input.organizationId),
+        eq(assignmentWorkoutSnapshots.assignmentId, input.assignmentId),
+      ),
+    )
+    .orderBy(asc(assignmentWorkoutSnapshots.position))
+    .limit(1);
+
+  if (!workoutSnapshot) {
+    return [];
+  }
+
+  return database
+    .select({
+      id: assignmentWorkoutItemSnapshots.id,
+      exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
+      blockLabel: assignmentWorkoutBlockSnapshots.label,
+      blockPosition: assignmentWorkoutBlockSnapshots.position,
+      itemPosition: assignmentWorkoutItemSnapshots.position,
+      reps: assignmentWorkoutItemSnapshots.reps,
+      load: assignmentWorkoutItemSnapshots.load,
+      durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
+      distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
+      notes: assignmentWorkoutItemSnapshots.notes,
+    })
+    .from(assignmentWorkoutItemSnapshots)
+    .innerJoin(
+      assignmentWorkoutBlockSnapshots,
+      and(
+        eq(
+          assignmentWorkoutBlockSnapshots.organizationId,
+          assignmentWorkoutItemSnapshots.organizationId,
+        ),
+        eq(
+          assignmentWorkoutBlockSnapshots.assignmentId,
+          assignmentWorkoutItemSnapshots.assignmentId,
+        ),
+        eq(
+          assignmentWorkoutBlockSnapshots.id,
+          assignmentWorkoutItemSnapshots.blockSnapshotId,
+        ),
+      ),
+    )
+    .where(
+      and(
+        eq(assignmentWorkoutItemSnapshots.organizationId, input.organizationId),
+        eq(assignmentWorkoutItemSnapshots.assignmentId, input.assignmentId),
+        eq(
+          assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+          workoutSnapshot.id,
+        ),
+      ),
+    )
+    .orderBy(
+      asc(assignmentWorkoutBlockSnapshots.position),
+      asc(assignmentWorkoutItemSnapshots.position),
+    );
+}
+
+export async function listSessionResultsForAthleteAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+    sessionId: string;
+  },
+): Promise<AthleteSessionResultItem[]> {
+  const [session] = await database
+    .select({ id: assignmentSessions.id })
+    .from(assignmentSessions)
+    .where(
+      and(
+        eq(assignmentSessions.organizationId, input.organizationId),
+        eq(assignmentSessions.assignmentId, input.assignmentId),
+        eq(assignmentSessions.id, input.sessionId),
+        eq(assignmentSessions.athleteUserId, input.athleteUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!session) {
+    return [];
+  }
+
+  return database
+    .select({
+      itemSnapshotId: assignmentSessionItemResults.itemSnapshotId,
+      roundNumber: assignmentSessionItemResults.roundNumber,
+      reps: assignmentSessionItemResults.reps,
+      load: assignmentSessionItemResults.load,
+      durationSeconds: assignmentSessionItemResults.durationSeconds,
+      distanceMeters: assignmentSessionItemResults.distanceMeters,
+      notes: assignmentSessionItemResults.notes,
+    })
+    .from(assignmentSessionItemResults)
+    .where(
+      and(
+        eq(assignmentSessionItemResults.organizationId, input.organizationId),
+        eq(assignmentSessionItemResults.assignmentId, input.assignmentId),
+        eq(assignmentSessionItemResults.sessionId, input.sessionId),
+      ),
+    );
 }
