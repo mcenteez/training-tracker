@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { AthleteWorkoutResultFields } from "@/components/assignments/athlete-workout-result-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
 import {
@@ -250,63 +250,11 @@ export default async function AthleteAssignmentDetailPage({
                         {item.blockLabel ? ` · ${item.blockLabel}` : ""} · Item{" "}
                         {item.itemPosition + 1}
                       </p>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <label className="grid gap-1 text-xs">
-                          Reps
-                          <Input
-                            name={`result:${item.id}:reps`}
-                            defaultValue={
-                              result?.reps?.toString() ??
-                              item.reps?.toString() ??
-                              ""
-                            }
-                            inputMode="numeric"
-                            disabled={!canEditSession}
-                          />
-                        </label>
-                        <label className="grid gap-1 text-xs">
-                          Load
-                          <Input
-                            name={`result:${item.id}:load`}
-                            defaultValue={result?.load ?? item.load ?? ""}
-                            disabled={!canEditSession}
-                          />
-                        </label>
-                        <label className="grid gap-1 text-xs">
-                          Duration Seconds
-                          <Input
-                            name={`result:${item.id}:durationSeconds`}
-                            defaultValue={
-                              result?.durationSeconds?.toString() ??
-                              item.durationSeconds?.toString() ??
-                              ""
-                            }
-                            inputMode="numeric"
-                            disabled={!canEditSession}
-                          />
-                        </label>
-                        <label className="grid gap-1 text-xs">
-                          Distance Meters
-                          <Input
-                            name={`result:${item.id}:distanceMeters`}
-                            defaultValue={
-                              result?.distanceMeters?.toString() ??
-                              item.distanceMeters?.toString() ??
-                              ""
-                            }
-                            inputMode="numeric"
-                            disabled={!canEditSession}
-                          />
-                        </label>
-                        <label className="grid gap-1 text-xs sm:col-span-2">
-                          Notes
-                          <Input
-                            name={`result:${item.id}:notes`}
-                            defaultValue={result?.notes ?? item.notes ?? ""}
-                            disabled={!canEditSession}
-                          />
-                        </label>
-                      </div>
+                      <AthleteWorkoutResultFields
+                        item={item}
+                        result={result}
+                        disabled={!canEditSession}
+                      />
                     </div>
                   );
                 })}
