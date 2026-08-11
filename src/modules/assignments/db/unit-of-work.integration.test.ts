@@ -140,6 +140,89 @@ describe("assignment unit of work", () => {
     await client.close();
   });
 
+  it("publishes plan snapshots preserving both scheduling modes", async () => {
+    await client.exec(`
+      INSERT INTO plans (id, organization_id, name, status)
+      VALUES ('61000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Mixed Plan', 'active');
+
+      INSERT INTO plan_schedule_slots (
+        organization_id, plan_id, workout_id, schedule_type, day_of_week, target_sessions_per_week, position, label
+      ) VALUES
+        ('10000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 'fixed_day', 'monday', NULL, 0, 'Strength'),
+        ('10000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 'weekly_frequency', NULL, 2, 1, 'Conditioning');
+    `);
+
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "plan",
+        sourcePlanId: "61000000-0000-4000-8000-000000000001",
+        startDate: "2026-08-17",
+        endDate: "2026-09-06",
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    const slotSnapshots = await client.query<{
+      schedule_type: string;
+      day_of_week: string | null;
+      target_sessions_per_week: number | null;
+      position: number;
+      label: string | null;
+    }>(`
+      SELECT schedule_type, day_of_week, target_sessions_per_week, position, label
+      FROM assignment_plan_slot_snapshots
+      WHERE assignment_id = '${draft.id}'
+      ORDER BY position ASC;
+    `);
+
+    expect(slotSnapshots.rows).toEqual([
+      {
+        schedule_type: "fixed_day",
+        day_of_week: "monday",
+        target_sessions_per_week: null,
+        position: 0,
+        label: "Strength",
+      },
+      {
+        schedule_type: "weekly_frequency",
+        day_of_week: null,
+        target_sessions_per_week: 2,
+        position: 1,
+        label: "Conditioning",
+      },
+    ]);
+
+    await client.exec(`
+      UPDATE plan_schedule_slots
+      SET schedule_type = 'weekly_frequency', day_of_week = NULL, target_sessions_per_week = 5
+      WHERE plan_id = '61000000-0000-4000-8000-000000000001' AND position = 0;
+    `);
+
+    const afterEdit = await client.query<{ day_of_week: string | null }>(`
+      SELECT day_of_week
+      FROM assignment_plan_slot_snapshots
+      WHERE assignment_id = '${draft.id}' AND position = 0;
+    `);
+
+    expect(afterEdit.rows).toEqual([{ day_of_week: "monday" }]);
+  });
+
   it("publishes a session-ready immutable workout snapshot", async () => {
     const unitOfWork = createAssignmentUnitOfWork(database);
     const draft = await createAssignment(unitOfWork, {

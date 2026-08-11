@@ -285,7 +285,9 @@ export function createAssignmentUnitOfWork(
                     {
                       workoutId: source.sourceWorkoutId,
                       sourcePlanSlotId: null,
+                      scheduleType: null,
                       dayOfWeek: null,
+                      targetSessionsPerWeek: null,
                       position: 0,
                       label: null,
                     },
@@ -294,7 +296,10 @@ export function createAssignmentUnitOfWork(
                     .select({
                       workoutId: planScheduleSlots.workoutId,
                       sourcePlanSlotId: planScheduleSlots.id,
+                      scheduleType: planScheduleSlots.scheduleType,
                       dayOfWeek: planScheduleSlots.dayOfWeek,
+                      targetSessionsPerWeek:
+                        planScheduleSlots.targetSessionsPerWeek,
                       position: planScheduleSlots.position,
                       label: planScheduleSlots.label,
                     })
@@ -441,7 +446,10 @@ export function createAssignmentUnitOfWork(
                 }
               }
 
-              if (workoutSource.sourcePlanSlotId && workoutSource.dayOfWeek) {
+              if (
+                workoutSource.sourcePlanSlotId &&
+                workoutSource.scheduleType
+              ) {
                 await databaseTransaction
                   .insert(assignmentPlanSlotSnapshots)
                   .values({
@@ -449,7 +457,9 @@ export function createAssignmentUnitOfWork(
                     assignmentId,
                     sourcePlanSlotId: workoutSource.sourcePlanSlotId,
                     workoutSnapshotId: workoutSnapshot.id,
+                    scheduleType: workoutSource.scheduleType,
                     dayOfWeek: workoutSource.dayOfWeek,
+                    targetSessionsPerWeek: workoutSource.targetSessionsPerWeek,
                     position: workoutSource.position,
                     label: workoutSource.label,
                   });
