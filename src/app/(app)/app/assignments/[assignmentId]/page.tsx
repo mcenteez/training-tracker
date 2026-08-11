@@ -43,42 +43,12 @@ export default async function AssignmentDetailPage({
   const { assignmentId } = await params;
   const context = await loadActiveAppContext();
 
-  const [teamMemberships, assignment, plans, workouts, teams, members] =
-    await Promise.all([
-      withDatabase((database) =>
-        listTeamMembershipsForUserInOrganization(database, {
-          organizationId: context.membership.organizationId,
-          userId: context.user.id,
-        }),
-      ),
-      withDatabase((database) =>
-        findAssignmentByOrganization(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-        }),
-      ),
-      withDatabase((database) =>
-        listPlansForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listWorkoutsForOrganization(database, {
-          organizationId: context.membership.organizationId,
-          status: "active",
-        }),
-      ),
-      withDatabase((database) =>
-        listTeamsByOrganizationId(database, context.membership.organizationId),
-      ),
-      withDatabase((database) =>
-        listOrganizationMembersByOrganizationId(
-          database,
-          context.membership.organizationId,
-        ),
-      ),
-    ]);
+  const teamMemberships = await withDatabase((database) =>
+    listTeamMembershipsForUserInOrganization(database, {
+      organizationId: context.membership.organizationId,
+      userId: context.user.id,
+    }),
+  );
 
   const canAssignOrganization = hasPermission(
     { organizationRole: context.membership.organizationRole },
@@ -97,6 +67,40 @@ export default async function AssignmentDetailPage({
   if (!canAssignOrganization && !canAssignTeam) {
     redirect("/app");
   }
+
+  const managedTeamIds = teamMemberships
+    .filter((membership) => membership.teamRole === "manager")
+    .map((membership) => membership.teamId);
+  const [assignment, plans, workouts, teams, members] = await Promise.all([
+    withDatabase((database) =>
+      findAssignmentByOrganization(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
+      }),
+    ),
+    withDatabase((database) =>
+      listPlansForOrganization(database, {
+        organizationId: context.membership.organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listWorkoutsForOrganization(database, {
+        organizationId: context.membership.organizationId,
+        status: "active",
+      }),
+    ),
+    withDatabase((database) =>
+      listTeamsByOrganizationId(database, context.membership.organizationId),
+    ),
+    withDatabase((database) =>
+      listOrganizationMembersByOrganizationId(
+        database,
+        context.membership.organizationId,
+      ),
+    ),
+  ]);
 
   if (!assignment) {
     notFound();

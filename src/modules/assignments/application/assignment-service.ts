@@ -478,7 +478,7 @@ export async function cancelAssignment(
   },
 ): Promise<Assignment> {
   return unitOfWork.transaction(async (transaction) => {
-    await resolveActorAccess(transaction, input);
+    const access = await resolveActorAccess(transaction, input);
 
     const current = await transaction.findAssignment(
       input.organizationId,
@@ -494,6 +494,25 @@ export async function cancelAssignment(
     }
 
     assertVersion(current.version, input.expectedVersion);
+
+    const targets = await transaction.listAssignmentTargets(
+      input.organizationId,
+      input.assignmentId,
+    );
+
+    await assertTargetsAllowedForTeamManagerScope(transaction, {
+      organizationId: input.organizationId,
+      targets: targets.map((target) =>
+        target.targetType === "team"
+          ? { targetType: "team" as const, teamId: target.teamId! }
+          : {
+              targetType: "athlete" as const,
+              athleteUserId: target.athleteUserId!,
+            },
+      ),
+      canAssignOrganization: access.canAssignOrganization,
+      managedTeamIds: access.managedTeamIds,
+    });
 
     const canceled = await transaction.markAssignmentCanceled(input);
 

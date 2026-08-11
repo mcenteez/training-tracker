@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
@@ -88,9 +88,40 @@ export interface AthleteSessionResultItem {
   notes: string | null;
 }
 
+function assignmentAccessCondition(managedTeamIds: readonly string[]): SQL {
+  if (managedTeamIds.length === 0) {
+    return sql`false`;
+  }
+
+  const teamIds = sql.join(
+    managedTeamIds.map((teamId) => sql`${teamId}`),
+    sql`, `,
+  );
+
+  return sql`not exists (
+    select 1
+    from assignment_targets scope_target
+    where scope_target.organization_id = ${assignments.organizationId}
+      and scope_target.assignment_id = ${assignments.id}
+      and not (
+        (scope_target.target_type = 'team' and scope_target.team_id in (${teamIds}))
+        or (
+          scope_target.target_type = 'athlete'
+          and exists (
+            select 1
+            from team_memberships scope_membership
+            where scope_membership.organization_id = ${assignments.organizationId}
+              and scope_membership.user_id = scope_target.athlete_user_id
+              and scope_membership.team_id in (${teamIds})
+          )
+        )
+      )
+  )`;
+}
+
 export async function listAssignmentsForOrganization(
   database: Database,
-  input: { organizationId: string },
+  input: { organizationId: string; managedTeamIds?: readonly string[] },
 ): Promise<AssignmentListItem[]> {
   const rows = await database
     .select({
@@ -151,7 +182,14 @@ export async function listAssignmentsForOrganization(
         eq(assignmentRecipients.assignmentId, assignments.id),
       ),
     )
-    .where(eq(assignments.organizationId, input.organizationId))
+    .where(
+      and(
+        eq(assignments.organizationId, input.organizationId),
+        input.managedTeamIds
+          ? assignmentAccessCondition(input.managedTeamIds)
+          : undefined,
+      ),
+    )
     .groupBy(assignments.id, plans.name, workouts.name)
     .orderBy(asc(assignments.createdAt));
 
@@ -164,10 +202,15 @@ export async function listAssignmentsForOrganization(
 
 export async function findAssignmentByOrganization(
   database: Database,
-  input: { organizationId: string; assignmentId: string },
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    managedTeamIds?: readonly string[];
+  },
 ): Promise<AssignmentDetail | null> {
   const [assignment] = await listAssignmentsForOrganization(database, {
     organizationId: input.organizationId,
+    managedTeamIds: input.managedTeamIds,
   }).then((items) => items.filter((item) => item.id === input.assignmentId));
 
   if (!assignment) {

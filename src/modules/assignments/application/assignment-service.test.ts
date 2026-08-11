@@ -240,6 +240,31 @@ describe("assignment service", () => {
     expect(canceled.status).toBe("canceled");
   });
 
+  it("prevents team managers from canceling assignments outside managed teams", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async () => "athlete" as const),
+      listAssignmentTargets: vi.fn(async () => [
+        {
+          id: "target-2",
+          targetType: "team" as const,
+          teamId: "team-2",
+          athleteUserId: null,
+        },
+      ]),
+    });
+
+    await expect(
+      cancelAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+
+    expect(transaction.markAssignmentCanceled).not.toHaveBeenCalled();
+  });
+
   it("raises not-found errors for missing assignments", async () => {
     const { unitOfWork } = setup({
       findAssignment: vi.fn(async () => null),

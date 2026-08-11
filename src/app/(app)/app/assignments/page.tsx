@@ -23,19 +23,12 @@ function formatDate(value: Date | null): string {
 export default async function AssignmentsPage() {
   const context = await loadActiveAppContext();
 
-  const [teamMemberships, assignmentItems] = await Promise.all([
-    withDatabase((database) =>
-      listTeamMembershipsForUserInOrganization(database, {
-        organizationId: context.membership.organizationId,
-        userId: context.user.id,
-      }),
-    ),
-    withDatabase((database) =>
-      listAssignmentsForOrganization(database, {
-        organizationId: context.membership.organizationId,
-      }),
-    ),
-  ]);
+  const teamMemberships = await withDatabase((database) =>
+    listTeamMembershipsForUserInOrganization(database, {
+      organizationId: context.membership.organizationId,
+      userId: context.user.id,
+    }),
+  );
 
   const canAssignOrganization = hasPermission(
     { organizationRole: context.membership.organizationRole },
@@ -54,6 +47,16 @@ export default async function AssignmentsPage() {
   if (!canAssignOrganization && !canAssignTeam) {
     redirect("/app");
   }
+
+  const managedTeamIds = teamMemberships
+    .filter((membership) => membership.teamRole === "manager")
+    .map((membership) => membership.teamId);
+  const assignmentItems = await withDatabase((database) =>
+    listAssignmentsForOrganization(database, {
+      organizationId: context.membership.organizationId,
+      managedTeamIds: canAssignOrganization ? undefined : managedTeamIds,
+    }),
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
