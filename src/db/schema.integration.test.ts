@@ -544,6 +544,331 @@ describe("tenant schema", () => {
     expect(result.rows[0]?.count).toBe(0);
   });
 
+  it("enforces assignment source shape and required dates", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000011', '10000000-0000-0000-0000-000000000001', 'Org 1 Session');
+
+      INSERT INTO plans (id, organization_id, name)
+      VALUES ('60000000-0000-0000-0000-000000000011', '10000000-0000-0000-0000-000000000001', 'Org 1 Plan');
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignments (
+          organization_id,
+          timezone,
+          source_workout_id,
+          source_plan_id,
+          scheduled_date
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          'UTC',
+          '40000000-0000-0000-0000-000000000011',
+          '60000000-0000-0000-0000-000000000011',
+          '2026-09-01'
+        );
+      `),
+    ).rejects.toThrow(/assignments_exactly_one_source/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignments (
+          organization_id,
+          timezone,
+          source_plan_id,
+          start_date,
+          end_date,
+          scheduled_date
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          'UTC',
+          '60000000-0000-0000-0000-000000000011',
+          '2026-09-01',
+          '2026-09-10',
+          '2026-09-01'
+        );
+      `),
+    ).rejects.toThrow(/assignments_plan_source_dates/);
+  });
+
+  it("enforces assignment target type and target id shape", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'Org 1 Session');
+
+      INSERT INTO teams (id, organization_id, name)
+      VALUES ('20000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'Varsity');
+
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'athlete');
+
+      INSERT INTO assignments (
+        id,
+        organization_id,
+        timezone,
+        source_workout_id,
+        scheduled_date
+      )
+      VALUES (
+        '80000000-0000-0000-0000-000000000012',
+        '10000000-0000-0000-0000-000000000001',
+        'UTC',
+        '40000000-0000-0000-0000-000000000012',
+        '2026-09-02'
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_targets (
+          organization_id,
+          assignment_id,
+          target_type,
+          team_id,
+          athlete_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000012',
+          'team',
+          '20000000-0000-0000-0000-000000000012',
+          '00000000-0000-0000-0000-000000000003'
+        );
+      `),
+    ).rejects.toThrow(/assignment_targets_exactly_one_target/);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_targets (
+          organization_id,
+          assignment_id,
+          target_type,
+          athlete_user_id
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000012',
+          'team',
+          '00000000-0000-0000-0000-000000000003'
+        );
+      `),
+    ).rejects.toThrow(/assignment_targets_target_shape/);
+  });
+
+  it("keeps assignment snapshot links scoped to the same assignment", async () => {
+    await database.exec(`
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000001', 'Org 1 Session');
+
+      INSERT INTO assignments (id, organization_id, timezone, source_workout_id, scheduled_date)
+      VALUES
+        ('80000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000001', 'UTC', '40000000-0000-0000-0000-000000000013', '2026-09-03'),
+        ('80000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000001', 'UTC', '40000000-0000-0000-0000-000000000013', '2026-09-04');
+
+      INSERT INTO assignment_workout_snapshots (
+        id,
+        organization_id,
+        assignment_id,
+        source_workout_id,
+        source_workout_version,
+        name,
+        position
+      )
+      VALUES (
+        '90000000-0000-0000-0000-000000000013',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000013',
+        '40000000-0000-0000-0000-000000000013',
+        1,
+        'Snapshot A',
+        0
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_plan_slot_snapshots (
+          organization_id,
+          assignment_id,
+          workout_snapshot_id,
+          day_of_week,
+          position
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000014',
+          '90000000-0000-0000-0000-000000000013',
+          'monday',
+          0
+        );
+      `),
+    ).rejects.toThrow(/assignment_plan_slot_snapshots_workout_snapshot_fk/);
+  });
+
+  it("enforces unique result rounds per session item", async () => {
+    await database.exec(`
+      INSERT INTO exercises (id, organization_id, name)
+      VALUES ('30000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000001', 'Back Squat');
+
+      INSERT INTO workouts (id, organization_id, name)
+      VALUES ('40000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000001', 'Org 1 Session');
+
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', 'athlete');
+
+      INSERT INTO assignments (
+        id,
+        organization_id,
+        timezone,
+        source_workout_id,
+        scheduled_date
+      )
+      VALUES (
+        '80000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        'UTC',
+        '40000000-0000-0000-0000-000000000014',
+        '2026-09-05'
+      );
+
+      INSERT INTO assignment_recipients (
+        id,
+        organization_id,
+        assignment_id,
+        athlete_user_id
+      )
+      VALUES (
+        '81000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '00000000-0000-0000-0000-000000000003'
+      );
+
+      INSERT INTO assignment_workout_snapshots (
+        id,
+        organization_id,
+        assignment_id,
+        source_workout_id,
+        source_workout_version,
+        name,
+        position
+      )
+      VALUES (
+        '90000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '40000000-0000-0000-0000-000000000014',
+        1,
+        'Snapshot Session',
+        0
+      );
+
+      INSERT INTO assignment_workout_block_snapshots (
+        id,
+        organization_id,
+        assignment_id,
+        workout_snapshot_id,
+        type,
+        rounds,
+        position
+      )
+      VALUES (
+        '91000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '90000000-0000-0000-0000-000000000015',
+        'straight',
+        1,
+        0
+      );
+
+      INSERT INTO assignment_workout_item_snapshots (
+        id,
+        organization_id,
+        assignment_id,
+        block_snapshot_id,
+        source_exercise_id,
+        exercise_name,
+        position,
+        reps
+      )
+      VALUES (
+        '92000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '91000000-0000-0000-0000-000000000015',
+        '30000000-0000-0000-0000-000000000014',
+        'Back Squat',
+        0,
+        5
+      );
+
+      INSERT INTO assignment_sessions (
+        id,
+        organization_id,
+        assignment_id,
+        recipient_id,
+        athlete_user_id,
+        workout_snapshot_id,
+        scheduled_date,
+        available_from,
+        available_until
+      )
+      VALUES (
+        '93000000-0000-0000-0000-000000000015',
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '81000000-0000-0000-0000-000000000015',
+        '00000000-0000-0000-0000-000000000003',
+        '90000000-0000-0000-0000-000000000015',
+        '2026-09-05',
+        '2026-09-05T00:00:00.000Z',
+        '2026-09-05T23:59:59.999Z'
+      );
+
+      INSERT INTO assignment_session_item_results (
+        organization_id,
+        assignment_id,
+        session_id,
+        item_snapshot_id,
+        round_number,
+        reps
+      )
+      VALUES (
+        '10000000-0000-0000-0000-000000000001',
+        '80000000-0000-0000-0000-000000000015',
+        '93000000-0000-0000-0000-000000000015',
+        '92000000-0000-0000-0000-000000000015',
+        1,
+        5
+      );
+    `);
+
+    await expect(
+      database.exec(`
+        INSERT INTO assignment_session_item_results (
+          organization_id,
+          assignment_id,
+          session_id,
+          item_snapshot_id,
+          round_number,
+          reps
+        )
+        VALUES (
+          '10000000-0000-0000-0000-000000000001',
+          '80000000-0000-0000-0000-000000000015',
+          '93000000-0000-0000-0000-000000000015',
+          '92000000-0000-0000-0000-000000000015',
+          1,
+          4
+        );
+      `),
+    ).rejects.toThrow(/assignment_session_item_results_round_unique/);
+  });
+
   it("cascades organization deletion through the workout graph", async () => {
     await database.exec(`
       INSERT INTO exercises (id, organization_id, name)

@@ -1,3 +1,4 @@
+export * from "@/modules/assignments/db/schema";
 export * from "@/modules/exercises/db/schema";
 export * from "@/modules/organizations/db/schema";
 export * from "@/modules/plans/db/schema";
