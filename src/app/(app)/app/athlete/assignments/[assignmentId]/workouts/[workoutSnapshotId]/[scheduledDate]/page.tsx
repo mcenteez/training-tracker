@@ -54,6 +54,19 @@ function readFlag(
   return (Array.isArray(value) ? value[0] : value) === "1";
 }
 
+const errorCopy: Record<string, string> = {
+  weekly_target_met: "You have already met the weekly target for this workout.",
+  outside_week:
+    "Flexible workouts can only be started during the current week.",
+  wrong_weekday: "This workout is scheduled for a different day of the week.",
+  outside_schedule: "This workout date is outside the assignment schedule.",
+  not_yet_available: "This workout is not available to start yet.",
+  already_submitted: "This workout was already completed and cannot change.",
+  version_conflict:
+    "This workout was updated somewhere else. Review it and try again.",
+  assignment_session_action_failed: "Unable to complete that session action.",
+};
+
 export default async function WorkoutOccurrencePage({
   params,
   searchParams,
@@ -258,7 +271,8 @@ export default async function WorkoutOccurrencePage({
                   ? "Workout completed."
                   : reset
                     ? "Workout reset."
-                    : "Unable to complete that session action."}
+                    : (errorCopy[feedbackError ?? ""] ??
+                      errorCopy.assignment_session_action_failed)}
           </CardContent>
         </Card>
       ) : null}

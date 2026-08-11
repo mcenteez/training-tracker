@@ -77,6 +77,8 @@ Reference: [access-control.md](access-control.md)
 - **Workout**: a single session template that defines one training session an athlete should complete.
 - **Training Block**: an ordered grouping inside one workout (straight sets, circuit, or superset) used to structure that session.
 - **Plan**: a multi-session schedule that organizes workout templates across a repeatable cadence (for example, a weekly Push/Pull/Legs cycle).
+- **Plan workout slot**: one workout in a plan plus its scheduling rule. A slot is either fixed-day (every Monday) or weekly-frequency (2 sessions per week on athlete-selected days).
+- **Workout occurrence**: one dated instance of a plan workout inside a published assignment. Athletes log results against occurrences.
 - **Assignment**: a future delivery object that publishes a plan or workout to athletes while preserving snapshot history.
 - Coaches should model one day/session per workout, use blocks to structure work within that session, and use plans to control when sessions occur over time.
 
@@ -89,6 +91,9 @@ Reference: [access-control.md](access-control.md)
 - Assignment workflows should preserve library reuse (reuse first, create when needed).
 - Control assignment visibility and availability windows.
 - Assignments must snapshot plan/workout programming so later library edits or archival cannot change historical or in-progress prescriptions.
+- Plan slots snapshot their scheduling rule (fixed weekday or weekly target) at publication; later plan edits never change published schedules.
+- Weeks run Monday through Sunday in the assignment timezone. Weekly targets do not prorate in partial first/last weeks and completed sessions never carry between weeks.
+- Fixed-day workouts produce one occurrence per matching weekday inside the assignment date range. Flexible workouts allow one occurrence per calendar date, up to the weekly target.
 
 ### 7) Results and Progress Tracking
 
@@ -131,9 +136,9 @@ Reference: [access-control.md](access-control.md)
 ### Athlete Flow
 
 1. Join organization/team via membership.
-2. View assigned workouts.
-3. Log workout results.
-4. Review own progress history.
+2. Open a plan assignment to see its schedule: fixed-day workouts with dates, flexible workouts with weekly progress.
+3. Open a workout occurrence to start it, record completion and actual metrics, and complete or reset the session.
+4. Review own progress history, including completed occurrences from previous weeks.
 
 ## Non-Functional Product Expectations
 

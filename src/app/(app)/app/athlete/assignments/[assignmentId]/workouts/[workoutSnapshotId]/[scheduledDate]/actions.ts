@@ -63,10 +63,25 @@ function expectedActionError(error: unknown, ref: OccurrenceRef): never {
     error instanceof DomainInvariantError ||
     error instanceof ResourceNotFoundError
   ) {
-    redirect(occurrenceUrl(ref, "?error=assignment_session_action_failed"));
+    redirect(occurrenceUrl(ref, `?error=${sessionErrorReason(error)}`));
   }
 
   throw error;
+}
+
+function sessionErrorReason(error: Error): string {
+  const message = error.message.toLowerCase();
+
+  if (message.includes("weekly target")) return "weekly_target_met";
+  if (message.includes("current week")) return "outside_week";
+  if (message.includes("different day")) return "wrong_weekday";
+  if (message.includes("outside the assignment schedule"))
+    return "outside_schedule";
+  if (message.includes("not available to start")) return "not_yet_available";
+  if (message.includes("submitted")) return "already_submitted";
+  if (message.includes("updated elsewhere")) return "version_conflict";
+
+  return "assignment_session_action_failed";
 }
 
 function revalidateOccurrence(ref: OccurrenceRef): void {

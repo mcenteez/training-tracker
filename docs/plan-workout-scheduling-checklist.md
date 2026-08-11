@@ -362,20 +362,20 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Update athlete dashboard plan rows to link to plan overview.
-- [ ] Keep workout-only rows linked to their logging occurrence.
+- [x] Update athlete dashboard plan rows to link to plan overview.
+- [x] Keep workout-only rows linked to their logging occurrence.
 - [ ] Show current-week completion summary on plan rows where practical.
-- [ ] Replace generic session action errors with structured user-facing reasons.
+- [x] Replace generic session action errors with structured user-facing reasons.
 - [ ] Add pending and disabled states for start, save, reset, and complete actions.
 - [ ] Add confirmation for Reset Session where progress exists.
-- [ ] Ensure destructive and completion controls are visually distinct.
+- [x] Ensure destructive and completion controls are visually distinct.
 - [ ] Verify focus order and touch target sizes on mobile.
-- [ ] Verify labels do not rely on implementation terms such as snapshot or item.
+- [x] Verify labels do not rely on implementation terms such as snapshot or item.
 
 ### Acceptance Criteria
 
-- [ ] Athletes can reach the correct plan or workout flow from the dashboard.
-- [ ] Blocked schedule actions explain when the workout becomes available.
+- [x] Athletes can reach the correct plan or workout flow from the dashboard.
+- [x] Blocked schedule actions explain when the workout becomes available.
 - [ ] No silent mutation failures remain in the occurrence workflow.
 - [ ] Mobile viewport checks show no overlap or horizontal overflow.
 
@@ -436,23 +436,23 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ## Documentation Updates
 
-- [ ] Update `docs/app-functionality.md` terminology and athlete flow.
-- [ ] Document fixed-day and weekly-frequency plan rules.
-- [ ] Document Monday-Sunday assignment-timezone week boundaries.
-- [ ] Document partial-week and no-carryover policies.
-- [ ] Update any assignment architecture or operational documentation affected by route changes.
+- [x] Update `docs/app-functionality.md` terminology and athlete flow.
+- [x] Document fixed-day and weekly-frequency plan rules.
+- [x] Document Monday-Sunday assignment-timezone week boundaries.
+- [x] Document partial-week and no-carryover policies.
+- [x] Update any assignment architecture or operational documentation affected by route changes.
 
 ## Done Definition
 
 - [ ] All milestone acceptance criteria are complete.
-- [ ] Existing plan data is migrated safely.
-- [ ] Plan overview and workout logging are separate routes.
-- [ ] Fixed-day and weekly-frequency plans work end to end.
-- [ ] Tenant isolation and athlete ownership tests pass.
-- [ ] Regression tests cover standalone workout assignments.
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
-- [ ] Relevant documentation is updated.
+- [x] Existing plan data is migrated safely.
+- [x] Plan overview and workout logging are separate routes.
+- [x] Fixed-day and weekly-frequency plans work end to end.
+- [x] Tenant isolation and athlete ownership tests pass.
+- [x] Regression tests cover standalone workout assignments.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
+- [x] Relevant documentation is updated.
 
 ## Suggested Execution Slices
 
@@ -464,7 +464,7 @@ Each plan workout slot uses exactly one scheduling mode:
 6. [x] Slice F: Dedicated workout logging route and selected-snapshot reads.
 7. [x] Slice G: Occurrence-aware session start, save, reset, and complete.
 8. [ ] Slice H: Weekly target enforcement and concurrency protection.
-9. [ ] Slice I: Dashboard integration, failure states, accessibility, and documentation.
+9. [ ] Slice I: Dashboard integration, failure states, accessibility, and documentation. (error reasons + docs done; browser/accessibility verification pending)
 
 ## Explicitly Deferred
 
