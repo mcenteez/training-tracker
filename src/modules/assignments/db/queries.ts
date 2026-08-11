@@ -9,6 +9,7 @@ import {
   assignmentSessionItemResults,
   assignmentSessions,
   assignmentTargets,
+  assignmentPlanSlotSnapshots,
   assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
   assignmentWorkoutSnapshots,
@@ -16,6 +17,7 @@ import {
   type AssignmentTarget,
 } from "@/modules/assignments/db/schema";
 import { plans } from "@/modules/plans/db/schema";
+import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
 import { teams } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
@@ -70,6 +72,28 @@ export interface AthleteAssignmentWorkoutSummary {
   id: string;
   name: string;
   position: number;
+}
+
+export interface AthletePlanSlotSnapshot {
+  id: string;
+  workoutSnapshotId: string;
+  workoutName: string;
+  scheduleType: "fixed_day" | "weekly_frequency";
+  dayOfWeek: PlanDayOfWeek | null;
+  targetSessionsPerWeek: number | null;
+  position: number;
+  label: string | null;
+}
+
+export interface AthletePlanSessionSummary {
+  id: string;
+  workoutSnapshotId: string;
+  planSlotSnapshotId: string | null;
+  scheduledDate: string;
+  status: "assigned" | "in_progress" | "submitted";
+  version: number;
+  startedAt: Date | null;
+  submittedAt: Date | null;
 }
 
 export interface AthleteWorkoutItemSnapshot {
@@ -490,6 +514,98 @@ export async function listWorkoutsForAthleteAssignment(
     .orderBy(asc(assignmentWorkoutSnapshots.position));
 
   return rows;
+}
+
+export async function listPlanSlotSnapshotsForAthleteAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+  },
+): Promise<AthletePlanSlotSnapshot[]> {
+  const [recipient] = await database
+    .select({ id: assignmentRecipients.id })
+    .from(assignmentRecipients)
+    .where(
+      and(
+        eq(assignmentRecipients.organizationId, input.organizationId),
+        eq(assignmentRecipients.assignmentId, input.assignmentId),
+        eq(assignmentRecipients.athleteUserId, input.athleteUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!recipient) {
+    return [];
+  }
+
+  return database
+    .select({
+      id: assignmentPlanSlotSnapshots.id,
+      workoutSnapshotId: assignmentPlanSlotSnapshots.workoutSnapshotId,
+      workoutName: assignmentWorkoutSnapshots.name,
+      scheduleType: assignmentPlanSlotSnapshots.scheduleType,
+      dayOfWeek: assignmentPlanSlotSnapshots.dayOfWeek,
+      targetSessionsPerWeek: assignmentPlanSlotSnapshots.targetSessionsPerWeek,
+      position: assignmentPlanSlotSnapshots.position,
+      label: assignmentPlanSlotSnapshots.label,
+    })
+    .from(assignmentPlanSlotSnapshots)
+    .innerJoin(
+      assignmentWorkoutSnapshots,
+      and(
+        eq(
+          assignmentWorkoutSnapshots.organizationId,
+          assignmentPlanSlotSnapshots.organizationId,
+        ),
+        eq(
+          assignmentWorkoutSnapshots.assignmentId,
+          assignmentPlanSlotSnapshots.assignmentId,
+        ),
+        eq(
+          assignmentWorkoutSnapshots.id,
+          assignmentPlanSlotSnapshots.workoutSnapshotId,
+        ),
+      ),
+    )
+    .where(
+      and(
+        eq(assignmentPlanSlotSnapshots.organizationId, input.organizationId),
+        eq(assignmentPlanSlotSnapshots.assignmentId, input.assignmentId),
+      ),
+    )
+    .orderBy(asc(assignmentPlanSlotSnapshots.position));
+}
+
+export async function listSessionsForAthleteAssignment(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+  },
+): Promise<AthletePlanSessionSummary[]> {
+  return database
+    .select({
+      id: assignmentSessions.id,
+      workoutSnapshotId: assignmentSessions.workoutSnapshotId,
+      planSlotSnapshotId: assignmentSessions.planSlotSnapshotId,
+      scheduledDate: assignmentSessions.scheduledDate,
+      status: assignmentSessions.status,
+      version: assignmentSessions.version,
+      startedAt: assignmentSessions.startedAt,
+      submittedAt: assignmentSessions.submittedAt,
+    })
+    .from(assignmentSessions)
+    .where(
+      and(
+        eq(assignmentSessions.organizationId, input.organizationId),
+        eq(assignmentSessions.assignmentId, input.assignmentId),
+        eq(assignmentSessions.athleteUserId, input.athleteUserId),
+      ),
+    )
+    .orderBy(asc(assignmentSessions.scheduledDate));
 }
 
 export async function listPrimaryWorkoutItemsForAssignment(

@@ -19,6 +19,7 @@ import {
 import {
   findPublishedAssignmentForAthlete,
   listAssignmentsForOrganization,
+  listPlanSlotSnapshotsForAthleteAssignment,
   listPublishedAssignmentsForAthlete,
 } from "@/modules/assignments/db/queries";
 import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
@@ -221,6 +222,70 @@ describe("assignment unit of work", () => {
     `);
 
     expect(afterEdit.rows).toEqual([{ day_of_week: "monday" }]);
+  });
+
+  it("returns plan slot snapshots only to the assignment recipient", async () => {
+    await client.exec(`
+      INSERT INTO plans (id, organization_id, name, status)
+      VALUES ('61000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Recipient Plan', 'active');
+
+      INSERT INTO plan_schedule_slots (
+        organization_id, plan_id, workout_id, schedule_type, day_of_week, position
+      ) VALUES
+        ('10000000-0000-4000-8000-000000000001', '61000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001', 'fixed_day', 'wednesday', 0);
+    `);
+
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "plan",
+        sourcePlanId: "61000000-0000-4000-8000-000000000002",
+        startDate: "2026-08-17",
+        endDate: "2026-08-30",
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    const recipientSlots = await listPlanSlotSnapshotsForAthleteAssignment(
+      database,
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+      },
+    );
+    const outsiderSlots = await listPlanSlotSnapshotsForAthleteAssignment(
+      database,
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000001",
+      },
+    );
+
+    expect(recipientSlots).toEqual([
+      expect.objectContaining({
+        scheduleType: "fixed_day",
+        dayOfWeek: "wednesday",
+        workoutName: "Lower Strength",
+      }),
+    ]);
+    expect(outsiderSlots).toEqual([]);
   });
 
   it("publishes a session-ready immutable workout snapshot", async () => {

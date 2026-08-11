@@ -153,27 +153,27 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Replace the weekday-only plan-slot input with a discriminated Zod union.
-- [ ] Add a schedule-mode segmented control to each plan-builder row.
-- [ ] Show weekday selection for `fixed_day`.
-- [ ] Show a bounded numeric frequency control for `weekly_frequency`.
-- [ ] Preserve workout selection, label, and ordering behavior.
-- [ ] Update graph serialization and action parsing.
-- [ ] Update create, edit, duplicate, and repository mapping paths.
-- [ ] Update plan detail copy:
-  - [ ] `Every Monday` for fixed-day slots.
-  - [ ] `2 sessions per week` for flexible slots.
-- [ ] Update empty, validation, and disabled states.
-- [ ] Add builder component tests for changing modes without stale hidden values.
-- [ ] Update plan service and repository tests.
+- [x] Replace the weekday-only plan-slot input with a discriminated Zod union.
+- [x] Add a schedule-mode segmented control to each plan-builder row.
+- [x] Show weekday selection for `fixed_day`.
+- [x] Show a bounded numeric frequency control for `weekly_frequency`.
+- [x] Preserve workout selection, label, and ordering behavior.
+- [x] Update graph serialization and action parsing.
+- [x] Update create, edit, duplicate, and repository mapping paths.
+- [x] Update plan detail copy:
+  - [x] `Every Monday` for fixed-day slots.
+  - [x] `2 sessions per week` for flexible slots.
+- [x] Update empty, validation, and disabled states.
+- [x] Add builder component tests for changing modes without stale hidden values.
+- [x] Update plan service and repository tests.
 
 ### Acceptance Criteria
 
-- [ ] A coach can create and edit a plan containing both scheduling modes.
-- [ ] Mode changes clear incompatible values before submission.
-- [ ] Invalid mixed-mode payloads are rejected server-side.
-- [ ] Duplicating a plan preserves every schedule rule.
-- [ ] Plan detail displays human-readable scheduling rules.
+- [x] A coach can create and edit a plan containing both scheduling modes.
+- [x] Mode changes clear incompatible values before submission.
+- [x] Invalid mixed-mode payloads are rejected server-side.
+- [x] Duplicating a plan preserves every schedule rule.
+- [x] Plan detail displays human-readable scheduling rules.
 
 ## Milestone 3: Assignment Snapshot Publication
 
@@ -185,21 +185,21 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Extend plan source selection to include schedule type and weekly target.
-- [ ] Persist all scheduling fields in assignment plan-slot snapshots.
-- [ ] Preserve slot label, position, source slot id, and workout snapshot relationship.
-- [ ] Remove publication assumptions that every plan slot has a weekday.
-- [ ] Ensure one workout snapshot remains associated with one snapshotted plan slot.
-- [ ] Add publication tests for mixed fixed and flexible plans.
-- [ ] Add regression coverage proving library edits do not mutate snapshots.
-- [ ] Add negative tests for malformed source scheduling data.
+- [x] Extend plan source selection to include schedule type and weekly target.
+- [x] Persist all scheduling fields in assignment plan-slot snapshots.
+- [x] Preserve slot label, position, source slot id, and workout snapshot relationship.
+- [x] Remove publication assumptions that every plan slot has a weekday.
+- [x] Ensure one workout snapshot remains associated with one snapshotted plan slot.
+- [x] Add publication tests for mixed fixed and flexible plans.
+- [x] Add regression coverage proving library edits do not mutate snapshots.
+- [x] Add negative tests for malformed source scheduling data.
 
 ### Acceptance Criteria
 
-- [ ] Published mixed-mode plans preserve exact scheduling rules.
-- [ ] Snapshot ordering matches plan ordering.
-- [ ] Historical assignments remain unchanged after plan edits.
-- [ ] Publication remains transactional.
+- [x] Published mixed-mode plans preserve exact scheduling rules.
+- [x] Snapshot ordering matches plan ordering.
+- [x] Historical assignments remain unchanged after plan edits.
+- [x] Publication remains transactional.
 
 ## Milestone 4: Occurrence and Weekly Progress Read Models
 
@@ -381,14 +381,14 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ## Migration and Compatibility Plan
 
-- [ ] Add a new forward-only Drizzle migration.
-- [ ] Add new nullable columns before enforcing new checks.
-- [ ] Backfill library slots and assignment snapshots as `fixed_day`.
-- [ ] Make weekday columns nullable only after backfill support is present.
-- [ ] Add schedule-type defaults only if they cannot mask malformed new writes.
-- [ ] Deploy code that can read migrated existing data.
-- [ ] Do not rewrite existing migrations.
-- [ ] Verify migration against an empty database and a database containing current plan assignments and sessions.
+- [x] Add a new forward-only Drizzle migration.
+- [x] Add new nullable columns before enforcing new checks.
+- [x] Backfill library slots and assignment snapshots as `fixed_day`.
+- [x] Make weekday columns nullable only after backfill support is present.
+- [x] Add schedule-type defaults only if they cannot mask malformed new writes.
+- [x] Deploy code that can read migrated existing data.
+- [x] Do not rewrite existing migrations.
+- [x] Verify migration against an empty database and a database containing current plan assignments and sessions.
 - [ ] Preserve existing submitted session URLs or add a deterministic redirect.
 
 ## Test Plan Checklist
@@ -403,15 +403,15 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Component
 
-- [ ] Plan builder mode switching.
-- [ ] Fixed-day and frequency controls.
+- [x] Plan builder mode switching.
+- [x] Fixed-day and frequency controls.
 - [ ] Plan overview workout rows and statuses.
 - [ ] Logging fields for editable and submitted sessions.
 
 ### Integration
 
-- [ ] Migration backfill and database checks.
-- [ ] Mixed-mode plan publication snapshots.
+- [x] Migration backfill and database checks.
+- [x] Mixed-mode plan publication snapshots.
 - [ ] Exact occurrence session start.
 - [ ] Flexible target enforcement.
 - [ ] Save, reset, and complete one occurrence without affecting another.
@@ -457,8 +457,8 @@ Each plan workout slot uses exactly one scheduling mode:
 ## Suggested Execution Slices
 
 1. [x] Slice A: Scheduling schema, migration, and database tests.
-2. [ ] Slice B: Plan input, builder, repository, and library views.
-3. [ ] Slice C: Assignment snapshot publication for both schedule modes.
+2. [x] Slice B: Plan input, builder, repository, and library views.
+3. [x] Slice C: Assignment snapshot publication for both schedule modes.
 4. [ ] Slice D: Date utilities, occurrence read model, and progress queries.
 5. [ ] Slice E: Plan-only athlete overview with clickable workouts.
 6. [ ] Slice F: Dedicated workout logging route and selected-snapshot reads.
