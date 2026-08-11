@@ -120,27 +120,27 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Add a plan schedule type enum with `fixed_day` and `weekly_frequency`.
-- [ ] Add `scheduleType` to `plan_schedule_slots`.
-- [ ] Make `dayOfWeek` nullable.
-- [ ] Add nullable `targetSessionsPerWeek` integer.
-- [ ] Backfill all existing rows as `fixed_day`.
-- [ ] Add a database check requiring exactly one valid schedule configuration.
-- [ ] Add a positive and bounded weekly-target database check.
-- [ ] Review uniqueness constraints now that weekday is nullable.
-- [ ] Mirror scheduling fields on `assignment_plan_slot_snapshots`.
-- [ ] Backfill existing assignment snapshots as `fixed_day`.
-- [ ] Add matching snapshot database checks.
-- [ ] Update Drizzle inferred types and exports.
-- [ ] Add schema integration tests for valid and invalid combinations.
+- [x] Add a plan schedule type enum with `fixed_day` and `weekly_frequency`.
+- [x] Add `scheduleType` to `plan_schedule_slots`.
+- [x] Make `dayOfWeek` nullable.
+- [x] Add nullable `targetSessionsPerWeek` integer.
+- [x] Backfill all existing rows as `fixed_day`.
+- [x] Add a database check requiring exactly one valid schedule configuration.
+- [x] Add a positive and bounded weekly-target database check.
+- [x] Review uniqueness constraints now that weekday is nullable.
+- [x] Mirror scheduling fields on `assignment_plan_slot_snapshots`.
+- [x] Backfill existing assignment snapshots as `fixed_day`.
+- [x] Add matching snapshot database checks.
+- [x] Update Drizzle inferred types and exports.
+- [x] Add schema integration tests for valid and invalid combinations.
 
 ### Acceptance Criteria
 
-- [ ] Existing weekday plans load without manual repair.
-- [ ] Fixed-day rows cannot store a frequency target.
-- [ ] Frequency rows cannot store a weekday.
-- [ ] Zero, negative, and excessive weekly targets fail at the database boundary.
-- [ ] Assignment snapshots enforce the same scheduling invariants as library plans.
+- [x] Existing weekday plans load without manual repair.
+- [x] Fixed-day rows cannot store a frequency target.
+- [x] Frequency rows cannot store a weekday.
+- [x] Zero, negative, and excessive weekly targets fail at the database boundary.
+- [x] Assignment snapshots enforce the same scheduling invariants as library plans.
 
 ## Milestone 2: Plan Builder and Library Views
 
@@ -456,7 +456,7 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ## Suggested Execution Slices
 
-1. [ ] Slice A: Scheduling schema, migration, and database tests.
+1. [x] Slice A: Scheduling schema, migration, and database tests.
 2. [ ] Slice B: Plan input, builder, repository, and library views.
 3. [ ] Slice C: Assignment snapshot publication for both schedule modes.
 4. [ ] Slice D: Date utilities, occurrence read model, and progress queries.

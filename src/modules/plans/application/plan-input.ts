@@ -1,12 +1,31 @@
 import { z } from "zod";
 
-import { planDaysOfWeek } from "@/modules/plans/db/schema";
+import {
+  maxWeeklyFrequencyTarget,
+  planDaysOfWeek,
+} from "@/modules/plans/db/schema";
 
-export const planScheduleSlotInputSchema = z.object({
-  workoutId: z.uuid(),
-  dayOfWeek: z.enum(planDaysOfWeek),
-  label: z.string().trim().max(120).nullable(),
-});
+export const planScheduleSlotInputSchema = z.discriminatedUnion(
+  "scheduleType",
+  [
+    z.object({
+      scheduleType: z.literal("fixed_day"),
+      workoutId: z.uuid(),
+      dayOfWeek: z.enum(planDaysOfWeek),
+      label: z.string().trim().max(120).nullable(),
+    }),
+    z.object({
+      scheduleType: z.literal("weekly_frequency"),
+      workoutId: z.uuid(),
+      targetSessionsPerWeek: z
+        .number()
+        .int()
+        .positive()
+        .max(maxWeeklyFrequencyTarget),
+      label: z.string().trim().max(120).nullable(),
+    }),
+  ],
+);
 
 export const planInputSchema = z.object({
   name: z.string().trim().min(2).max(120),

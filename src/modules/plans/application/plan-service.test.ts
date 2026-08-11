@@ -19,9 +19,16 @@ const planInput = {
   description: null,
   scheduleSlots: [
     {
+      scheduleType: "fixed_day" as const,
       workoutId: "10000000-0000-4000-8000-000000000001",
       dayOfWeek: "monday" as const,
       label: "Push",
+    },
+    {
+      scheduleType: "weekly_frequency" as const,
+      workoutId: "10000000-0000-4000-8000-000000000001",
+      targetSessionsPerWeek: 2,
+      label: "Conditioning",
     },
   ],
 };

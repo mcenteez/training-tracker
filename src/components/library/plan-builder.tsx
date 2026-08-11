@@ -8,10 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { PlanInput } from "@/modules/plans/application/plan-input";
-import { planDaysOfWeek } from "@/modules/plans/db/schema";
+import {
+  maxWeeklyFrequencyTarget,
+  planDaysOfWeek,
+} from "@/modules/plans/db/schema";
 
-type BuilderScheduleSlot = PlanInput["scheduleSlots"][number] & {
+type BuilderScheduleSlot = {
   key: string;
+  workoutId: string;
+  scheduleType: "fixed_day" | "weekly_frequency";
+  dayOfWeek: (typeof planDaysOfWeek)[number];
+  targetSessionsPerWeek: number;
+  label: string | null;
 };
 
 interface PlanBuilderProps {
@@ -38,7 +46,9 @@ const initialState: PlanActionState = {};
 const emptySlot = (workoutId = ""): BuilderScheduleSlot => ({
   key: crypto.randomUUID(),
   workoutId,
+  scheduleType: "fixed_day",
   dayOfWeek: "monday",
+  targetSessionsPerWeek: 1,
   label: null,
 });
 
@@ -53,19 +63,37 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
   const [scheduleSlots, setScheduleSlots] = useState<BuilderScheduleSlot[]>(
     () =>
       plan?.scheduleSlots.map((slot) => ({
-        ...slot,
         key: crypto.randomUUID(),
+        workoutId: slot.workoutId,
+        scheduleType: slot.scheduleType,
+        dayOfWeek:
+          slot.scheduleType === "fixed_day" ? slot.dayOfWeek : "monday",
+        targetSessionsPerWeek:
+          slot.scheduleType === "weekly_frequency"
+            ? slot.targetSessionsPerWeek
+            : 1,
+        label: slot.label,
       })) ?? [],
   );
 
   const graph: PlanInput = {
     name,
     description: description.trim() || null,
-    scheduleSlots: scheduleSlots.map((slot) => ({
-      workoutId: slot.workoutId,
-      dayOfWeek: slot.dayOfWeek,
-      label: slot.label,
-    })),
+    scheduleSlots: scheduleSlots.map((slot) =>
+      slot.scheduleType === "weekly_frequency"
+        ? {
+            scheduleType: "weekly_frequency" as const,
+            workoutId: slot.workoutId,
+            targetSessionsPerWeek: slot.targetSessionsPerWeek,
+            label: slot.label,
+          }
+        : {
+            scheduleType: "fixed_day" as const,
+            workoutId: slot.workoutId,
+            dayOfWeek: slot.dayOfWeek,
+            label: slot.label,
+          },
+    ),
   };
 
   function updateScheduleSlot(
@@ -168,25 +196,63 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
             {scheduleSlots.map((slot, slotIndex) => (
               <section
                 key={slot.key}
-                className="grid gap-2 border border-border bg-muted/15 p-3 md:grid-cols-[10rem_minmax(14rem,1fr)_minmax(10rem,1fr)_auto]"
+                className="grid gap-2 border border-border bg-muted/15 p-3 md:grid-cols-[9rem_10rem_minmax(12rem,1fr)_minmax(9rem,1fr)_auto]"
                 aria-label={`Scheduled session ${slotIndex + 1}`}
               >
                 <NativeSelect
-                  aria-label="Day of week"
-                  value={slot.dayOfWeek}
+                  aria-label="Schedule mode"
+                  value={slot.scheduleType}
                   onChange={(event) =>
                     updateScheduleSlot(slotIndex, {
-                      dayOfWeek: event.target
-                        .value as BuilderScheduleSlot["dayOfWeek"],
+                      scheduleType: event.target
+                        .value as BuilderScheduleSlot["scheduleType"],
                     })
                   }
                 >
-                  {planDaysOfWeek.map((day) => (
-                    <option key={day} value={day}>
-                      {dayLabel(day)}
-                    </option>
-                  ))}
+                  <option value="fixed_day">Fixed day</option>
+                  <option value="weekly_frequency">Weekly target</option>
                 </NativeSelect>
+                {slot.scheduleType === "fixed_day" ? (
+                  <NativeSelect
+                    aria-label="Day of week"
+                    value={slot.dayOfWeek}
+                    onChange={(event) =>
+                      updateScheduleSlot(slotIndex, {
+                        dayOfWeek: event.target
+                          .value as BuilderScheduleSlot["dayOfWeek"],
+                      })
+                    }
+                  >
+                    {planDaysOfWeek.map((day) => (
+                      <option key={day} value={day}>
+                        {dayLabel(day)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Input
+                    aria-label="Sessions per week"
+                    type="number"
+                    min={1}
+                    max={maxWeeklyFrequencyTarget}
+                    inputMode="numeric"
+                    value={slot.targetSessionsPerWeek}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      updateScheduleSlot(slotIndex, {
+                        targetSessionsPerWeek: Number.isFinite(parsed)
+                          ? Math.max(
+                              1,
+                              Math.min(
+                                maxWeeklyFrequencyTarget,
+                                Math.floor(parsed),
+                              ),
+                            )
+                          : 1,
+                      });
+                    }}
+                  />
+                )}
                 <NativeSelect
                   aria-label="Workout template"
                   value={slot.workoutId}

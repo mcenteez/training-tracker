@@ -64,11 +64,21 @@ export default async function EditPlanPage({
               name: plan.name,
               description: plan.description,
               version: plan.version,
-              scheduleSlots: plan.scheduleSlots.map((slot) => ({
-                workoutId: slot.workoutId,
-                dayOfWeek: slot.dayOfWeek ?? "monday",
-                label: slot.label,
-              })),
+              scheduleSlots: plan.scheduleSlots.map((slot) =>
+                slot.scheduleType === "weekly_frequency"
+                  ? {
+                      scheduleType: "weekly_frequency" as const,
+                      workoutId: slot.workoutId,
+                      targetSessionsPerWeek: slot.targetSessionsPerWeek ?? 1,
+                      label: slot.label,
+                    }
+                  : {
+                      scheduleType: "fixed_day" as const,
+                      workoutId: slot.workoutId,
+                      dayOfWeek: slot.dayOfWeek ?? "monday",
+                      label: slot.label,
+                    },
+              ),
             }}
           />
         </CardContent>

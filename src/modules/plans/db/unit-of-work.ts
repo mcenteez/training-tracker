@@ -28,7 +28,13 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
               organizationId,
               planId,
               workoutId: slot.workoutId,
-              dayOfWeek: slot.dayOfWeek,
+              scheduleType: slot.scheduleType,
+              dayOfWeek:
+                slot.scheduleType === "fixed_day" ? slot.dayOfWeek : null,
+              targetSessionsPerWeek:
+                slot.scheduleType === "weekly_frequency"
+                  ? slot.targetSessionsPerWeek
+                  : null,
               position,
               label: slot.label,
             })),
