@@ -130,7 +130,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_team_name");
+    redirect("/app/admin?error=invalid_team_name");
   }
 
   const user = await currentUser();
@@ -138,7 +138,7 @@ export async function createTeamAction(formData: FormData): Promise<void> {
   const fullName = getFullName(user);
 
   if (!email) {
-    redirect("/app?error=missing_email");
+    redirect("/app/admin?error=missing_email");
   }
 
   try {
@@ -159,13 +159,13 @@ export async function createTeamAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden");
+      redirect("/app/admin?error=forbidden");
     }
 
     throw error;
   }
 
-  redirect("/app?created=1");
+  redirect("/app/admin?created=1");
 }
 
 async function loadActorContext(): Promise<{
@@ -184,7 +184,7 @@ async function loadActorContext(): Promise<{
   const fullName = getFullName(user);
 
   if (!email) {
-    redirect("/app?error=missing_email");
+    redirect("/app/admin?error=missing_email");
   }
 
   return { userId, email, fullName };
@@ -202,7 +202,7 @@ export async function addOrUpdateTeamMemberAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_team_member_input");
+    redirect("/app/admin?error=invalid_team_member_input");
   }
 
   try {
@@ -225,13 +225,13 @@ export async function addOrUpdateTeamMemberAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_member_manage");
+      redirect("/app/admin?error=forbidden_member_manage");
     }
 
     throw error;
   }
 
-  redirect("/app?memberSaved=1");
+  redirect("/app/admin?memberSaved=1");
 }
 
 export async function removeTeamMemberAction(
@@ -245,7 +245,7 @@ export async function removeTeamMemberAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_team_member_input");
+    redirect("/app/admin?error=invalid_team_member_input");
   }
 
   try {
@@ -267,13 +267,13 @@ export async function removeTeamMemberAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_member_manage");
+      redirect("/app/admin?error=forbidden_member_manage");
     }
 
     throw error;
   }
 
-  redirect("/app?memberRemoved=1");
+  redirect("/app/admin?memberRemoved=1");
 }
 
 export async function inviteOrganizationMemberAction(
@@ -287,7 +287,7 @@ export async function inviteOrganizationMemberAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_invite_input");
+    redirect("/app/admin?error=invalid_invite_input");
   }
 
   try {
@@ -313,17 +313,17 @@ export async function inviteOrganizationMemberAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_invite_manage");
+      redirect("/app/admin?error=forbidden_invite_manage");
     }
 
     if (error instanceof DomainInvariantError) {
-      redirect("/app?error=duplicate_invite");
+      redirect("/app/admin?error=duplicate_invite");
     }
 
     throw error;
   }
 
-  redirect("/app?inviteCreated=1");
+  redirect("/app/admin?inviteCreated=1");
 }
 
 export async function revokeOrganizationInvitationAction(
@@ -336,7 +336,7 @@ export async function revokeOrganizationInvitationAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_invite_input");
+    redirect("/app/admin?error=invalid_invite_input");
   }
 
   try {
@@ -360,20 +360,20 @@ export async function revokeOrganizationInvitationAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_invite_manage");
+      redirect("/app/admin?error=forbidden_invite_manage");
     }
 
     if (
       error instanceof DomainInvariantError ||
       error instanceof ResourceNotFoundError
     ) {
-      redirect("/app?error=invite_not_found");
+      redirect("/app/admin?error=invite_not_found");
     }
 
     throw error;
   }
 
-  redirect("/app?inviteRevoked=1");
+  redirect("/app/admin?inviteRevoked=1");
 }
 
 export async function updateOrganizationMemberRoleAction(
@@ -387,7 +387,7 @@ export async function updateOrganizationMemberRoleAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_org_member_input");
+    redirect("/app/admin?error=invalid_org_member_input");
   }
 
   try {
@@ -412,13 +412,13 @@ export async function updateOrganizationMemberRoleAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_org_member_manage");
+      redirect("/app/admin?error=forbidden_org_member_manage");
     }
 
     throw error;
   }
 
-  redirect("/app?orgMemberUpdated=1");
+  redirect("/app/admin?orgMemberUpdated=1");
 }
 
 export async function removeOrganizationMemberAction(
@@ -431,7 +431,7 @@ export async function removeOrganizationMemberAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_org_member_input");
+    redirect("/app/admin?error=invalid_org_member_input");
   }
 
   try {
@@ -452,13 +452,13 @@ export async function removeOrganizationMemberAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_org_member_manage");
+      redirect("/app/admin?error=forbidden_org_member_manage");
     }
 
     throw error;
   }
 
-  redirect("/app?orgMemberRemoved=1");
+  redirect("/app/admin?orgMemberRemoved=1");
 }
 
 export async function transferOrganizationOwnershipAction(
@@ -472,7 +472,7 @@ export async function transferOrganizationOwnershipAction(
   });
 
   if (!parsedInput.success) {
-    redirect("/app?error=invalid_org_member_input");
+    redirect("/app/admin?error=invalid_org_member_input");
   }
 
   try {
@@ -497,11 +497,11 @@ export async function transferOrganizationOwnershipAction(
     });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      redirect("/app?error=forbidden_org_member_manage");
+      redirect("/app/admin?error=forbidden_org_member_manage");
     }
 
     throw error;
   }
 
-  redirect("/app?ownershipTransferred=1");
+  redirect("/app/admin?ownershipTransferred=1");
 }

@@ -48,10 +48,14 @@ function getNavigationItems(role: string | null): AppNavItem[] {
     return [{ href: "/app", label: "My Dashboard" }];
   }
 
-  return [
-    { href: "/app", label: "Dashboard" },
-    { href: "/onboarding/organization", label: "Organization" },
-  ];
+  if (role === "owner" || role === "manager") {
+    return [
+      { href: "/app", label: "Performance" },
+      { href: "/app/admin", label: "Admin" },
+    ];
+  }
+
+  return [{ href: "/app", label: "Performance" }];
 }
 
 export async function AppHeader() {

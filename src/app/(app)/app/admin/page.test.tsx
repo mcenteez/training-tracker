@@ -22,7 +22,7 @@ vi.mock("@/db/client", () => ({
   withDatabase: withDatabaseMock,
 }));
 
-import AppHomePage from "./page";
+import AdminPage from "./page";
 
 function mockAuthenticatedUser() {
   authMock.mockResolvedValue({ userId: "clerk_user_1" });
@@ -31,13 +31,13 @@ function mockAuthenticatedUser() {
     emailAddresses: [
       {
         id: "primary_1",
-        emailAddress: "athlete@example.com",
+        emailAddress: "manager@example.com",
       },
     ],
   });
 }
 
-describe("app dashboard role rendering", () => {
+describe("app admin page", () => {
   afterEach(() => {
     cleanup();
   });
@@ -52,53 +52,20 @@ describe("app dashboard role rendering", () => {
     });
   });
 
-  it("renders athlete-focused dashboard for athlete role", async () => {
+  it("renders admin interface for manager role", async () => {
     mockAuthenticatedUser();
+
     withDatabaseMock.mockResolvedValue({
-      dashboardView: "athlete",
-      userContext: {
-        id: "user-1",
-        clerkUserId: "clerk_user_1",
-        email: "athlete@example.com",
-        hasOrganizationMembership: true,
-        organizationId: "organization-1",
-        organizationRole: "athlete",
-      },
-      athleteTeams: [
-        {
-          teamId: "team-1",
-          teamName: "Varsity",
-          teamRole: "athlete",
-        },
-      ],
-      teams: [],
-      organizationMembers: [],
-      teamMembers: [],
-      invitations: [],
-      auditEvents: [],
-    });
-
-    const view = await AppHomePage({ searchParams: Promise.resolve({}) });
-    render(view);
-
-    expect(screen.getByText("Athlete Hub")).toBeInTheDocument();
-    expect(screen.getByText("My teams")).toBeInTheDocument();
-    expect(screen.queryByText("Organization members")).not.toBeInTheDocument();
-  });
-
-  it("renders performance dashboard for non-athlete roles", async () => {
-    mockAuthenticatedUser();
-    withDatabaseMock.mockResolvedValue({
-      dashboardView: "performance",
       userContext: {
         id: "user-1",
         clerkUserId: "clerk_user_1",
         email: "manager@example.com",
+        fullName: null,
         hasOrganizationMembership: true,
         organizationId: "organization-1",
         organizationRole: "manager",
       },
-      athleteTeams: [],
+      organizationName: "North High",
       teams: [],
       organizationMembers: [],
       teamMembers: [],
@@ -106,12 +73,36 @@ describe("app dashboard role rendering", () => {
       auditEvents: [],
     });
 
-    const view = await AppHomePage({ searchParams: Promise.resolve({}) });
+    const view = await AdminPage({ searchParams: Promise.resolve({}) });
     render(view);
 
-    expect(screen.getByText("Performance Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Team participation")).toBeInTheDocument();
-    expect(screen.queryByText("Organization members")).not.toBeInTheDocument();
-    expect(screen.queryByText("Athlete Hub")).not.toBeInTheDocument();
+    expect(screen.getByText("Admin Interface")).toBeInTheDocument();
+    expect(screen.getByText("Teams")).toBeInTheDocument();
+  });
+
+  it("redirects viewer role away from admin interface", async () => {
+    mockAuthenticatedUser();
+
+    withDatabaseMock.mockResolvedValue({
+      userContext: {
+        id: "user-2",
+        clerkUserId: "clerk_user_2",
+        email: "viewer@example.com",
+        fullName: null,
+        hasOrganizationMembership: true,
+        organizationId: "organization-1",
+        organizationRole: "viewer",
+      },
+      organizationName: "North High",
+      teams: [],
+      organizationMembers: [],
+      teamMembers: [],
+      invitations: [],
+      auditEvents: [],
+    });
+
+    await expect(
+      AdminPage({ searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("REDIRECT:/app?error=forbidden_admin");
   });
 });

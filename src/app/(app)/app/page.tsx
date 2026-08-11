@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,14 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { withDatabase } from "@/db/client";
 import { hasPermission } from "@/modules/access-control/permissions";
 import {
@@ -32,17 +22,6 @@ import {
   listTeamsByOrganizationId,
 } from "@/modules/teams/db/queries";
 import { getAuthenticatedUserContext } from "@/modules/users/application/user-service";
-
-import {
-  addOrUpdateTeamMemberAction,
-  createTeamAction,
-  inviteOrganizationMemberAction,
-  removeOrganizationMemberAction,
-  revokeOrganizationInvitationAction,
-  removeTeamMemberAction,
-  transferOrganizationOwnershipAction,
-  updateOrganizationMemberRoleAction,
-} from "./actions";
 
 type AppHomePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -86,13 +65,6 @@ function getFullName(
   return fallback || null;
 }
 
-function getUserDisplayName(user: {
-  fullName: string | null;
-  email: string;
-}): string {
-  return user.fullName?.trim() || user.email;
-}
-
 function getFeedbackMessage(
   params: Record<string, string | string[] | undefined>,
 ): { kind: "success" | "error"; text: string } | null {
@@ -103,6 +75,17 @@ function getFeedbackMessage(
 
   if (created === "1") {
     return { kind: "success", text: "Team created successfully." };
+  }
+
+  const forbiddenAdmin = Array.isArray(params.error)
+    ? params.error[0]
+    : params.error;
+
+  if (forbiddenAdmin === "forbidden_admin") {
+    return {
+      kind: "error",
+      text: "You do not have access to the admin interface.",
+    };
   }
 
   const memberSaved = Array.isArray(params.memberSaved)
@@ -329,7 +312,7 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
     ]);
 
     return {
-      dashboardView: "admin" as const,
+      dashboardView: "performance" as const,
       userContext,
       organizationName,
       athleteTeams: [],
@@ -345,47 +328,22 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
     redirect("/onboarding/organization");
   }
 
-  const canCreateTeam =
-    data.userContext.organizationRole !== null &&
-    hasPermission(
-      { organizationRole: data.userContext.organizationRole },
-      "team.create",
-    );
-
-  const canManageTeamMembers = (teamId: string): boolean => {
-    if (data.userContext.organizationRole === null) {
-      return false;
-    }
-
-    const actorTeamRole =
-      data.teamMembers.find(
-        (member) =>
-          member.teamId === teamId && member.userId === data.userContext.id,
-      )?.teamRole ?? null;
-
-    return hasPermission(
-      {
-        organizationRole: data.userContext.organizationRole,
-        teamRole: actorTeamRole,
-      },
-      "team.members.manage",
-    );
-  };
-
-  const canManageInvitations =
+  const params = await searchParams;
+  const feedbackMessage = getFeedbackMessage(params);
+  const roleLabel = data.userContext.organizationRole ?? "athlete";
+  const organizationName = data.organizationName ?? "Unknown organization";
+  const pendingInvitations = data.invitations.filter(
+    (invitation) => invitation.status === "pending",
+  );
+  const athleteCount = data.organizationMembers.filter(
+    (member) => member.organizationRole === "athlete",
+  ).length;
+  const canAccessAdmin =
     data.userContext.organizationRole !== null &&
     hasPermission(
       { organizationRole: data.userContext.organizationRole },
       "organization.members.manage",
     );
-
-  const params = await searchParams;
-  const feedbackMessage = getFeedbackMessage(params);
-  const roleLabel = data.userContext.organizationRole ?? "athlete";
-  const organizationName = data.organizationName ?? "Unknown organization";
-  const ownershipTransferCandidates = data.organizationMembers.filter(
-    (member) => member.organizationRole !== "owner",
-  );
 
   if (data.dashboardView === "athlete") {
     return (
@@ -477,19 +435,40 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
     );
   }
 
+  const teamSummaries = data.teams.map((team) => {
+    const members = data.teamMembers.filter(
+      (member) => member.teamId === team.id,
+    );
+    const athletesOnTeam = members.filter((member) => {
+      const organizationMember = data.organizationMembers.find(
+        (organizationMemberItem) =>
+          organizationMemberItem.userId === member.userId,
+      );
+
+      return organizationMember?.organizationRole === "athlete";
+    }).length;
+
+    return {
+      id: team.id,
+      name: team.name,
+      memberCount: members.length,
+      athleteCount: athletesOnTeam,
+    };
+  });
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
       <Card className="border-primary/25 bg-linear-to-br from-card via-card to-accent/10 shadow-2xl shadow-black/20">
         <CardHeader className="gap-3">
           <div className="inline-flex w-fit items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium tracking-wide text-primary uppercase">
-            Control Center
+            Performance Dashboard
           </div>
           <CardTitle className="text-3xl tracking-tight sm:text-4xl">
-            Training Tracker
+            Organization readiness at a glance
           </CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Create teams, manage member access, and shape daily operations from
-            one focused admin surface.
+            Track team coverage, participation, and compliance trends. Use the
+            admin interface for operational changes.
           </CardDescription>
           <div className="flex w-fit items-center rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur">
             Organization:{" "}
@@ -518,487 +497,110 @@ export default async function AppHomePage({ searchParams }: AppHomePageProps) {
         </p>
       ) : null}
 
-      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
-        <CardHeader>
-          <CardTitle className="text-2xl">Teams</CardTitle>
-          <CardDescription>
-            Manage team structure and team-level member roles.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {canCreateTeam ? (
-            <form
-              action={createTeamAction}
-              className="grid gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
-            >
-              <div className="space-y-2">
-                <label
-                  htmlFor="teamName"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Team name
-                </label>
-                <Input
-                  id="teamName"
-                  name="teamName"
-                  type="text"
-                  placeholder="Varsity"
-                  required
-                  minLength={2}
-                  maxLength={120}
-                  className="h-10"
-                />
-              </div>
-              <Button type="submit" size="lg" className="h-10 sm:min-w-36">
-                Create team
-              </Button>
-            </form>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Your role does not allow team creation.
-            </p>
-          )}
-
-          {data.teams.length > 0 ? (
-            <ul className="space-y-4">
-              {data.teams.map((team) => (
-                <li key={team.id}>
-                  <Card
-                    size="sm"
-                    className="ring-1 ring-border/80 shadow-md shadow-black/10"
-                  >
-                    <CardHeader className="gap-1.5">
-                      <CardTitle className="text-lg tracking-tight">
-                        {team.name}
-                      </CardTitle>
-                      <CardDescription>
-                        Configure members and roles for this team.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3.5">
-                      {canManageTeamMembers(team.id) ? (
-                        <form
-                          action={addOrUpdateTeamMemberAction}
-                          className="space-y-3 rounded-lg border border-border/70 bg-muted/30 p-3"
-                        >
-                          <input type="hidden" name="teamId" value={team.id} />
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-1.5">
-                              <label className="block text-xs font-medium text-muted-foreground">
-                                Member
-                              </label>
-                              <Select name="userId" required>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select member" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {data.organizationMembers.map((member) => (
-                                    <SelectItem
-                                      key={member.userId}
-                                      value={member.userId}
-                                    >
-                                      {getUserDisplayName(member)} (
-                                      {member.organizationRole})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label className="block text-xs font-medium text-muted-foreground">
-                                Team role
-                              </label>
-                              <Select
-                                name="role"
-                                required
-                                defaultValue="athlete"
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Choose role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="manager">
-                                    manager
-                                  </SelectItem>
-                                  <SelectItem value="viewer">viewer</SelectItem>
-                                  <SelectItem value="athlete">
-                                    athlete
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <Button type="submit" size="sm" className="min-w-36">
-                            Save member role
-                          </Button>
-                        </form>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          Your role does not allow member management for this
-                          team.
-                        </p>
-                      )}
-
-                      {(() => {
-                        const members = data.teamMembers.filter(
-                          (member) => member.teamId === team.id,
-                        );
-
-                        if (members.length === 0) {
-                          return (
-                            <p className="text-xs text-muted-foreground">
-                              No members on this team yet.
-                            </p>
-                          );
-                        }
-
-                        return (
-                          <ul className="space-y-2">
-                            {members.map((member) => (
-                              <li
-                                key={`${team.id}:${member.userId}`}
-                                className="flex items-center justify-between rounded-lg border border-border/70 bg-background/70 px-2.5 py-1.5"
-                              >
-                                <span className="text-xs">
-                                  {getUserDisplayName(member)} (
-                                  {member.teamRole})
-                                </span>
-
-                                {canManageTeamMembers(team.id) ? (
-                                  <form action={removeTeamMemberAction}>
-                                    <input
-                                      type="hidden"
-                                      name="teamId"
-                                      value={team.id}
-                                    />
-                                    <input
-                                      type="hidden"
-                                      name="userId"
-                                      value={member.userId}
-                                    />
-                                    <Button
-                                      type="submit"
-                                      size="xs"
-                                      variant="outline"
-                                    >
-                                      Remove
-                                    </Button>
-                                  </form>
-                                ) : null}
-                              </li>
-                            ))}
-                          </ul>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No teams yet. Create your first team to continue setup.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="pb-2">
+            <CardDescription>Teams tracked</CardDescription>
+            <CardTitle className="text-3xl">{data.teams.length}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="pb-2">
+            <CardDescription>Athletes in organization</CardDescription>
+            <CardTitle className="text-3xl">{athleteCount}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="pb-2">
+            <CardDescription>Pending invitations</CardDescription>
+            <CardTitle className="text-3xl">
+              {pendingInvitations.length}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="pb-2">
+            <CardDescription>Roster entries</CardDescription>
+            <CardTitle className="text-3xl">
+              {data.teamMembers.length}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </section>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
-          <CardTitle className="text-2xl">Organization members</CardTitle>
+          <CardTitle className="text-2xl">Team participation</CardTitle>
           <CardDescription>
-            Manage organization-level roles and membership access.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3.5">
-          {data.userContext.organizationRole === "owner" ? (
-            <form
-              action={transferOrganizationOwnershipAction}
-              className="grid gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
-            >
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  New owner
-                </label>
-                <Select name="newOwnerUserId" required>
-                  <SelectTrigger
-                    className="h-10 min-w-56"
-                    disabled={ownershipTransferCandidates.length === 0}
-                  >
-                    <SelectValue placeholder="Select member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ownershipTransferCandidates.map((member) => (
-                      <SelectItem key={member.userId} value={member.userId}>
-                        {getUserDisplayName(member)} ({member.organizationRole})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Previous owner role
-                </label>
-                <Select
-                  name="previousOwnerRole"
-                  defaultValue="manager"
-                  required
-                >
-                  <SelectTrigger className="h-10 min-w-44">
-                    <SelectValue placeholder="Role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manager">manager</SelectItem>
-                    <SelectItem value="viewer">viewer</SelectItem>
-                    <SelectItem value="athlete">athlete</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                type="submit"
-                size="lg"
-                className="h-10 sm:min-w-44"
-                disabled={ownershipTransferCandidates.length === 0}
-              >
-                Transfer ownership
-              </Button>
-
-              {ownershipTransferCandidates.length === 0 ? (
-                <p className="text-xs text-muted-foreground sm:col-span-3">
-                  Add another member before transferring ownership.
-                </p>
-              ) : null}
-            </form>
-          ) : null}
-
-          {data.organizationMembers.length > 0 ? (
-            <ul className="space-y-2.5">
-              {data.organizationMembers.map((member) => {
-                const canManageMember =
-                  canManageInvitations && member.organizationRole !== "owner";
-
-                return (
-                  <li
-                    key={member.userId}
-                    className="space-y-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm">{getUserDisplayName(member)}</p>
-                        {member.fullName ? (
-                          <p className="text-xs text-muted-foreground">
-                            {member.email}
-                          </p>
-                        ) : null}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {member.organizationRole}
-                      </p>
-                    </div>
-
-                    {canManageMember ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <form
-                          action={updateOrganizationMemberRoleAction}
-                          className="flex flex-wrap items-center gap-2"
-                        >
-                          <input
-                            type="hidden"
-                            name="userId"
-                            value={member.userId}
-                          />
-                          <Select
-                            name="role"
-                            defaultValue={member.organizationRole}
-                          >
-                            <SelectTrigger className="h-8 min-w-32">
-                              <SelectValue placeholder="Role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="manager">manager</SelectItem>
-                              <SelectItem value="viewer">viewer</SelectItem>
-                              <SelectItem value="athlete">athlete</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button type="submit" size="xs" variant="outline">
-                            Update role
-                          </Button>
-                        </form>
-
-                        <form action={removeOrganizationMemberAction}>
-                          <input
-                            type="hidden"
-                            name="userId"
-                            value={member.userId}
-                          />
-                          <Button type="submit" size="xs" variant="outline">
-                            Remove member
-                          </Button>
-                        </form>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Role changes for this member are restricted.
-                      </p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No organization members found.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
-        <CardHeader>
-          <CardTitle className="text-2xl">Invitations</CardTitle>
-          <CardDescription>
-            Invite organization members by email and role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {canManageInvitations ? (
-            <form
-              action={inviteOrganizationMemberAction}
-              className="grid gap-3 rounded-xl border border-border/70 bg-background/65 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
-            >
-              <div className="space-y-2">
-                <label
-                  htmlFor="invitedEmail"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Email
-                </label>
-                <Input
-                  id="invitedEmail"
-                  name="invitedEmail"
-                  type="email"
-                  placeholder="coach@school.edu"
-                  required
-                  className="h-10"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Role
-                </label>
-                <Select name="role" defaultValue="athlete" required>
-                  <SelectTrigger className="h-10 min-w-36">
-                    <SelectValue placeholder="Role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manager">manager</SelectItem>
-                    <SelectItem value="viewer">viewer</SelectItem>
-                    <SelectItem value="athlete">athlete</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" size="lg" className="h-10 sm:min-w-36">
-                Send invite
-              </Button>
-            </form>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Your role does not allow invitation management.
-            </p>
-          )}
-
-          {data.invitations.length > 0 ? (
-            <ul className="space-y-2.5">
-              {data.invitations.map((invitation) => (
-                <li
-                  key={invitation.id}
-                  className="space-y-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm">
-                      {invitation.invitedEmail} ({invitation.role})
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {invitation.status}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>
-                      Expires {invitation.expiresAt.toLocaleDateString()}
-                    </span>
-                    <span>•</span>
-                    <Link
-                      href={`/accept-invite/${invitation.token}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Accept link
-                    </Link>
-                    {canManageInvitations && invitation.status === "pending" ? (
-                      <form action={revokeOrganizationInvitationAction}>
-                        <input
-                          type="hidden"
-                          name="invitationId"
-                          value={invitation.id}
-                        />
-                        <Button size="xs" variant="outline" type="submit">
-                          Revoke
-                        </Button>
-                      </form>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No invitations yet.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
-        <CardHeader>
-          <CardTitle className="text-2xl">Audit trail</CardTitle>
-          <CardDescription>
-            Security-sensitive invitation and membership activity.
+            Snapshot of staffing and athlete coverage across teams.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {data.auditEvents.length > 0 ? (
+          {teamSummaries.length > 0 ? (
             <ul className="space-y-2.5">
-              {data.auditEvents
-                .slice(-20)
-                .reverse()
-                .map((event) => (
-                  <li
-                    key={event.id}
-                    className="rounded-lg border border-border/70 bg-background/70 px-3 py-2"
-                  >
-                    <p className="text-xs text-muted-foreground">
-                      {event.occurredAt.toLocaleString()}
-                    </p>
-                    <p className="text-sm font-medium">{event.action}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Actor: {event.actorUserId}
-                      {event.targetUserId
-                        ? ` • Target: ${event.targetUserId}`
-                        : ""}
-                    </p>
-                  </li>
-                ))}
+              {teamSummaries.map((team) => (
+                <li
+                  key={team.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
+                >
+                  <p className="text-sm font-medium">{team.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Members: {team.memberCount} • Athletes: {team.athleteCount}
+                  </p>
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No audit events yet.
+              No team data yet. Add teams and memberships in the admin
+              interface.
             </p>
           )}
         </CardContent>
       </Card>
+
+      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+        <CardHeader>
+          <CardTitle className="text-2xl">Compliance snapshot</CardTitle>
+          <CardDescription>
+            Workout assignment and completion metrics will appear here in the
+            next phase.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2">
+            <p className="text-sm font-medium">Workout assignment coverage</p>
+            <p className="text-xs text-muted-foreground">
+              Coming soon: percent of athletes with assigned workouts this week.
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/70 bg-background/70 px-3 py-2">
+            <p className="text-sm font-medium">Completion compliance</p>
+            <p className="text-xs text-muted-foreground">
+              Coming soon: submitted results versus assigned workload by team.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {canAccessAdmin ? (
+        <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
+          <CardHeader>
+            <CardTitle className="text-2xl">Admin interface</CardTitle>
+            <CardDescription>
+              Manage teams, roles, invitations, and organization access.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a
+              href="/app/admin"
+              className="inline-flex h-10 items-center rounded-md border border-border/80 bg-background px-4 text-sm font-medium hover:bg-accent/40"
+            >
+              Open admin interface
+            </a>
+          </CardContent>
+        </Card>
+      ) : null}
     </main>
   );
 }

@@ -24,7 +24,7 @@ This document is a high-level functional reference for human contributors and AI
 - Authorization is role-based and enforced server-side for every read and write.
 - Tenant isolation is mandatory: organization-owned data cannot leak across organizations.
 
-Reference: [access-control.md](C:/Users/jrmce/code/training-tracker.worktrees/now-that-we-have-a-basic-auth-authz/docs/access-control.md)
+Reference: [access-control.md](access-control.md)
 
 ### 2) Organization Management
 
@@ -33,6 +33,14 @@ Reference: [access-control.md](C:/Users/jrmce/code/training-tracker.worktrees/no
 - Transfer ownership transactionally.
 - Manage organization members and roles.
 - Remove organization members and dependent access safely.
+- Operational management actions are centralized in a dedicated admin interface.
+
+### 2.1) Performance Dashboard And Admin Split
+
+- The default non-athlete landing page is a read-focused performance dashboard.
+- Owners, managers, and viewers can view organization/team snapshots from the performance dashboard.
+- Only owners and managers can access the admin interface for operational changes.
+- Athletes use a separate athlete-focused dashboard surface.
 
 ### 3) Team Management
 
