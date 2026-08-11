@@ -3,9 +3,9 @@ import { notFound, redirect } from "next/navigation";
 
 import { withDatabase } from "@/db/client";
 import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
+import { AssignmentTargetFields } from "@/components/assignments/assignment-target-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NativeSelect } from "@/components/ui/native-select";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import {
@@ -164,48 +164,28 @@ export default async function AssignmentDetailPage({
           <CardHeader>
             <CardTitle>Targets</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              Teams
-              <NativeSelect
-                name="teamIds"
-                multiple
-                className="min-h-36"
-                disabled={!isDraft}
-                defaultValue={assignment.targets
-                  .filter((target) => target.targetType === "team")
-                  .map((target) => target.teamId ?? "")
-                  .filter(Boolean)}
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-
-            <label className="grid gap-1.5 text-sm">
-              Athletes
-              <NativeSelect
-                name="athleteUserIds"
-                multiple
-                className="min-h-36"
-                disabled={!isDraft}
-                defaultValue={assignment.targets
-                  .filter((target) => target.targetType === "athlete")
-                  .map((target) => target.athleteUserId ?? "")
-                  .filter(Boolean)}
-              >
-                {members
-                  .filter((member) => member.organizationRole === "athlete")
-                  .map((member) => (
-                    <option key={member.userId} value={member.userId}>
-                      {member.fullName ?? member.email}
-                    </option>
-                  ))}
-              </NativeSelect>
-            </label>
+          <CardContent>
+            <AssignmentTargetFields
+              teams={teams.map((team) => ({
+                id: team.id,
+                label: team.name,
+              }))}
+              athletes={members
+                .filter((member) => member.organizationRole === "athlete")
+                .map((member) => ({
+                  id: member.userId,
+                  label: member.fullName ?? member.email,
+                }))}
+              selectedTeamIds={assignment.targets
+                .filter((target) => target.targetType === "team")
+                .map((target) => target.teamId ?? "")
+                .filter(Boolean)}
+              selectedAthleteIds={assignment.targets
+                .filter((target) => target.targetType === "athlete")
+                .map((target) => target.athleteUserId ?? "")
+                .filter(Boolean)}
+              disabled={!isDraft}
+            />
           </CardContent>
         </Card>
 
