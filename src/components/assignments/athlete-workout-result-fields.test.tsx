@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AthleteWorkoutResultFields } from "@/components/assignments/athlete-workout-result-fields";
@@ -33,6 +33,24 @@ describe("AthleteWorkoutResultFields", () => {
     expect(
       screen.getByText("Actuals and notes").closest("details"),
     ).not.toHaveAttribute("open");
+  });
+
+  it("toggles completion for one exercise without affecting the others", async () => {
+    render(
+      <div>
+        <AthleteWorkoutResultFields item={item} disabled={false} />
+        <AthleteWorkoutResultFields
+          item={{ ...item, id: "item-2", exerciseName: "Squat" }}
+          disabled={false}
+        />
+      </div>,
+    );
+
+    const firstButton = screen.getAllByRole("button", { name: "Complete" })[0];
+    fireEvent.click(firstButton);
+
+    expect(screen.getByRole("button", { name: "Completed" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Complete" })).toBeVisible();
   });
 
   it("keeps the actuals drawer open when saved actuals exist", () => {

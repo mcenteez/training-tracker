@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type {
@@ -18,6 +20,9 @@ export function AthleteWorkoutResultFields({
   result,
   disabled,
 }: AthleteWorkoutResultFieldsProps) {
+  const [completedAt, setCompletedAt] = useState<Date | null>(
+    result?.completedAt ?? null,
+  );
   const hasPrescribedMetrics =
     item.reps !== null ||
     item.load !== null ||
@@ -34,7 +39,7 @@ export function AthleteWorkoutResultFields({
       result.distanceMeters !== null) ||
     Boolean(result?.notes);
   const drawerId = `actuals-${item.id}`;
-  const completeLabel = result?.completedAt ? "Completed" : "Complete";
+  const completeLabel = completedAt ? "Completed" : "Complete";
 
   return (
     <div className="mt-3 space-y-3">
@@ -57,16 +62,17 @@ export function AthleteWorkoutResultFields({
       <input
         type="hidden"
         name={`result:${item.id}:completedAt`}
-        value={result?.completedAt?.toISOString() ?? ""}
+        value={completedAt?.toISOString() ?? ""}
       />
 
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          type="submit"
-          name={`result:${item.id}:complete`}
-          value="1"
-          variant={result?.completedAt ? "secondary" : "default"}
+          type="button"
+          variant={completedAt ? "secondary" : "default"}
           disabled={disabled}
+          onClick={() =>
+            setCompletedAt((current) => (current ? null : new Date()))
+          }
         >
           {completeLabel}
         </Button>
