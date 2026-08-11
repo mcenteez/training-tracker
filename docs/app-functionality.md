@@ -70,6 +70,15 @@ Reference: [access-control.md](access-control.md)
 - Workouts can be duplicated into independent drafts while retaining source-template provenance.
 - Concurrent edits use optimistic versions so a stale editor cannot silently overwrite newer programming.
 
+### 5.1) Library Terminology and Usage
+
+- **Exercise**: a reusable movement definition with coaching cues, category, equipment, and optional video.
+- **Workout**: a single session template that defines one training session an athlete should complete.
+- **Training Block**: an ordered grouping inside one workout (straight sets, circuit, or superset) used to structure that session.
+- **Plan**: a multi-session schedule that organizes workout templates across a repeatable cadence (for example, a weekly Push/Pull/Legs cycle).
+- **Assignment**: a future delivery object that publishes a plan or workout to athletes while preserving snapshot history.
+- Coaches should model one day/session per workout, use blocks to structure work within that session, and use plans to control when sessions occur over time.
+
 ### 6) Workout Assignment
 
 - A workout can be assigned to any athlete in the organization, subject to authorization.

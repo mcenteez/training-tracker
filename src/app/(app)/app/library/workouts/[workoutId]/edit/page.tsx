@@ -1,8 +1,15 @@
 import { notFound, redirect } from "next/navigation";
 
 import { updateWorkoutAction } from "@/app/(app)/app/library/actions";
+import { LibraryGlossary } from "@/components/library/library-glossary";
 import { WorkoutBuilder } from "@/components/library/workout-builder";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadLibraryAppContext } from "@/lib/library-context";
 import { listExercisesForOrganization } from "@/modules/exercises/db/queries";
@@ -66,10 +73,15 @@ export default async function EditWorkoutPage({
   };
 
   return (
-    <div className="py-7">
+    <div className="space-y-5 py-7">
+      <LibraryGlossary />
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle>Edit workout</CardTitle>
+          <CardDescription>
+            Update this session template and its training blocks while keeping
+            plan-level scheduling as a separate layer.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <WorkoutBuilder

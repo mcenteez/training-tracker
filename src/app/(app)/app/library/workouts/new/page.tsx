@@ -1,8 +1,15 @@
 import { redirect } from "next/navigation";
 
 import { createWorkoutAction } from "@/app/(app)/app/library/actions";
+import { LibraryGlossary } from "@/components/library/library-glossary";
 import { WorkoutBuilder } from "@/components/library/workout-builder";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadLibraryAppContext } from "@/lib/library-context";
 import { listExercisesForOrganization } from "@/modules/exercises/db/queries";
@@ -18,10 +25,15 @@ export default async function NewWorkoutPage() {
   );
 
   return (
-    <div className="py-7">
+    <div className="space-y-5 py-7">
+      <LibraryGlossary />
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle>Create workout</CardTitle>
+          <CardDescription>
+            Build one session template by composing ordered training blocks and
+            exercise prescriptions.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <WorkoutBuilder
