@@ -303,27 +303,27 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Replace primary-workout lookup in session start with explicit workout and plan-slot snapshot resolution.
-- [ ] Require `workoutSnapshotId`, `planSlotSnapshotId`, and `scheduledDate` for plan session creation.
-- [ ] Validate the plan slot belongs to the assignment and references the workout snapshot.
-- [ ] Validate fixed-day occurrence dates against the snapshotted weekday.
-- [ ] Validate flexible dates against assignment range and assignment-local current week.
-- [ ] Persist `planSlotSnapshotId` on plan sessions.
-- [ ] Replace latest-session lookup with exact occurrence lookup.
+- [x] Replace primary-workout lookup in session start with explicit workout and plan-slot snapshot resolution.
+- [x] Require `workoutSnapshotId`, `planSlotSnapshotId`, and `scheduledDate` for plan session creation.
+- [x] Validate the plan slot belongs to the assignment and references the workout snapshot.
+- [x] Validate fixed-day occurrence dates against the snapshotted weekday.
+- [x] Validate flexible dates against assignment range and assignment-local current week.
+- [x] Persist `planSlotSnapshotId` on plan sessions.
+- [x] Replace latest-session lookup with exact occurrence lookup.
 - [ ] Replace primary-workout item lookup with selected-workout item lookup.
-- [ ] Preserve standalone workout assignment behavior with a null plan slot snapshot.
-- [ ] Keep autosave item allow-list scoped to the session workout snapshot.
-- [ ] Keep reset transactional and occurrence-scoped.
-- [ ] Keep completion transactional and version-aware.
-- [ ] Add service tests for stale versions, wrong slots, wrong dates, and wrong athletes.
+- [x] Preserve standalone workout assignment behavior with a null plan slot snapshot.
+- [x] Keep autosave item allow-list scoped to the session workout snapshot.
+- [x] Keep reset transactional and occurrence-scoped.
+- [x] Keep completion transactional and version-aware.
+- [x] Add service tests for stale versions, wrong slots, wrong dates, and wrong athletes.
 
 ### Acceptance Criteria
 
-- [ ] Starting Workout 2 never returns Workout 1's session.
-- [ ] Repeated weekly occurrences create distinct sessions on distinct dates.
-- [ ] The same occurrence start is idempotent.
-- [ ] Session results cannot reference exercises from another workout snapshot.
-- [ ] Reset clears only the selected occurrence.
+- [x] Starting Workout 2 never returns Workout 1's session.
+- [x] Repeated weekly occurrences create distinct sessions on distinct dates.
+- [x] The same occurrence start is idempotent.
+- [x] Session results cannot reference exercises from another workout snapshot.
+- [x] Reset clears only the selected occurrence.
 
 ## Milestone 8: Weekly Frequency Enforcement
 
@@ -335,22 +335,22 @@ Each plan workout slot uses exactly one scheduling mode:
 
 ### Implementation Checklist
 
-- [ ] Count existing in-progress and submitted flexible sessions for the plan slot and local week.
-- [ ] Reject start when the weekly target is already met.
-- [ ] Prevent duplicate same-date starts with existing session uniqueness.
+- [x] Count existing in-progress and submitted flexible sessions for the plan slot and local week.
+- [x] Reject start when the weekly target is already met.
+- [x] Prevent duplicate same-date starts with existing session uniqueness.
 - [ ] Add transaction-safe or constraint-backed protection against concurrent over-target starts.
 - [ ] Define UI behavior for an abandoned in-progress occurrence.
 - [ ] Show remaining sessions on overview and logging pages.
 - [ ] Show target-met state with links to completed occurrences.
 - [ ] Add concurrency and retry tests.
-- [ ] Add week rollover tests.
+- [x] Add week rollover tests.
 
 ### Acceptance Criteria
 
-- [ ] A 2x/week workout permits two eligible occurrences and rejects a third.
+- [x] A 2x/week workout permits two eligible occurrences and rejects a third.
 - [ ] Concurrent starts cannot exceed the target.
-- [ ] Monday begins a new target window in the assignment timezone.
-- [ ] Prior-week sessions do not count toward the current week.
+- [x] Monday begins a new target window in the assignment timezone.
+- [x] Prior-week sessions do not count toward the current week.
 
 ## Milestone 9: Dashboard, UX, and Failure States
 
@@ -399,7 +399,7 @@ Each plan workout slot uses exactly one scheduling mode:
 - [x] Week-boundary calculations in multiple timezones.
 - [x] Fixed-day occurrence generation.
 - [x] Flexible weekly-progress calculation.
-- [ ] Session lifecycle schedule invariants.
+- [x] Session lifecycle schedule invariants.
 
 ### Component
 
@@ -412,10 +412,10 @@ Each plan workout slot uses exactly one scheduling mode:
 
 - [x] Migration backfill and database checks.
 - [x] Mixed-mode plan publication snapshots.
-- [ ] Exact occurrence session start.
-- [ ] Flexible target enforcement.
+- [x] Exact occurrence session start.
+- [x] Flexible target enforcement.
 - [ ] Save, reset, and complete one occurrence without affecting another.
-- [ ] Repeated workouts across separate weeks.
+- [x] Repeated workouts across separate weeks.
 
 ### Security and Tenant Isolation
 
@@ -462,7 +462,7 @@ Each plan workout slot uses exactly one scheduling mode:
 4. [x] Slice D: Date utilities, occurrence read model, and progress queries.
 5. [ ] Slice E: Plan-only athlete overview with clickable workouts.
 6. [ ] Slice F: Dedicated workout logging route and selected-snapshot reads.
-7. [ ] Slice G: Occurrence-aware session start, save, reset, and complete.
+7. [x] Slice G: Occurrence-aware session start, save, reset, and complete.
 8. [ ] Slice H: Weekly target enforcement and concurrency protection.
 9. [ ] Slice I: Dashboard integration, failure states, accessibility, and documentation.
 

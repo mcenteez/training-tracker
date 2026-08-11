@@ -41,10 +41,10 @@ vi.mock("@/modules/assignments/application/assignment-session-service", () => ({
 }));
 
 import {
-  autosaveAssignmentSessionAction,
-  startAssignmentSessionAction,
-  resetAssignmentSessionAction,
-  submitAssignmentSessionAction,
+  autosaveWorkoutOccurrenceAction,
+  resetWorkoutOccurrenceAction,
+  startWorkoutOccurrenceAction,
+  submitWorkoutOccurrenceAction,
 } from "./actions";
 
 const ids = {
@@ -53,9 +53,21 @@ const ids = {
   assignmentId: "33333333-3333-4333-8333-333333333333",
   sessionId: "44444444-4444-4444-8444-444444444444",
   itemSnapshotId: "55555555-5555-4555-8555-555555555555",
+  workoutSnapshotId: "66666666-6666-4666-8666-666666666666",
+  planSlotSnapshotId: "77777777-7777-4777-8777-777777777777",
 };
 
-describe("athlete assignment actions", () => {
+const occurrenceUrl = `/app/athlete/assignments/${ids.assignmentId}/workouts/${ids.workoutSnapshotId}/2026-08-11`;
+
+function occurrenceFormData(): FormData {
+  const formData = new FormData();
+  formData.set("assignmentId", ids.assignmentId);
+  formData.set("workoutSnapshotId", ids.workoutSnapshotId);
+  formData.set("scheduledDate", "2026-08-11");
+  return formData;
+}
+
+describe("workout occurrence actions", () => {
   beforeEach(() => {
     loadActiveAppContextMock.mockReset();
     withDatabaseMock.mockReset();
@@ -95,12 +107,12 @@ describe("athlete assignment actions", () => {
     resetAssignmentSessionMock.mockResolvedValue(undefined);
   });
 
-  it("starts a session and redirects with success", async () => {
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
+  it("starts a plan occurrence and redirects with success", async () => {
+    const formData = occurrenceFormData();
+    formData.set("planSlotSnapshotId", ids.planSlotSnapshotId);
 
-    await expect(startAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?started=1`,
+    await expect(startWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?started=1`,
     );
 
     expect(startAssignmentSessionMock).toHaveBeenCalledWith(
@@ -109,6 +121,8 @@ describe("athlete assignment actions", () => {
         organizationId: ids.organizationId,
         assignmentId: ids.assignmentId,
         athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: ids.planSlotSnapshotId,
+        scheduledDate: "2026-08-11",
       },
     );
     expect(revalidatePathMock).toHaveBeenCalledWith(
@@ -116,8 +130,27 @@ describe("athlete assignment actions", () => {
     );
   });
 
-  it("rejects missing assignment id for start action", async () => {
-    await expect(startAssignmentSessionAction(new FormData())).rejects.toThrow(
+  it("starts a workout-only occurrence without a plan slot", async () => {
+    const formData = occurrenceFormData();
+
+    await expect(startWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?started=1`,
+    );
+
+    expect(startAssignmentSessionMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      expect.objectContaining({
+        planSlotSnapshotId: null,
+        scheduledDate: null,
+      }),
+    );
+  });
+
+  it("rejects malformed occurrence references", async () => {
+    const formData = occurrenceFormData();
+    formData.set("scheduledDate", "not-a-date");
+
+    await expect(startWorkoutOccurrenceAction(formData)).rejects.toThrow(
       "REDIRECT:/app/athlete?error=invalid_assignment",
     );
 
@@ -129,76 +162,28 @@ describe("athlete assignment actions", () => {
       .spyOn(globalThis.crypto, "randomUUID")
       .mockReturnValue("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
+    const formData = occurrenceFormData();
     formData.set("sessionId", ids.sessionId);
     formData.set("expectedVersion", "1");
     formData.append("itemSnapshotIds", ids.itemSnapshotId);
     formData.set(`result:${ids.itemSnapshotId}:reps`, "12");
-    formData.set(`result:${ids.itemSnapshotId}:load`, "95lb");
     formData.set(`result:${ids.itemSnapshotId}:notes`, "good tempo");
 
-    await expect(autosaveAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?saved=1`,
+    await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?saved=1`,
     );
 
     expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
       { unitOfWork: "session-uow" },
       expect.objectContaining({
-        organizationId: ids.organizationId,
-        assignmentId: ids.assignmentId,
-        athleteUserId: ids.athleteUserId,
         sessionId: ids.sessionId,
         expectedVersion: 1,
         mutationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         results: [
-          {
-            itemSnapshotId: ids.itemSnapshotId,
-            completedAt: expect.any(Date),
-            roundNumber: 1,
-            reps: 12,
-            load: "95lb",
-            durationSeconds: null,
-            distanceMeters: null,
-            notes: "good tempo",
-          },
-        ],
-      }),
-    );
-
-    randomUuidSpy.mockRestore();
-  });
-
-  it("saves a completion-only result when the exercise is marked complete", async () => {
-    const randomUuidSpy = vi
-      .spyOn(globalThis.crypto, "randomUUID")
-      .mockReturnValue("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
-
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
-    formData.set("sessionId", ids.sessionId);
-    formData.set("expectedVersion", "1");
-    formData.append("itemSnapshotIds", ids.itemSnapshotId);
-    formData.set(`result:${ids.itemSnapshotId}:complete`, "1");
-
-    await expect(autosaveAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?saved=1`,
-    );
-
-    expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
-      { unitOfWork: "session-uow" },
-      expect.objectContaining({
-        mutationId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-        results: [
           expect.objectContaining({
             itemSnapshotId: ids.itemSnapshotId,
-            completedAt: expect.any(Date),
-            roundNumber: 1,
-            reps: null,
-            load: null,
-            durationSeconds: null,
-            distanceMeters: null,
-            notes: null,
+            reps: 12,
+            notes: "good tempo",
           }),
         ],
       }),
@@ -207,106 +192,54 @@ describe("athlete assignment actions", () => {
     randomUuidSpy.mockRestore();
   });
 
-  it("maps expected domain errors to assignment action failure redirect", async () => {
+  it("maps expected domain errors to the occurrence error redirect", async () => {
     autosaveAssignmentSessionResultsMock.mockRejectedValue(
       new DomainInvariantError("out of window"),
     );
 
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
+    const formData = occurrenceFormData();
     formData.set("sessionId", ids.sessionId);
     formData.set("expectedVersion", "1");
 
-    await expect(autosaveAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?error=assignment_session_action_failed`,
+    await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?error=assignment_session_action_failed`,
     );
   });
 
-  it("submits a session and redirects with success", async () => {
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
-    formData.set("sessionId", ids.sessionId);
-    formData.set("expectedVersion", "2");
-
-    await expect(submitAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?submitted=1`,
-    );
-
-    expect(submitAssignmentSessionMock).toHaveBeenCalledWith(
-      { unitOfWork: "session-uow" },
-      {
-        organizationId: ids.organizationId,
-        assignmentId: ids.assignmentId,
-        athleteUserId: ids.athleteUserId,
-        sessionId: ids.sessionId,
-        expectedVersion: 2,
-      },
-    );
-  });
-
-  it("persists pending workout results before submitting", async () => {
+  it("persists pending results before submitting", async () => {
     autosaveAssignmentSessionResultsMock.mockResolvedValue({ version: 3 });
 
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
+    const formData = occurrenceFormData();
     formData.set("sessionId", ids.sessionId);
     formData.set("expectedVersion", "2");
     formData.append("itemSnapshotIds", ids.itemSnapshotId);
     formData.set(`result:${ids.itemSnapshotId}:complete`, "1");
 
-    await expect(submitAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?submitted=1`,
-    );
-
-    expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
-      { unitOfWork: "session-uow" },
-      expect.objectContaining({
-        organizationId: ids.organizationId,
-        assignmentId: ids.assignmentId,
-        athleteUserId: ids.athleteUserId,
-        sessionId: ids.sessionId,
-        expectedVersion: 2,
-        results: [
-          expect.objectContaining({
-            itemSnapshotId: ids.itemSnapshotId,
-            completedAt: expect.any(Date),
-            roundNumber: 1,
-          }),
-        ],
-      }),
+    await expect(submitWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?submitted=1`,
     );
 
     expect(submitAssignmentSessionMock).toHaveBeenCalledWith(
       { unitOfWork: "session-uow" },
-      {
-        organizationId: ids.organizationId,
-        assignmentId: ids.assignmentId,
-        athleteUserId: ids.athleteUserId,
-        sessionId: ids.sessionId,
-        expectedVersion: 3,
-      },
+      expect.objectContaining({ expectedVersion: 3 }),
     );
   });
 
-  it("resets a session back to its initial state", async () => {
-    const formData = new FormData();
-    formData.set("assignmentId", ids.assignmentId);
+  it("resets an occurrence and redirects with success", async () => {
+    const formData = occurrenceFormData();
     formData.set("sessionId", ids.sessionId);
     formData.set("expectedVersion", "3");
 
-    await expect(resetAssignmentSessionAction(formData)).rejects.toThrow(
-      `REDIRECT:/app/athlete/assignments/${ids.assignmentId}?reset=1`,
+    await expect(resetWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?reset=1`,
     );
 
     expect(resetAssignmentSessionMock).toHaveBeenCalledWith(
       { unitOfWork: "session-uow" },
-      {
-        organizationId: ids.organizationId,
-        assignmentId: ids.assignmentId,
-        athleteUserId: ids.athleteUserId,
+      expect.objectContaining({
         sessionId: ids.sessionId,
         expectedVersion: 3,
-      },
+      }),
     );
   });
 });

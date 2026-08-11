@@ -1,29 +1,25 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { AthleteWorkoutResultFields } from "@/components/assignments/athlete-workout-result-fields";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
 import {
+  buildPlanOccurrenceOverview,
+  type PlanOccurrenceStatus,
+} from "@/modules/assignments/application/plan-occurrences";
+import { toLocalDateString } from "@/modules/assignments/application/schedule-dates";
+import {
   findLatestSessionForAthleteAssignment,
   findPublishedAssignmentForAthlete,
-  listPrimaryWorkoutItemsForAssignment,
-  listSessionResultsForAthleteAssignment,
+  listPlanSlotSnapshotsForAthleteAssignment,
+  listSessionsForAthleteAssignment,
   listWorkoutsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
 
-import {
-  autosaveAssignmentSessionAction,
-  startAssignmentSessionAction,
-  resetAssignmentSessionAction,
-  submitAssignmentSessionAction,
-} from "./actions";
-
 interface AthleteAssignmentDetailPageProps {
   params: Promise<{ assignmentId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function formatDateTime(value: Date | null): string {
@@ -37,100 +33,114 @@ function formatDateTime(value: Date | null): string {
   }).format(value);
 }
 
+function formatOccurrenceDate(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year!, month! - 1, day!)));
+}
+
+const statusLabels: Record<PlanOccurrenceStatus, string> = {
+  available: "Available",
+  in_progress: "In progress",
+  submitted: "Completed",
+  upcoming: "Upcoming",
+  missed: "Missed",
+};
+
 export default async function AthleteAssignmentDetailPage({
   params,
-  searchParams,
 }: AthleteAssignmentDetailPageProps) {
   const { assignmentId } = await params;
-  const resolvedSearchParams = await searchParams;
   const context = await loadActiveAppContext();
 
   if (context.membership.organizationRole !== "athlete") {
     redirect("/app");
   }
 
-  const [assignment, session, workoutItems] = await Promise.all([
-    withDatabase((database) =>
-      findPublishedAssignmentForAthlete(database, {
-        organizationId: context.membership.organizationId,
-        athleteUserId: context.user.id,
-        assignmentId,
-      }),
-    ),
-    withDatabase((database) =>
-      findLatestSessionForAthleteAssignment(database, {
-        organizationId: context.membership.organizationId,
-        athleteUserId: context.user.id,
-        assignmentId,
-      }),
-    ),
-    withDatabase((database) =>
-      listPrimaryWorkoutItemsForAssignment(database, {
-        organizationId: context.membership.organizationId,
-        assignmentId,
-      }),
-    ),
-  ]);
+  const assignment = await withDatabase((database) =>
+    findPublishedAssignmentForAthlete(database, {
+      organizationId: context.membership.organizationId,
+      athleteUserId: context.user.id,
+      assignmentId,
+    }),
+  );
 
   if (!assignment) {
     notFound();
   }
 
-  const planWorkouts =
-    assignment.sourceType === "plan"
-      ? await withDatabase((database) =>
-          listWorkoutsForAthleteAssignment(database, {
-            organizationId: context.membership.organizationId,
-            assignmentId,
-          }),
-        )
-      : [];
+  if (assignment.sourceType === "workout") {
+    const [workouts, session] = await Promise.all([
+      withDatabase((database) =>
+        listWorkoutsForAthleteAssignment(database, {
+          organizationId: context.membership.organizationId,
+          assignmentId,
+        }),
+      ),
+      withDatabase((database) =>
+        findLatestSessionForAthleteAssignment(database, {
+          organizationId: context.membership.organizationId,
+          athleteUserId: context.user.id,
+          assignmentId,
+        }),
+      ),
+    ]);
+    const workoutSnapshotId = session?.workoutSnapshotId ?? workouts[0]?.id;
+    const scheduledDate =
+      assignment.scheduledDate ??
+      toLocalDateString(new Date(), assignment.timezone);
 
-  const feedbackError = Array.isArray(resolvedSearchParams.error)
-    ? resolvedSearchParams.error[0]
-    : resolvedSearchParams.error;
-  const started =
-    (Array.isArray(resolvedSearchParams.started)
-      ? resolvedSearchParams.started[0]
-      : resolvedSearchParams.started) === "1";
-  const saved =
-    (Array.isArray(resolvedSearchParams.saved)
-      ? resolvedSearchParams.saved[0]
-      : resolvedSearchParams.saved) === "1";
-  const submitted =
-    (Array.isArray(resolvedSearchParams.submitted)
-      ? resolvedSearchParams.submitted[0]
-      : resolvedSearchParams.submitted) === "1";
-  const reset =
-    (Array.isArray(resolvedSearchParams.reset)
-      ? resolvedSearchParams.reset[0]
-      : resolvedSearchParams.reset) === "1";
+    if (!workoutSnapshotId) {
+      notFound();
+    }
 
-  const existingResults =
-    session === null
-      ? []
-      : await withDatabase((database) =>
-          listSessionResultsForAthleteAssignment(database, {
-            organizationId: context.membership.organizationId,
-            assignmentId,
-            athleteUserId: context.user.id,
-            sessionId: session.id,
-          }),
-        );
-  const resultByItemId = new Map(
-    existingResults.map((result) => [result.itemSnapshotId, result]),
-  );
+    redirect(
+      `/app/athlete/assignments/${assignmentId}/workouts/${workoutSnapshotId}/${scheduledDate}`,
+    );
+  }
 
-  const canStartSession =
-    assignment.status === "published" &&
-    session === null &&
-    workoutItems.length > 0;
-  const canEditSession =
-    session !== null &&
-    session.status !== "submitted" &&
-    workoutItems.length > 0;
-  const activeWorkoutSnapshotId =
-    session?.workoutSnapshotId ?? planWorkouts[0]?.id ?? null;
+  const [slots, sessions] = await Promise.all([
+    withDatabase((database) =>
+      listPlanSlotSnapshotsForAthleteAssignment(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+      }),
+    ),
+    withDatabase((database) =>
+      listSessionsForAthleteAssignment(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+      }),
+    ),
+  ]);
+
+  const overview =
+    assignment.startDate && assignment.endDate
+      ? buildPlanOccurrenceOverview({
+          slots,
+          sessions,
+          startDate: assignment.startDate,
+          endDate: assignment.endDate,
+          timezone: assignment.timezone,
+        })
+      : null;
+
+  const currentWeekFixed =
+    overview?.fixedOccurrences.filter(
+      (occurrence) =>
+        occurrence.scheduledDate >= overview.weekStart &&
+        occurrence.scheduledDate <= overview.weekEnd,
+    ) ?? [];
+  const upcomingFixed =
+    overview?.fixedOccurrences.filter(
+      (occurrence) => occurrence.scheduledDate > overview.weekEnd,
+    ) ?? [];
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -139,9 +149,7 @@ export default async function AthleteAssignmentDetailPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {assignment.sourceName}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {assignment.sourceType === "plan" ? "Plan" : "Workout"} assignment
-          </p>
+          <p className="text-sm text-muted-foreground">Plan assignment</p>
         </div>
 
         <Button asChild variant="outline">
@@ -149,32 +157,10 @@ export default async function AthleteAssignmentDetailPage({
         </Button>
       </section>
 
-      {started || saved || submitted || reset || feedbackError ? (
-        <Card
-          className={
-            feedbackError
-              ? "border-destructive/50 bg-destructive/5"
-              : "border-emerald-500/40 bg-emerald-500/5"
-          }
-        >
-          <CardContent className="pt-6 text-sm">
-            {started
-              ? "Session started."
-              : saved
-                ? "Progress saved."
-                : submitted
-                  ? "Session submitted."
-                  : reset
-                    ? "Session reset."
-                    : "Unable to complete that session action."}
-          </CardContent>
-        </Card>
-      ) : null}
-
       {assignment.status === "canceled" ? (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="pt-6 text-sm">
-            This assignment was canceled. Your existing session and results
+            This assignment was canceled. Your existing sessions and results
             remain available.
           </CardContent>
         </Card>
@@ -185,38 +171,39 @@ export default async function AthleteAssignmentDetailPage({
           <CardTitle>Schedule</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-1 text-sm sm:grid-cols-2">
-          {assignment.sourceType === "plan" ? (
-            <>
-              <p>Start: {assignment.startDate ?? "-"}</p>
-              <p>End: {assignment.endDate ?? "-"}</p>
-            </>
-          ) : (
-            <>
-              <p>Scheduled: {assignment.scheduledDate ?? "-"}</p>
-              <p>Timezone: {assignment.timezone}</p>
-            </>
-          )}
-          <p>Available from: {formatDateTime(assignment.availableFrom)}</p>
-          <p>Available until: {formatDateTime(assignment.availableUntil)}</p>
+          <p>Start: {assignment.startDate ?? "-"}</p>
+          <p>End: {assignment.endDate ?? "-"}</p>
           <p>Published: {formatDateTime(assignment.publishedAt)}</p>
-          <p>Recipients: {assignment.recipientCount}</p>
+          <p>Timezone: {assignment.timezone}</p>
         </CardContent>
       </Card>
 
-      {assignment.sourceType === "plan" ? (
+      {overview ? (
         <Card>
           <CardHeader>
-            <CardTitle>Plan Workouts</CardTitle>
+            <CardTitle>This Week</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {planWorkouts.map((workout, index) => {
-              const isActive = workout.id === activeWorkoutSnapshotId;
+            {currentWeekFixed.length === 0 &&
+            overview.flexibleSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No workouts are scheduled this week.
+              </p>
+            ) : null}
+
+            {currentWeekFixed.map((occurrence) => {
+              const isNext =
+                overview.nextActionable?.planSlotSnapshotId ===
+                  occurrence.planSlotSnapshotId &&
+                overview.nextActionable?.scheduledDate ===
+                  occurrence.scheduledDate;
 
               return (
-                <div
-                  key={workout.id}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    isActive
+                <Link
+                  key={`${occurrence.planSlotSnapshotId}-${occurrence.scheduledDate}`}
+                  href={`/app/athlete/assignments/${assignmentId}/workouts/${occurrence.workoutSnapshotId}/${occurrence.scheduledDate}`}
+                  className={`block rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/40 ${
+                    isNext
                       ? "border-primary/40 bg-primary/5"
                       : "border-border/70 bg-background/70"
                   }`}
@@ -224,144 +211,119 @@ export default async function AthleteAssignmentDetailPage({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium">
-                        Workout {index + 1} of {planWorkouts.length}
+                        {occurrence.workoutName}
+                        {occurrence.label ? ` · ${occurrence.label}` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {workout.name}
+                        {formatOccurrenceDate(occurrence.scheduledDate)}
                       </p>
                     </div>
                     <p className="text-xs font-medium text-muted-foreground">
-                      {isActive ? "Current workout" : "Upcoming"}
+                      {statusLabels[occurrence.status]}
+                      {isNext ? " · Up next" : ""}
                     </p>
                   </div>
-                </div>
+                </Link>
+              );
+            })}
+
+            {overview.flexibleSlots.map((slot) => {
+              const isNext =
+                overview.nextActionable?.planSlotSnapshotId ===
+                slot.planSlotSnapshotId;
+              const linkDate = slot.inProgressDate ?? overview.today;
+
+              return (
+                <Link
+                  key={slot.planSlotSnapshotId}
+                  href={`/app/athlete/assignments/${assignmentId}/workouts/${slot.workoutSnapshotId}/${linkDate}`}
+                  className={`block rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/40 ${
+                    isNext
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border/70 bg-background/70"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">
+                        {slot.workoutName}
+                        {slot.label ? ` · ${slot.label}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {slot.targetSessionsPerWeek}x per week · any day
+                      </p>
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {slot.completedThisWeek} of {slot.targetSessionsPerWeek}{" "}
+                      completed
+                      {slot.inProgressDate ? " · In progress" : ""}
+                      {isNext && !slot.inProgressDate ? " · Up next" : ""}
+                    </p>
+                  </div>
+                </Link>
               );
             })}
           </CardContent>
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Workout Logging</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {session ? (
-            <div className="space-y-1 text-sm">
-              <p>Status: {session.status}</p>
-              <p>Started: {formatDateTime(session.startedAt)}</p>
-              <p>Submitted: {formatDateTime(session.submittedAt)}</p>
-              <p>Saved results: {session.resultCount}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No session started yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {session === null ? (
-        <form action={startAssignmentSessionAction}>
-          <input type="hidden" name="assignmentId" value={assignmentId} />
-          <Button type="submit" disabled={!canStartSession}>
-            Start Session
-          </Button>
-        </form>
+      {upcomingFixed.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {upcomingFixed.slice(0, 6).map((occurrence) => (
+              <div
+                key={`${occurrence.planSlotSnapshotId}-${occurrence.scheduledDate}`}
+                className="rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium">
+                      {occurrence.workoutName}
+                      {occurrence.label ? ` · ${occurrence.label}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatOccurrenceDate(occurrence.scheduledDate)}
+                    </p>
+                  </div>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Upcoming
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
 
-      {workoutItems.length > 0 ? (
+      {overview && overview.completedHistory.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Assigned Items</CardTitle>
+            <CardTitle>Completed</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <form
-              action={autosaveAssignmentSessionAction}
-              className="space-y-4"
-            >
-              <input type="hidden" name="assignmentId" value={assignmentId} />
-              <input type="hidden" name="sessionId" value={session?.id ?? ""} />
-              <input
-                type="hidden"
-                name="expectedVersion"
-                value={session?.version ?? ""}
-              />
-
-              <div className="space-y-3">
-                {workoutItems.map((item) => {
-                  const result = resultByItemId.get(item.id);
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-lg border border-border/70 bg-background/70 p-3"
-                    >
-                      <input
-                        type="hidden"
-                        name="itemSnapshotIds"
-                        value={item.id}
-                      />
-                      <p className="text-sm font-medium">{item.exerciseName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Block {item.blockPosition + 1}
-                        {item.blockLabel ? ` (${item.blockLabel})` : ""} -
-                        Exercise {item.itemPosition + 1}
-                      </p>
-                      <AthleteWorkoutResultFields
-                        item={item}
-                        result={result}
-                        disabled={!canEditSession}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={!canEditSession}>
-                  Save Progress
-                </Button>
-                <Button
-                  type="submit"
-                  formAction={submitAssignmentSessionAction}
-                  disabled={!canEditSession}
-                >
-                  Complete Session
-                </Button>
-              </div>
-            </form>
-
-            <form action={resetAssignmentSessionAction}>
-              <input type="hidden" name="assignmentId" value={assignmentId} />
-              <input type="hidden" name="sessionId" value={session?.id ?? ""} />
-              <input
-                type="hidden"
-                name="expectedVersion"
-                value={session?.version ?? ""}
-              />
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={!canEditSession}
+          <CardContent className="space-y-2">
+            {overview.completedHistory.map((entry) => (
+              <Link
+                key={entry.sessionId}
+                href={`/app/athlete/assignments/${assignmentId}/workouts/${entry.workoutSnapshotId}/${entry.scheduledDate}`}
+                className="block rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm transition-colors hover:bg-muted/40"
               >
-                Reset Session
-              </Button>
-            </form>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">
+                    {entry.workoutName}
+                    {entry.label ? ` · ${entry.label}` : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatOccurrenceDate(entry.scheduledDate)}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </CardContent>
         </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Assigned Items</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              This assignment does not yet include workout snapshots to log.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      ) : null}
     </main>
   );
 }

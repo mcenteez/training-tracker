@@ -608,6 +608,61 @@ export async function listSessionsForAthleteAssignment(
     .orderBy(asc(assignmentSessions.scheduledDate));
 }
 
+export async function listWorkoutItemsForSnapshot(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    workoutSnapshotId: string;
+  },
+): Promise<AthleteWorkoutItemSnapshot[]> {
+  return database
+    .select({
+      id: assignmentWorkoutItemSnapshots.id,
+      exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
+      blockLabel: assignmentWorkoutBlockSnapshots.label,
+      blockPosition: assignmentWorkoutBlockSnapshots.position,
+      itemPosition: assignmentWorkoutItemSnapshots.position,
+      reps: assignmentWorkoutItemSnapshots.reps,
+      load: assignmentWorkoutItemSnapshots.load,
+      durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
+      distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
+      notes: assignmentWorkoutItemSnapshots.notes,
+    })
+    .from(assignmentWorkoutItemSnapshots)
+    .innerJoin(
+      assignmentWorkoutBlockSnapshots,
+      and(
+        eq(
+          assignmentWorkoutBlockSnapshots.organizationId,
+          assignmentWorkoutItemSnapshots.organizationId,
+        ),
+        eq(
+          assignmentWorkoutBlockSnapshots.assignmentId,
+          assignmentWorkoutItemSnapshots.assignmentId,
+        ),
+        eq(
+          assignmentWorkoutBlockSnapshots.id,
+          assignmentWorkoutItemSnapshots.blockSnapshotId,
+        ),
+      ),
+    )
+    .where(
+      and(
+        eq(assignmentWorkoutItemSnapshots.organizationId, input.organizationId),
+        eq(assignmentWorkoutItemSnapshots.assignmentId, input.assignmentId),
+        eq(
+          assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+          input.workoutSnapshotId,
+        ),
+      ),
+    )
+    .orderBy(
+      asc(assignmentWorkoutBlockSnapshots.position),
+      asc(assignmentWorkoutItemSnapshots.position),
+    );
+}
+
 export async function listPrimaryWorkoutItemsForAssignment(
   database: Database,
   input: {
