@@ -105,6 +105,8 @@ The organization training library is distinct from assigned workout access:
 - Organization Viewers and Team Viewers can browse the library but cannot mutate it.
 - Athlete-only users do not browse organization templates. They receive only assigned training through the athlete experience.
 - A global library decision evaluates every team membership in the active organization. A role in another organization grants no access.
+- Library import at `/app/library/import` requires manage access. Viewers are redirected, and the Import tab is hidden from them. The import service re-resolves the actor's role inside the import transaction rather than trusting the route guard.
+- The published import JSON Schema at `/schemas/library-import/v1.json` is public and contains no tenant data.
 
 Library routes and every library mutation independently revalidate the active organization, current memberships, and requested resource ownership on the server. Exercise, workout, and plan identifiers supplied by clients never establish organization scope.
 

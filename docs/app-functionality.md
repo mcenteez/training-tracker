@@ -77,6 +77,16 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - Workouts can be duplicated into independent drafts while retaining source-template provenance.
 - Concurrent edits use optimistic versions so a stale editor cannot silently overwrite newer programming.
 
+### 5.2) Library Import
+
+- Trainers with library manage access can bulk-create exercises, workouts, and plans from a single JSON document at `/app/library/import`, either by uploading a file or pasting JSON.
+- The intended workflow is generating programming with an AI assistant against a published JSON Schema, served at `/schemas/library-import/v1.json` and generated from the same validator that checks uploads.
+- The document references exercises and workouts by name rather than identifier. References resolve against the same document or the organization's existing library.
+- Submitting a document only previews it. The preview lists every entity that would be created, every name already in the library that will be skipped, and every problem to fix. Nothing is written until the trainer confirms.
+- A confirmed import runs in one transaction. Any failure imports nothing.
+- Imported exercises are created active. Imported workouts and plans are created as drafts so unreviewed content cannot reach athletes.
+- Import never updates or overwrites an existing record. See [library-import-format.md](./library-import-format.md).
+
 ### 5.1) Library Terminology and Usage
 
 - **Exercise**: a reusable movement definition with coaching cues, category, equipment, and optional video.

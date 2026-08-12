@@ -340,10 +340,10 @@ Notes:
 
 ### 6. Documentation
 
-- [ ] Add `docs/library-import-format.md` as the canonical spec, linked from the import page.
-- [ ] Include a ready-to-paste example bundle plus the AI prompt template, with the schema URL embedded in the template.
-- [ ] Document the schema versioning policy: additive changes stay on `v1`, breaking changes ship a new path.
-- [ ] Note the feature and its permission requirements in `docs/app-functionality.md` and `docs/access-control.md`.
+- [x] Add `docs/library-import-format.md` as the canonical spec, linked from the import page.
+- [x] Include a ready-to-paste example bundle plus the AI prompt template, with the schema URL embedded in the template.
+- [x] Document the schema versioning policy: additive changes stay on `v1`, breaking changes ship a new path.
+- [x] Note the feature and its permission requirements in `docs/app-functionality.md` and `docs/access-control.md`.
 
 ### 7. Verification
 
