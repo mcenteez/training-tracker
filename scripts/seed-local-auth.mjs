@@ -10,6 +10,8 @@ const sql = neon(databaseUrl);
 
 const organizationId = "10000000-0000-4000-8000-000000000001";
 const teamId = "20000000-0000-4000-8000-000000000001";
+const foreignOrganizationId = "10000000-0000-4000-8000-000000000099";
+const foreignTeamId = "20000000-0000-4000-8000-000000000099";
 const users = {
   owner: "30000000-0000-4000-8000-000000000001",
   manager: "30000000-0000-4000-8000-000000000002",
@@ -58,6 +60,18 @@ await sql.transaction([
       (${organizationId}, ${teamId}, ${users.viewer}, 'viewer')
     ON CONFLICT (team_id, user_id) DO UPDATE
     SET role = EXCLUDED.role, updated_at = now()
+  `,
+  sql`
+    INSERT INTO organizations (id, name, timezone)
+    VALUES (${foreignOrganizationId}, 'Foreign Training Organization', 'UTC')
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name, timezone = EXCLUDED.timezone, updated_at = now()
+  `,
+  sql`
+    INSERT INTO teams (id, organization_id, name)
+    VALUES (${foreignTeamId}, ${foreignOrganizationId}, 'Foreign Team')
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name, updated_at = now()
   `,
 ]);
 
