@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidIanaTimezone } from "./timeliness-policy";
+
 const dateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD date format");
@@ -53,7 +55,12 @@ export const assignmentSourceInputSchema = z
   );
 
 export const createAssignmentInputSchema = z.object({
-  timezone: z.string().trim().min(1).max(120),
+  timezone: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(isValidIanaTimezone, "Use a valid IANA timezone"),
   source: assignmentSourceInputSchema,
   targets: z.array(assignmentTargetInputSchema).min(1).max(500),
 });

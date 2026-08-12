@@ -176,35 +176,35 @@ Create one pure application-layer resolver used by virtual occurrences, session 
 
 ### Implementation Checklist
 
-- [ ] Add a typed timeliness-policy value object.
-- [ ] Add a pure `resolveOccurrenceDueAt` function.
-- [ ] Add a pure `resolveLateEntryUntil` function using assignment-local calendar days.
-- [ ] Add a pure equivalent-window boundary helper.
-- [ ] Reject invalid or unsupported IANA timezones at the server boundary.
-- [ ] Avoid host-timezone-dependent `Date` construction.
-- [ ] Use the exclusive next-midnight boundary for end-of-day deadlines.
-- [ ] Resolve weekly-frequency deadlines to the exclusive Monday-midnight boundary after the applicable week.
-- [ ] Ensure partial first and last assignment weeks retain the approved weekly deadline rule.
-- [ ] Ensure canceled assignment effective ends do not manufacture later deadlines.
+- [x] Add a typed timeliness-policy value object.
+- [x] Add a pure `resolveOccurrenceDueAt` function.
+- [x] Add a pure `resolveLateEntryUntil` function using assignment-local calendar days.
+- [x] Add a pure equivalent-window boundary helper.
+- [x] Reject invalid or unsupported IANA timezones at the server boundary.
+- [x] Avoid host-timezone-dependent `Date` construction.
+- [x] Use the exclusive next-midnight boundary for end-of-day deadlines.
+- [x] Resolve weekly-frequency deadlines to the exclusive Monday-midnight boundary after the applicable week.
+- [x] Ensure partial first and last assignment weeks retain the approved weekly deadline rule.
+- [x] Ensure canceled assignment effective ends do not manufacture later deadlines.
 
 ### Unit Tests
 
-- [ ] Fixed workout deadline resolves in UTC from assignment-local date.
-- [ ] Fixed-day plan deadline matches fixed workout semantics.
-- [ ] Weekly-frequency deadline resolves after Sunday in the assignment-local week.
-- [ ] Spring-forward transition resolves to the correct instant.
-- [ ] Fall-back transition resolves to the correct instant.
-- [ ] Non-hour UTC offsets resolve correctly.
-- [ ] Seven calendar late-entry days remain calendar-correct across DST changes.
-- [ ] Boundary equality classifies as late.
-- [ ] Current and previous windows are equal-length and non-overlapping.
-- [ ] All-time returns no previous comparison window.
+- [x] Fixed workout deadline resolves in UTC from assignment-local date.
+- [x] Fixed-day plan deadline matches fixed workout semantics.
+- [x] Weekly-frequency deadline resolves after Sunday in the assignment-local week.
+- [x] Spring-forward transition resolves to the correct instant.
+- [x] Fall-back transition resolves to the correct instant.
+- [x] Non-hour UTC offsets resolve correctly.
+- [x] Seven calendar late-entry days remain calendar-correct across DST changes.
+- [x] Boundary equality classifies as late.
+- [x] Current and previous windows are equal-length and non-overlapping.
+- [x] All-time returns no previous comparison window.
 
 ### Acceptance Criteria
 
-- [ ] Virtual and persisted versions of the same occurrence resolve identical `dueAt` values.
-- [ ] Results are independent of the server or test runner timezone.
-- [ ] DST changes never shift the intended local deadline date.
+- [x] Virtual and persisted versions of the same occurrence resolve identical `dueAt` values.
+- [x] Results are independent of the server or test runner timezone.
+- [x] DST changes never shift the intended local deadline date.
 
 ## Milestone 3: Session Lifecycle and Late Logging
 
