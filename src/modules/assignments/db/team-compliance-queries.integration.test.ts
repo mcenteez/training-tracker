@@ -258,6 +258,81 @@ describe("team compliance queries", () => {
     expect(ninetyDays.summary.athletesNeedingAttention).toBe(1);
   });
 
+  it("returns reconciled current and previous team timeliness trends", async () => {
+    await client.exec(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-05-01T00:00:00Z'
+      WHERE organization_id = '${ids.organization}';
+
+      UPDATE assignments
+      SET scheduled_date = '2026-07-10'
+      WHERE id = '${ids.pastAssignment}';
+
+      UPDATE assignments
+      SET scheduled_date = '2026-07-11'
+      WHERE id = '${ids.olderAssignment}';
+
+      UPDATE assignment_sessions
+      SET status = 'submitted', submitted_at = '2026-08-12T13:00:00Z'
+      WHERE id = '${ids.session}';
+    `);
+
+    const dashboard = await getTeamComplianceDashboard(database, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      windowDays: 30,
+      now: new Date("2026-08-20T00:00:00.000Z"),
+    });
+
+    expect(dashboard.timeliness.current.counts).toEqual({
+      onTimeCompleted: 1,
+      lateCompleted: 0,
+      openOverdue: 0,
+      notYetDue: 0,
+    });
+    expect(dashboard.timeliness.previous?.counts).toEqual({
+      onTimeCompleted: 0,
+      lateCompleted: 0,
+      openOverdue: 2,
+      notYetDue: 0,
+    });
+    expect(dashboard.timeliness.trend?.onTimeCompletion).toMatchObject({
+      current: { numerator: 1, denominator: 1, rate: 1 },
+      previous: { numerator: 0, denominator: 2, rate: 0 },
+      percentagePointChange: 100,
+      direction: "improved",
+    });
+    expect(
+      dashboard.timeliness.assignments.reduce(
+        (total, assignment) => total + assignment.current.timelinessEligible,
+        0,
+      ),
+    ).toBe(dashboard.timeliness.current.timelinessEligible);
+    expect(
+      dashboard.timeliness.assignments.find(
+        (assignment) => assignment.assignmentId === ids.assignment,
+      )?.athletes[0]?.current.counts.onTimeCompleted,
+    ).toBe(1);
+  });
+
+  it("excludes pre-policy work from team timeliness denominators", async () => {
+    await client.exec(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-08-15T00:00:00Z'
+      WHERE organization_id = '${ids.organization}';
+    `);
+
+    const dashboard = await getTeamComplianceDashboard(database, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      windowDays: 30,
+      now: new Date("2026-08-20T00:00:00.000Z"),
+    });
+
+    expect(dashboard.timeliness.current.timelinessEligible).toBe(0);
+    expect(dashboard.timeliness.current.unavailableReason).toBe("no_due_work");
+  });
+
   it("preserves publish-time compliance after roster removal", async () => {
     await client.exec(`
       DELETE FROM team_memberships
@@ -296,6 +371,8 @@ describe("team compliance queries", () => {
     });
 
     expect(canceled.summary.counts.overdue).toBe(2);
+    expect(canceled.timeliness.previous).toBeNull();
+    expect(canceled.timeliness.trend).toBeNull();
     expect(empty.assignments).toEqual([]);
     expect(empty.summary.completionRate).toBeNull();
   });

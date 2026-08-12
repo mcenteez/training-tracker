@@ -325,34 +325,34 @@ Extend the authorized team read model while preserving publish-time recipient sc
 
 ### Implementation Checklist
 
-- [ ] Return current and previous timeliness summaries for the selected team.
-- [ ] Return timeliness and trend summaries per assignment.
-- [ ] Return timeliness summaries per athlete and occurrence.
-- [ ] Filter current and previous sets by resolved `dueAt` boundaries.
-- [ ] Preserve assignment cancellation history according to Phase 1 rules.
-- [ ] Preserve publish-time recipient-to-team scope in both windows.
-- [ ] Capture one database/request `asOf` instant.
-- [ ] Avoid loading foreign-team recipients before application filtering.
-- [ ] Add query indexes only after validating query plans against realistic fixtures.
-- [ ] Keep direct-athlete assignments out of team rows unless publish-time scope identifies the team.
+- [x] Return current and previous timeliness summaries for the selected team.
+- [x] Return timeliness and trend summaries per assignment.
+- [x] Return timeliness summaries per athlete and occurrence.
+- [x] Filter current and previous sets by resolved `dueAt` boundaries.
+- [x] Preserve assignment cancellation history according to Phase 1 rules.
+- [x] Preserve publish-time recipient-to-team scope in both windows.
+- [x] Capture one database/request `asOf` instant.
+- [x] Avoid loading foreign-team recipients before application filtering.
+- [x] Add query indexes only after validating query plans against realistic fixtures.
+- [x] Keep direct-athlete assignments out of team rows unless publish-time scope identifies the team.
 
 ### Integration Tests
 
-- [ ] Team current and previous counts reconcile with assignment summaries.
-- [ ] On-time, late, and open-overdue assignments aggregate correctly.
-- [ ] Window boundary occurrences appear once.
-- [ ] Canceled assignment history follows the same rule in both windows.
-- [ ] Removed team members remain represented through publish-time scope.
-- [ ] Team Viewer can read the model without mutation permissions.
-- [ ] Unmanaged and foreign teams return no data.
-- [ ] Pre-policy work does not enter timeliness denominators.
-- [ ] Zero due work and insufficient history remain distinct.
+- [x] Team current and previous counts reconcile with assignment summaries.
+- [x] On-time, late, and open-overdue assignments aggregate correctly.
+- [x] Window boundary occurrences appear once.
+- [x] Canceled assignment history follows the same rule in both windows.
+- [x] Removed team members remain represented through publish-time scope.
+- [x] Team Viewer can read the model without mutation permissions.
+- [x] Unmanaged and foreign teams return no data.
+- [x] Pre-policy work does not enter timeliness denominators.
+- [x] Zero due work and insufficient history remain distinct.
 
 ### Acceptance Criteria
 
-- [ ] Team trends are mathematically consistent with assignment and athlete detail.
-- [ ] Team size does not bias normalized comparisons.
-- [ ] Tenant isolation applies equally to current and previous windows.
+- [x] Team trends are mathematically consistent with assignment and athlete detail.
+- [x] Team size does not bias normalized comparisons.
+- [x] Tenant isolation applies equally to current and previous windows.
 
 ## Milestone 7: Organization Timeliness and Trend Read Model
 

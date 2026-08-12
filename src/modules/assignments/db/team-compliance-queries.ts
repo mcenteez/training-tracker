@@ -16,6 +16,16 @@ import {
   type ComplianceSummary,
 } from "@/modules/assignments/application/compliance-summary";
 import {
+  buildTimelinessSummary,
+  type TimelinessOccurrenceInput,
+  type TimelinessSummary,
+} from "@/modules/assignments/application/timeliness-summary";
+import {
+  buildComplianceTrendSummary,
+  type ComplianceTrendSummary,
+} from "@/modules/assignments/application/timeliness-trend";
+import { resolveEquivalentMetricWindows } from "@/modules/assignments/application/timeliness-policy";
+import {
   assignments,
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
@@ -40,6 +50,31 @@ export interface TeamComplianceDashboard {
   assignments: TeamAssignmentCompliance[];
   summary: ComplianceSummary;
   rosteredAthleteIds: string[];
+  timeliness: TeamTimelinessDashboard;
+}
+
+export interface TeamAthleteTimelinessSummary {
+  recipientId: string;
+  athleteUserId: string;
+  current: TimelinessSummary;
+  previous: TimelinessSummary | null;
+  trend: ComplianceTrendSummary | null;
+}
+
+export interface TeamAssignmentTimelinessSummary {
+  assignmentId: string;
+  sourceName: string;
+  current: TimelinessSummary;
+  previous: TimelinessSummary | null;
+  trend: ComplianceTrendSummary | null;
+  athletes: TeamAthleteTimelinessSummary[];
+}
+
+export interface TeamTimelinessDashboard {
+  current: TimelinessSummary;
+  previous: TimelinessSummary | null;
+  trend: ComplianceTrendSummary | null;
+  assignments: TeamAssignmentTimelinessSummary[];
 }
 
 export interface OrganizationTeamComplianceSummary {
@@ -119,6 +154,12 @@ async function loadTeamComplianceData(
       scheduledDate: assignments.scheduledDate,
       publishedAt: assignments.publishedAt,
       canceledAt: assignments.canceledAt,
+      timelinessPolicyVersion: assignments.timelinessPolicyVersion,
+      timelinessPolicyEffectiveAt: assignments.timelinessPolicyEffectiveAt,
+      fixedDueLocalMinute: assignments.fixedDueLocalMinute,
+      weeklyDueDay: assignments.weeklyDueDay,
+      weeklyDueLocalMinute: assignments.weeklyDueLocalMinute,
+      lateEntryDays: assignments.lateEntryDays,
       planName: plans.name,
       workoutName: workouts.name,
     })
@@ -169,6 +210,12 @@ async function loadTeamComplianceData(
       scheduledDate: assignment.scheduledDate,
       publishedAt: assignment.publishedAt,
       canceledAt: assignment.canceledAt,
+      timelinessPolicyVersion: assignment.timelinessPolicyVersion,
+      timelinessPolicyEffectiveAt: assignment.timelinessPolicyEffectiveAt,
+      fixedDueLocalMinute: assignment.fixedDueLocalMinute,
+      weeklyDueDay: assignment.weeklyDueDay,
+      weeklyDueLocalMinute: assignment.weeklyDueLocalMinute,
+      lateEntryDays: assignment.lateEntryDays,
     }));
 
   if (complianceAssignments.length === 0) {
@@ -227,6 +274,7 @@ async function loadTeamComplianceData(
             startedAt: assignmentSessions.startedAt,
             submittedAt: assignmentSessions.submittedAt,
             updatedAt: assignmentSessions.updatedAt,
+            dueAt: assignmentSessions.dueAt,
           })
           .from(assignmentSessions)
           .innerJoin(
@@ -340,6 +388,20 @@ export async function getTeamComplianceDashboard(
     windowDays: input.windowDays,
   });
   const rosteredAthleteIds = rosterRows.map((row) => row.athleteUserId);
+  const timelinessAssignments = data.assignments.map((assignment) =>
+    buildTeamAssignmentCompliance({
+      assignment,
+      recipients: data.recipients.filter(
+        (recipient) => recipient.assignmentId === assignment.id,
+      ),
+      slots: data.slots.filter((slot) => slot.assignmentId === assignment.id),
+      sessions: data.sessions.filter(
+        (session) => session.assignmentId === assignment.id,
+      ),
+      now: input.now ?? new Date(),
+      windowDays: null,
+    }),
+  );
 
   return {
     assignments,
@@ -356,6 +418,132 @@ export async function getTeamComplianceDashboard(
       rosteredAthleteIds,
     }),
     rosteredAthleteIds,
+    timeliness: buildTeamTimelinessDashboard({
+      assignments: timelinessAssignments,
+      asOf: input.now ?? new Date(),
+      windowDays: input.windowDays,
+    }),
+  };
+}
+
+function occurrenceInput(
+  occurrence: {
+    dueAt: Date | null;
+    submittedAt: Date | null;
+    policyEffectiveAt: Date;
+  },
+  athleteUserId: string,
+): TimelinessOccurrenceInput {
+  return {
+    athleteUserId,
+    dueAt: occurrence.dueAt,
+    firstSubmittedAt: occurrence.submittedAt,
+    policyEffectiveAt: occurrence.policyEffectiveAt,
+  };
+}
+
+function occurrencesForWindow(
+  occurrences: readonly TimelinessOccurrenceInput[],
+  input: { startAt?: Date; endAt: Date; includeEnd: boolean },
+): TimelinessOccurrenceInput[] {
+  return occurrences.filter((occurrence) => {
+    if (!occurrence.dueAt) return true;
+    if (input.startAt && occurrence.dueAt < input.startAt) return false;
+    return input.includeEnd
+      ? occurrence.dueAt <= input.endAt
+      : occurrence.dueAt < input.endAt;
+  });
+}
+
+function summarizeTimeliness(input: {
+  occurrences: readonly TimelinessOccurrenceInput[];
+  asOf: Date;
+  startAt?: Date;
+  endAt: Date;
+  includeEnd: boolean;
+}): TimelinessSummary {
+  return buildTimelinessSummary({
+    occurrences: occurrencesForWindow(input.occurrences, input),
+    asOf: input.asOf,
+  });
+}
+
+export function buildTeamTimelinessDashboard(input: {
+  assignments: readonly TeamAssignmentCompliance[];
+  asOf: Date;
+  windowDays?: number | null;
+}): TeamTimelinessDashboard {
+  const windowDays =
+    input.windowDays === 90 ? 90 : input.windowDays === null ? null : 30;
+  const windows = resolveEquivalentMetricWindows({
+    asOf: input.asOf,
+    windowDays,
+  });
+  const currentWindow = windows?.current ?? {
+    startAt: undefined,
+    endAt: input.asOf,
+  };
+  const allOccurrences = input.assignments.flatMap((assignment) =>
+    assignment.recipients.flatMap((recipient) =>
+      recipient.occurrences.map((occurrence) =>
+        occurrenceInput(occurrence, recipient.athleteUserId),
+      ),
+    ),
+  );
+  const summarize = (occurrences: readonly TimelinessOccurrenceInput[]) => {
+    const current = summarizeTimeliness({
+      occurrences,
+      asOf: input.asOf,
+      startAt: currentWindow.startAt,
+      endAt: currentWindow.endAt,
+      includeEnd: true,
+    });
+    const previous = windows
+      ? summarizeTimeliness({
+          occurrences,
+          asOf: input.asOf,
+          startAt: windows.previous.startAt,
+          endAt: windows.previous.endAt,
+          includeEnd: false,
+        })
+      : null;
+
+    return {
+      current,
+      previous,
+      trend:
+        previous === null
+          ? null
+          : buildComplianceTrendSummary({ current, previous }),
+    };
+  };
+  const team = summarize(allOccurrences);
+
+  return {
+    ...team,
+    assignments: input.assignments.map((assignment) => {
+      const assignmentOccurrences = assignment.recipients.flatMap((recipient) =>
+        recipient.occurrences.map((occurrence) =>
+          occurrenceInput(occurrence, recipient.athleteUserId),
+        ),
+      );
+      const assignmentSummary = summarize(assignmentOccurrences);
+
+      return {
+        assignmentId: assignment.id,
+        sourceName: assignment.sourceName,
+        ...assignmentSummary,
+        athletes: assignment.recipients.map((recipient) => ({
+          recipientId: recipient.id,
+          athleteUserId: recipient.athleteUserId,
+          ...summarize(
+            recipient.occurrences.map((occurrence) =>
+              occurrenceInput(occurrence, recipient.athleteUserId),
+            ),
+          ),
+        })),
+      };
+    }),
   };
 }
 

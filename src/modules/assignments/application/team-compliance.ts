@@ -1,4 +1,8 @@
 import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
+import {
+  resolveOccurrenceDueAt,
+  type TimelinessPolicy,
+} from "./timeliness-policy";
 
 import {
   buildComplianceSummary,
@@ -38,6 +42,12 @@ export interface TeamComplianceAssignmentInput {
   scheduledDate: string | null;
   publishedAt: Date | null;
   canceledAt: Date | null;
+  timelinessPolicyVersion?: number;
+  timelinessPolicyEffectiveAt?: Date;
+  fixedDueLocalMinute?: number;
+  weeklyDueDay?: number;
+  weeklyDueLocalMinute?: number;
+  lateEntryDays?: number;
 }
 
 export interface TeamComplianceRecipientInput {
@@ -71,6 +81,7 @@ export interface TeamComplianceSessionInput {
   startedAt: Date | null;
   submittedAt: Date | null;
   updatedAt: Date;
+  dueAt?: Date | null;
 }
 
 export interface TeamComplianceOccurrence {
@@ -81,6 +92,8 @@ export interface TeamComplianceOccurrence {
   scheduledDate: string;
   status: TeamComplianceStatus;
   submittedAt: Date | null;
+  dueAt: Date | null;
+  policyEffectiveAt: Date;
 }
 
 export interface TeamComplianceRecipient {
@@ -168,6 +181,38 @@ function addOccurrence(
   increment(recipient.counts, occurrence.status);
 }
 
+function assignmentTimelinessPolicy(
+  assignment: TeamComplianceAssignmentInput,
+): TimelinessPolicy {
+  return {
+    version: 1,
+    effectiveAt: assignment.timelinessPolicyEffectiveAt ?? new Date(0),
+    fixedDueLocalMinute: assignment.fixedDueLocalMinute ?? 1440,
+    weeklyDueDay: assignment.weeklyDueDay ?? 7,
+    weeklyDueLocalMinute: assignment.weeklyDueLocalMinute ?? 1440,
+    lateEntryDays: assignment.lateEntryDays ?? 7,
+  };
+}
+
+function occurrenceDueAt(input: {
+  assignment: TeamComplianceAssignmentInput;
+  scheduledDate: string;
+  scheduleType: "fixed" | "weekly_frequency";
+  persistedDueAt?: Date | null;
+}): Date | null {
+  const policy = assignmentTimelinessPolicy(input.assignment);
+  const resolved =
+    input.persistedDueAt ??
+    resolveOccurrenceDueAt({
+      scheduledDate: input.scheduledDate,
+      scheduleType: input.scheduleType,
+      timezone: input.assignment.timezone,
+      policy,
+    });
+
+  return resolved && resolved >= policy.effectiveAt ? resolved : null;
+}
+
 function recipientPriority(recipient: TeamComplianceRecipient): number {
   if (recipient.summary.counts.overdue > 0) return 0;
   if (recipient.summary.counts.started > 0) return 1;
@@ -203,6 +248,7 @@ export function buildTeamAssignmentCompliance(input: {
   now: Date;
   windowDays?: number | null;
 }): TeamAssignmentCompliance {
+  const policy = assignmentTimelinessPolicy(input.assignment);
   const today = toLocalDateString(input.now, input.assignment.timezone);
   const assignmentStart =
     input.assignment.startDate ?? input.assignment.scheduledDate ?? today;
@@ -260,6 +306,13 @@ export function buildTeamAssignmentCompliance(input: {
               ? sessionStatus(session, today)
               : expectedStatus(scheduledDate, today),
             submittedAt: session?.submittedAt ?? null,
+            dueAt: occurrenceDueAt({
+              assignment: input.assignment,
+              scheduledDate,
+              scheduleType: "fixed",
+              persistedDueAt: session?.dueAt,
+            }),
+            policyEffectiveAt: policy.effectiveAt,
           });
         }
         continue;
@@ -290,6 +343,13 @@ export function buildTeamAssignmentCompliance(input: {
                 ? sessionStatus(session, today)
                 : expectedStatus(scheduledDate, today),
               submittedAt: session?.submittedAt ?? null,
+              dueAt: occurrenceDueAt({
+                assignment: input.assignment,
+                scheduledDate,
+                scheduleType: "fixed",
+                persistedDueAt: session?.dueAt,
+              }),
+              policyEffectiveAt: policy.effectiveAt,
             });
           }
           continue;
@@ -316,6 +376,13 @@ export function buildTeamAssignmentCompliance(input: {
               scheduledDate: session.scheduledDate,
               status: sessionStatus(session, today),
               submittedAt: session.submittedAt,
+              dueAt: occurrenceDueAt({
+                assignment: input.assignment,
+                scheduledDate: session.scheduledDate,
+                scheduleType: "weekly_frequency",
+                persistedDueAt: session.dueAt,
+              }),
+              policyEffectiveAt: policy.effectiveAt,
             });
           }
 
@@ -336,6 +403,12 @@ export function buildTeamAssignmentCompliance(input: {
               scheduledDate: quotaDate,
               status: quotaStatus,
               submittedAt: null,
+              dueAt: occurrenceDueAt({
+                assignment: input.assignment,
+                scheduledDate: quotaDate,
+                scheduleType: "weekly_frequency",
+              }),
+              policyEffectiveAt: policy.effectiveAt,
             });
           }
         }
