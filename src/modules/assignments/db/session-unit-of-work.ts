@@ -46,6 +46,13 @@ export function createAssignmentSessionUnitOfWork(
                 endDate: assignments.endDate,
                 availableFrom: assignments.availableFrom,
                 availableUntil: assignments.availableUntil,
+                timelinessPolicyVersion: assignments.timelinessPolicyVersion,
+                timelinessPolicyEffectiveAt:
+                  assignments.timelinessPolicyEffectiveAt,
+                fixedDueLocalMinute: assignments.fixedDueLocalMinute,
+                weeklyDueDay: assignments.weeklyDueDay,
+                weeklyDueLocalMinute: assignments.weeklyDueLocalMinute,
+                lateEntryDays: assignments.lateEntryDays,
               })
               .from(assignmentRecipients)
               .innerJoin(
@@ -153,6 +160,7 @@ export function createAssignmentSessionUnitOfWork(
                 status: assignmentSessions.status,
                 availableFrom: assignmentSessions.availableFrom,
                 availableUntil: assignmentSessions.availableUntil,
+                dueAt: assignmentSessions.dueAt,
                 version: assignmentSessions.version,
                 lastMutationId: assignmentSessions.lastMutationId,
               })
@@ -183,6 +191,7 @@ export function createAssignmentSessionUnitOfWork(
                 scheduledDate: input.scheduledDate,
                 availableFrom: input.availableFrom,
                 availableUntil: input.availableUntil,
+                dueAt: input.dueAt,
                 status: "in_progress",
                 startedAt,
               })
@@ -209,6 +218,7 @@ export function createAssignmentSessionUnitOfWork(
                 status: assignmentSessions.status,
                 availableFrom: assignmentSessions.availableFrom,
                 availableUntil: assignmentSessions.availableUntil,
+                dueAt: assignmentSessions.dueAt,
                 version: assignmentSessions.version,
                 lastMutationId: assignmentSessions.lastMutationId,
               })
@@ -331,7 +341,7 @@ export function createAssignmentSessionUnitOfWork(
               .update(assignmentSessions)
               .set({
                 status: "submitted",
-                submittedAt: new Date(),
+                submittedAt: sql`coalesce(${assignmentSessions.submittedAt}, ${input.submittedAt})`,
                 updatedAt: new Date(),
                 version: sql`${assignmentSessions.version} + 1`,
               })

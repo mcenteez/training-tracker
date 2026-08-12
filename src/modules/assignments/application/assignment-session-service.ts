@@ -8,12 +8,19 @@ import {
   submitSessionResultsInputSchema,
 } from "@/modules/assignments/application/assignment-input";
 import {
+  addDays,
   compareDates,
-  currentWeekWindow,
   listFixedDayDates,
+  mondayOf,
   toLocalDateString,
   weekdayOf,
 } from "@/modules/assignments/application/schedule-dates";
+import {
+  resolveLateEntryUntil,
+  resolveLocalDateTimeAtMinute,
+  resolveOccurrenceDueAt,
+  type TimelinessPolicy,
+} from "@/modules/assignments/application/timeliness-policy";
 import type {
   AssignmentSession,
   AssignmentSessionItemResult,
@@ -31,6 +38,12 @@ interface AssignmentRecipientRecord {
   endDate: string | null;
   availableFrom: Date | null;
   availableUntil: Date | null;
+  timelinessPolicyVersion?: number;
+  timelinessPolicyEffectiveAt?: Date;
+  fixedDueLocalMinute?: number;
+  weeklyDueDay?: number;
+  weeklyDueLocalMinute?: number;
+  lateEntryDays?: number;
 }
 
 interface WorkoutSnapshotRecord {
@@ -61,6 +74,7 @@ interface AssignmentSessionRecord {
   status: AssignmentSession["status"];
   availableFrom: Date;
   availableUntil: Date;
+  dueAt: Date | null;
   version: number;
   lastMutationId: string | null;
 }
@@ -114,6 +128,7 @@ export interface AssignmentSessionTransaction {
     scheduledDate: string;
     availableFrom: Date;
     availableUntil: Date;
+    dueAt: Date | null;
   }): Promise<AssignmentSession>;
   findSessionByIdForAthlete(
     organizationId: string,
@@ -145,6 +160,7 @@ export interface AssignmentSessionTransaction {
     assignmentId: string;
     sessionId: string;
     expectedVersion: number;
+    submittedAt: Date;
   }): Promise<AssignmentSession | null>;
   listSessionResults(input: {
     organizationId: string;
@@ -169,77 +185,38 @@ function nowDateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-function addUtcDays(date: string, days: number): string {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year!, month! - 1, day! + days))
-    .toISOString()
-    .slice(0, 10);
-}
-
-function localMidnightToUtc(date: string, timezone: string): Date {
-  const [year, month, day] = date.split("-").map(Number);
-  const targetTime = Date.UTC(year!, month! - 1, day!);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-  let candidateTime = targetTime;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const parts = Object.fromEntries(
-      formatter
-        .formatToParts(new Date(candidateTime))
-        .filter((part) => part.type !== "literal")
-        .map((part) => [part.type, Number(part.value)]),
-    );
-    const representedTime = Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour,
-      parts.minute,
-      parts.second,
-    );
-    const adjustment = targetTime - representedTime;
-
-    candidateTime += adjustment;
-    if (adjustment === 0) {
-      break;
-    }
-  }
-
-  return new Date(candidateTime);
-}
-
 function resolveAvailabilityWindow(input: {
   availableFrom: Date | null;
   availableUntil: Date | null;
-  scheduledDate: string | null;
+  scheduledDate: string;
+  scheduleType: "fixed" | "weekly_frequency";
   timezone: string;
-  now: Date;
-}): { availableFrom: Date; availableUntil: Date } {
-  const scheduledDayStart = input.scheduledDate
-    ? localMidnightToUtc(input.scheduledDate, input.timezone)
-    : null;
-  const scheduledDayEnd = input.scheduledDate
-    ? new Date(
-        localMidnightToUtc(
-          addUtcDays(input.scheduledDate, 1),
-          input.timezone,
-        ).getTime() - 1,
-      )
-    : null;
-  const availableFrom = input.availableFrom ?? scheduledDayStart ?? input.now;
+  policy: TimelinessPolicy;
+}): { availableFrom: Date; availableUntil: Date; dueAt: Date | null } {
+  const availableFrom =
+    input.availableFrom ??
+    resolveLocalDateTimeAtMinute(input.scheduledDate, 0, input.timezone);
+  const resolvedDueAt = resolveOccurrenceDueAt({
+    scheduledDate: input.scheduledDate,
+    scheduleType: input.scheduleType,
+    timezone: input.timezone,
+    policy: input.policy,
+  });
+  const dueAt =
+    resolvedDueAt && resolvedDueAt >= input.policy.effectiveAt
+      ? resolvedDueAt
+      : null;
+  const policyAvailableUntil = dueAt
+    ? resolveLateEntryUntil({
+        dueAt,
+        timezone: input.timezone,
+        lateEntryDays: input.policy.lateEntryDays,
+      })
+    : new Date(resolvedDueAt!.getTime() - 1);
   const availableUntil =
-    input.availableUntil ??
-    scheduledDayEnd ??
-    new Date(availableFrom.getTime() + 24 * 60 * 60 * 1000);
+    input.availableUntil && input.availableUntil < policyAvailableUntil
+      ? input.availableUntil
+      : policyAvailableUntil;
 
   if (availableUntil <= availableFrom) {
     throw new DomainInvariantError(
@@ -247,14 +224,27 @@ function resolveAvailabilityWindow(input: {
     );
   }
 
-  return { availableFrom, availableUntil };
+  return { availableFrom, availableUntil, dueAt };
+}
+
+function timelinessPolicy(
+  assignment: AssignmentRecipientRecord,
+): TimelinessPolicy {
+  return {
+    version: 1,
+    effectiveAt: assignment.timelinessPolicyEffectiveAt ?? new Date(0),
+    fixedDueLocalMinute: assignment.fixedDueLocalMinute ?? 1440,
+    weeklyDueDay: assignment.weeklyDueDay ?? 7,
+    weeklyDueLocalMinute: assignment.weeklyDueLocalMinute ?? 1440,
+    lateEntryDays: assignment.lateEntryDays ?? 7,
+  };
 }
 
 function assertSessionWindow(
   session: AssignmentSessionRecord,
   now: Date,
 ): void {
-  if (now < session.availableFrom || now > session.availableUntil) {
+  if (now < session.availableFrom || now >= session.availableUntil) {
     throw new DomainInvariantError(
       "This session is outside its availability window.",
     );
@@ -337,15 +327,20 @@ export async function startAssignmentSession(
       );
     }
 
+    const scheduledDate = assignment.scheduledDate ?? nowDateOnly(now);
     const availability = resolveAvailabilityWindow({
       availableFrom: assignment.availableFrom,
       availableUntil: assignment.availableUntil,
-      scheduledDate: assignment.scheduledDate,
+      scheduledDate,
+      scheduleType: "fixed",
       timezone: assignment.timezone,
-      now,
+      policy: timelinessPolicy(assignment),
     });
 
-    if (now < availability.availableFrom || now > availability.availableUntil) {
+    if (
+      now < availability.availableFrom ||
+      now >= availability.availableUntil
+    ) {
       throw new DomainInvariantError(
         "This assignment is not currently available to start.",
       );
@@ -358,9 +353,10 @@ export async function startAssignmentSession(
       athleteUserId: input.athleteUserId,
       workoutSnapshotId: primaryWorkoutSnapshot.workoutSnapshotId,
       planSlotSnapshotId: null,
-      scheduledDate: assignment.scheduledDate ?? nowDateOnly(now),
+      scheduledDate,
       availableFrom: availability.availableFrom,
       availableUntil: availability.availableUntil,
+      dueAt: availability.dueAt,
     });
   });
 }
@@ -404,8 +400,9 @@ async function startPlanOccurrenceSession(
   }
 
   const today = toLocalDateString(now, assignment.timezone);
-  const { weekStart, weekEnd } = currentWeekWindow(now, assignment.timezone);
   const scheduledDate = input.scheduledDate ?? today;
+  const occurrenceWeekStart = mondayOf(scheduledDate);
+  const occurrenceWeekEnd = addDays(occurrenceWeekStart, 6);
 
   if (
     compareDates(scheduledDate, assignment.startDate) < 0 ||
@@ -441,13 +438,9 @@ async function startPlanOccurrenceSession(
       );
     }
   } else {
-    if (
-      compareDates(scheduledDate, weekStart) < 0 ||
-      compareDates(scheduledDate, weekEnd) > 0 ||
-      compareDates(scheduledDate, today) > 0
-    ) {
+    if (compareDates(scheduledDate, today) > 0) {
       throw new DomainInvariantError(
-        "Flexible workouts can only be started during the current week.",
+        "Flexible workouts cannot be started before their occurrence date.",
       );
     }
   }
@@ -505,8 +498,8 @@ async function startPlanOccurrenceSession(
     const countedThisWeek = lockedSessions.filter(
       (session) =>
         session.planSlotSnapshotId === slot.id &&
-        compareDates(session.scheduledDate, weekStart) >= 0 &&
-        compareDates(session.scheduledDate, weekEnd) <= 0,
+        compareDates(session.scheduledDate, occurrenceWeekStart) >= 0 &&
+        compareDates(session.scheduledDate, occurrenceWeekEnd) <= 0,
     ).length;
 
     if (countedThisWeek >= target) {
@@ -520,9 +513,17 @@ async function startPlanOccurrenceSession(
     availableFrom: null,
     availableUntil: null,
     scheduledDate,
+    scheduleType:
+      slot.scheduleType === "weekly_frequency" ? "weekly_frequency" : "fixed",
     timezone: assignment.timezone,
-    now,
+    policy: timelinessPolicy(assignment),
   });
+
+  if (now < availability.availableFrom || now >= availability.availableUntil) {
+    throw new DomainInvariantError(
+      "This occurrence is outside its late-entry window.",
+    );
+  }
 
   return transaction.createSession({
     organizationId: input.organizationId,
@@ -534,6 +535,7 @@ async function startPlanOccurrenceSession(
     scheduledDate,
     availableFrom: availability.availableFrom,
     availableUntil: availability.availableUntil,
+    dueAt: availability.dueAt,
   });
 }
 
@@ -545,10 +547,10 @@ export async function autosaveAssignmentSessionResults(
     athleteUserId: string;
     sessionId: string;
     expectedVersion: number;
+    now?: Date;
     mutationId: string;
     results: readonly AssignmentSessionResultInput[];
     allowSubmittedEdit?: boolean;
-    now?: Date;
   },
 ): Promise<AssignmentSession> {
   const parsed = autosaveSessionResultsInputSchema.parse({
@@ -648,6 +650,7 @@ export async function submitAssignmentSession(
     athleteUserId: string;
     sessionId: string;
     expectedVersion: number;
+    now?: Date;
   },
 ): Promise<AssignmentSession> {
   const parsed = submitSessionResultsInputSchema.parse({
@@ -677,7 +680,8 @@ export async function submitAssignmentSession(
       );
     }
 
-    assertSessionWindow(session, new Date());
+    const now = input.now ?? new Date();
+    assertSessionWindow(session, now);
 
     const existingResults = await transaction.listSessionResults({
       organizationId: input.organizationId,
@@ -696,6 +700,7 @@ export async function submitAssignmentSession(
       assignmentId: input.assignmentId,
       sessionId: parsed.sessionId,
       expectedVersion: parsed.expectedVersion,
+      submittedAt: now,
     });
 
     if (!submitted) {

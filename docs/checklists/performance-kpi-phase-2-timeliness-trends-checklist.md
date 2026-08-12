@@ -214,35 +214,35 @@ Allow approved late logging without conflating the availability window with the 
 
 ### Implementation Checklist
 
-- [ ] Resolve and persist `dueAt` when creating a session.
-- [ ] Resolve `availableUntil` independently as seven local calendar days after `dueAt`.
-- [ ] Keep explicit earlier assignment availability restrictions when product policy requires them.
-- [ ] Permit an unstarted fixed occurrence to be opened during its late-entry window.
-- [ ] Permit a missed weekly-frequency target to be started during its late-entry window without changing its original week.
-- [ ] Keep late weekly sessions attached to the original plan-slot week and due instant.
-- [ ] Prevent duplicate sessions for the same athlete, slot, and occurrence identity.
-- [ ] Preserve `submittedAt` during explicit completed-result edits.
-- [ ] Prevent resubmission from overwriting first submission time.
-- [ ] Keep autosave idempotency and optimistic concurrency behavior.
-- [ ] Return actionable errors when the late-entry window has closed.
-- [ ] Keep all athlete reads and mutations scoped by organization, assignment recipient, athlete, workout snapshot, slot snapshot, and occurrence identity.
+- [x] Resolve and persist `dueAt` when creating a session.
+- [x] Resolve `availableUntil` independently as seven local calendar days after `dueAt`.
+- [x] Keep explicit earlier assignment availability restrictions when product policy requires them.
+- [x] Permit an unstarted fixed occurrence to be opened during its late-entry window.
+- [x] Permit a missed weekly-frequency target to be started during its late-entry window without changing its original week.
+- [x] Keep late weekly sessions attached to the original plan-slot week and due instant.
+- [x] Prevent duplicate sessions for the same athlete, slot, and occurrence identity.
+- [x] Preserve `submittedAt` during explicit completed-result edits.
+- [x] Prevent resubmission from overwriting first submission time.
+- [x] Keep autosave idempotency and optimistic concurrency behavior.
+- [x] Return actionable errors when the late-entry window has closed.
+- [x] Keep all athlete reads and mutations scoped by organization, assignment recipient, athlete, workout snapshot, slot snapshot, and occurrence identity.
 
 ### Tests
 
-- [ ] On-time session can start, save, and submit normally.
-- [ ] Unstarted fixed work can be submitted during the seven-day late window.
-- [ ] Weekly-frequency work can be logged late against its original week.
-- [ ] Logging is rejected after the late-entry boundary.
-- [ ] Completed-result edits preserve first submission time and classification.
-- [ ] Retry and duplicate mutation IDs do not change first submission time.
-- [ ] An athlete cannot create or mutate another athlete's late session.
-- [ ] A foreign organization cannot use a valid occurrence identity to create a session.
+- [x] On-time session can start, save, and submit normally.
+- [x] Unstarted fixed work can be submitted during the seven-day late window.
+- [x] Weekly-frequency work can be logged late against its original week.
+- [x] Logging is rejected after the late-entry boundary.
+- [x] Completed-result edits preserve first submission time and classification.
+- [x] Retry and duplicate mutation IDs do not change first submission time.
+- [x] An athlete cannot create or mutate another athlete's late session.
+- [x] A foreign organization cannot use a valid occurrence identity to create a session.
 
 ### Acceptance Criteria
 
-- [ ] Late logging is possible for exactly the approved calendar window.
-- [ ] On-time classification is stable after submission.
-- [ ] Offline-safe idempotency remains intact.
+- [x] Late logging is possible for exactly the approved calendar window.
+- [x] On-time classification is stable after submission.
+- [x] Offline-safe idempotency remains intact.
 
 ## Milestone 4: Shared Timeliness Summary Domain
 

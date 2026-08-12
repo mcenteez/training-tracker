@@ -581,6 +581,10 @@ describe("assignment unit of work", () => {
     );
 
     expect(started.status).toBe("in_progress");
+    expect(started.dueAt?.toISOString()).toBe("2026-08-13T00:00:00.000Z");
+    expect(started.availableUntil.toISOString()).toBe(
+      "2026-08-20T00:00:00.000Z",
+    );
 
     const itemSnapshots = await client.query<{
       id: string;

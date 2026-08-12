@@ -138,7 +138,7 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
 }
 
 describe("assignment session service", () => {
-  it("uses the scheduled local day when availability bounds are omitted", async () => {
+  it("uses the scheduled local day and seven-day late window when bounds are omitted", async () => {
     const { transaction, unitOfWork } = setup({
       findRecipientAssignment: vi.fn(async () => ({
         assignmentId: ids.assignmentId,
@@ -165,12 +165,13 @@ describe("assignment session service", () => {
       expect.objectContaining({
         scheduledDate: "2026-08-11",
         availableFrom: new Date("2026-08-11T04:00:00.000Z"),
-        availableUntil: new Date("2026-08-12T03:59:59.999Z"),
+        dueAt: new Date("2026-08-12T04:00:00.000Z"),
+        availableUntil: new Date("2026-08-19T04:00:00.000Z"),
       }),
     );
   });
 
-  it("preserves the full scheduled local day across daylight-saving changes", async () => {
+  it("preserves local due and late-entry boundaries across daylight-saving changes", async () => {
     const { transaction, unitOfWork } = setup({
       findRecipientAssignment: vi.fn(async () => ({
         assignmentId: ids.assignmentId,
@@ -196,7 +197,40 @@ describe("assignment session service", () => {
     expect(transaction.createSession).toHaveBeenCalledWith(
       expect.objectContaining({
         availableFrom: new Date("2026-11-01T04:00:00.000Z"),
-        availableUntil: new Date("2026-11-02T04:59:59.999Z"),
+        dueAt: new Date("2026-11-02T05:00:00.000Z"),
+        availableUntil: new Date("2026-11-09T05:00:00.000Z"),
+      }),
+    );
+  });
+
+  it("allows an unstarted fixed workout during the late-entry window", async () => {
+    const { transaction, unitOfWork } = setup({
+      findRecipientAssignment: vi.fn(async () => ({
+        assignmentId: ids.assignmentId,
+        recipientId: ids.recipientId,
+        sourceType: "workout" as const,
+        status: "published" as const,
+        timezone: "UTC",
+        scheduledDate: "2026-08-11",
+        startDate: null,
+        endDate: null,
+        availableFrom: null,
+        availableUntil: null,
+        timelinessPolicyEffectiveAt: new Date("2026-08-01T00:00:00.000Z"),
+      })),
+    });
+
+    await startAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      now: new Date("2026-08-15T12:00:00.000Z"),
+    });
+
+    expect(transaction.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dueAt: new Date("2026-08-12T00:00:00.000Z"),
+        availableUntil: new Date("2026-08-19T00:00:00.000Z"),
       }),
     );
   });
@@ -423,6 +457,44 @@ describe("assignment session service", () => {
           scheduledDate: "2026-08-11",
         }),
       );
+    });
+
+    it("starts a late weekly occurrence against its original week", async () => {
+      const { transaction, unitOfWork } = planSetup();
+
+      await startAssignmentSession(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        planSlotSnapshotId: flexSlotId,
+        scheduledDate: "2026-08-10",
+        now: new Date("2026-08-18T12:00:00.000Z"),
+      });
+
+      expect(transaction.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scheduledDate: "2026-08-10",
+          dueAt: new Date("2026-08-17T00:00:00.000Z"),
+          availableUntil: new Date("2026-08-24T00:00:00.000Z"),
+        }),
+      );
+    });
+
+    it("rejects a weekly occurrence at the exclusive late-entry boundary", async () => {
+      const { transaction, unitOfWork } = planSetup();
+
+      await expect(
+        startAssignmentSession(unitOfWork, {
+          organizationId: ids.organizationId,
+          assignmentId: ids.assignmentId,
+          athleteUserId: ids.athleteUserId,
+          planSlotSnapshotId: flexSlotId,
+          scheduledDate: "2026-08-10",
+          now: new Date("2026-08-24T00:00:00.000Z"),
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(transaction.createSession).not.toHaveBeenCalled();
     });
 
     it("rejects flexible starts beyond the weekly target", async () => {
@@ -678,6 +750,28 @@ describe("assignment session service", () => {
         expectedVersion: 1,
       }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("submits with the injected first-submission instant", async () => {
+    const submittedAt = new Date("2026-08-11T17:30:00.000Z");
+    const { transaction, unitOfWork } = setup();
+
+    await submitAssignmentSession(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      sessionId: ids.sessionId,
+      expectedVersion: 1,
+      now: submittedAt,
+    });
+
+    expect(transaction.submitSession).toHaveBeenCalledWith({
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      sessionId: ids.sessionId,
+      expectedVersion: 1,
+      submittedAt,
+    });
   });
 
   it("rejects submit for non-owner athlete session access", async () => {

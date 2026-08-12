@@ -28,7 +28,7 @@ export function isValidIanaTimezone(timezone: string): boolean {
   }
 }
 
-function localDateTimeToUtc(
+export function resolveLocalDateTimeAtMinute(
   date: string,
   localMinute: number,
   timezone: string,
@@ -96,7 +96,7 @@ export function resolveOccurrenceDueAt(input: {
   }
 
   if (input.scheduleType === "fixed") {
-    return localDateTimeToUtc(
+    return resolveLocalDateTimeAtMinute(
       input.scheduledDate,
       input.policy.fixedDueLocalMinute,
       input.timezone,
@@ -105,7 +105,7 @@ export function resolveOccurrenceDueAt(input: {
 
   const weekStart = mondayOf(input.scheduledDate);
   const weeklyDueDate = addDays(weekStart, input.policy.weeklyDueDay - 1);
-  return localDateTimeToUtc(
+  return resolveLocalDateTimeAtMinute(
     weeklyDueDate,
     input.policy.weeklyDueLocalMinute,
     input.timezone,
@@ -135,7 +135,7 @@ export function resolveLateEntryUntil(input: {
   const localDate = `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
   const localMinute = parts.hour * 60 + parts.minute;
 
-  return localDateTimeToUtc(
+  return resolveLocalDateTimeAtMinute(
     addDays(localDate, input.lateEntryDays),
     localMinute,
     input.timezone,
