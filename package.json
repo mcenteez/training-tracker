@@ -18,7 +18,7 @@
     "test:e2e": "npm run db:seed:local && playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate": "npm run format:check && npm run lint && npm run type-check && npm test",
+    "validate": "npm run format:check && npm run lint && npm run type-check && npm test && npm run test:e2e",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
