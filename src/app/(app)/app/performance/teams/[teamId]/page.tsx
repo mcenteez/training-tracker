@@ -120,7 +120,7 @@ export default async function TeamPerformancePage({
             </dd>
             <dd className="text-sm text-muted-foreground">
               {complianceSummary.counts.completed} of{" "}
-              {complianceSummary.eligibleDue} due occurrences completed
+              {complianceSummary.eligibleDue} due scheduled workouts completed
             </dd>
           </CardHeader>
         </Card>
@@ -146,7 +146,7 @@ export default async function TeamPerformancePage({
             <dd className="text-sm text-muted-foreground">
               {complianceSummary.oldestOverdueDate
                 ? `Oldest due ${complianceSummary.oldestOverdueDate}`
-                : "No overdue occurrences"}
+                : "No overdue scheduled workouts"}
             </dd>
           </CardHeader>
         </Card>
@@ -236,8 +236,8 @@ export default async function TeamPerformancePage({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            {complianceSummary.counts.upcoming} upcoming occurrences in this
-            window
+            {complianceSummary.counts.upcoming} upcoming scheduled workouts in
+            this window
           </p>
 
           {assignmentCompliance.length === 0 ? (

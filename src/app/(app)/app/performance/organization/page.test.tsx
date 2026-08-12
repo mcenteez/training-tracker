@@ -217,7 +217,7 @@ describe("organization performance page", () => {
 
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(
-      screen.getByText("2 of 4 due occurrences completed"),
+      screen.getByText("2 of 4 due scheduled workouts completed"),
     ).toBeInTheDocument();
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
     expect(screen.getByText("67%")).toBeInTheDocument();

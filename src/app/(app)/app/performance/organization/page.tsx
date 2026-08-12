@@ -175,7 +175,7 @@ export default async function OrganizationPerformancePage({
             </dd>
             <dd className="text-sm text-muted-foreground">
               {compliance.summary.counts.completed} of{" "}
-              {compliance.summary.eligibleDue} due occurrences completed
+              {compliance.summary.eligibleDue} due scheduled workouts completed
             </dd>
           </CardHeader>
         </Card>
@@ -234,7 +234,7 @@ export default async function OrganizationPerformancePage({
           <CardTitle className="text-2xl">Team compliance</CardTitle>
           <CardDescription>
             Teams with overdue athletes appear first. Rates use each team&apos;s
-            due occurrences in the selected window.
+            due scheduled workouts in the selected window.
           </CardDescription>
         </CardHeader>
         <CardContent>

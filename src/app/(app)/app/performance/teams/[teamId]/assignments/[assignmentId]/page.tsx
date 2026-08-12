@@ -129,7 +129,8 @@ export default async function TeamAssignmentPerformancePage({
             </CardTitle>
             <CardDescription>
               {assignment.timeliness.current.counts.onTimeCompleted} of{" "}
-              {assignment.timeliness.current.timelinessEligible} due occurrences
+              {assignment.timeliness.current.timelinessEligible} due scheduled
+              workouts
             </CardDescription>
           </CardHeader>
         </Card>
@@ -205,7 +206,7 @@ export default async function TeamAssignmentPerformancePage({
                 </p>
                 {recipient.occurrences.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No occurrences fall within this time window.
+                    No scheduled workouts fall within this time window.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
