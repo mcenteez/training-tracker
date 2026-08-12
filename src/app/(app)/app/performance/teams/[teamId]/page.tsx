@@ -11,7 +11,7 @@ import {
 import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import { hasPermission } from "@/modules/access-control/permissions";
-import { listTeamAssignmentCompliance } from "@/modules/assignments/db/team-compliance-queries";
+import { getTeamComplianceDashboard } from "@/modules/assignments/db/team-compliance-queries";
 import { listTeamMembersByTeamId } from "@/modules/teams/db/queries";
 
 type TeamPerformancePageProps = {
@@ -33,6 +33,13 @@ function dateLabel(assignment: {
     : `${assignment.startDate} to ${assignment.endDate}`;
 }
 
+function formatRate(rate: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(rate);
+}
+
 export default async function TeamPerformancePage({
   params,
   searchParams,
@@ -42,16 +49,20 @@ export default async function TeamPerformancePage({
   const windowDays = parseWindowDays(filters.window);
   const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const organizationId = context.membership.organizationId;
-  const [members, assignmentCompliance] = await withDatabase((database) =>
+  const [members, complianceDashboard] = await withDatabase((database) =>
     Promise.all([
       listTeamMembersByTeamId(database, { organizationId, teamId }),
-      listTeamAssignmentCompliance(database, {
+      getTeamComplianceDashboard(database, {
         organizationId,
         teamId,
         windowDays,
       }),
     ]),
   );
+  const assignmentCompliance = complianceDashboard.assignments;
+  const complianceSummary = complianceDashboard.summary;
+  const dueNow =
+    complianceSummary.counts.started + complianceSummary.counts.dueToday;
   const canManageTeam = hasPermission(context.access, "team.update");
   const canAssignTeam = hasPermission(context.access, "workout.assign.team");
 
@@ -87,6 +98,58 @@ export default async function TeamPerformancePage({
           <Link href="/app/library">Library</Link>
         </Button>
       </nav>
+
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Team compliance summary"
+      >
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Completion rate</CardDescription>
+            <CardTitle className="text-3xl">
+              {complianceSummary.completionRate === null
+                ? "No due work"
+                : formatRate(complianceSummary.completionRate)}
+            </CardTitle>
+            <CardDescription>
+              {complianceSummary.counts.completed} of{" "}
+              {complianceSummary.eligibleDue} due occurrences completed
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Athletes needing attention</CardDescription>
+            <CardTitle className="text-3xl">
+              {complianceSummary.athletesNeedingAttention}
+            </CardTitle>
+            <CardDescription>Unique athletes with overdue work</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Overdue work</CardDescription>
+            <CardTitle className="text-3xl">
+              {complianceSummary.counts.overdue}
+            </CardTitle>
+            <CardDescription>
+              {complianceSummary.oldestOverdueDate
+                ? `Oldest due ${complianceSummary.oldestOverdueDate}`
+                : "No overdue occurrences"}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Due now</CardDescription>
+            <CardTitle className="text-3xl">{dueNow}</CardTitle>
+            <CardDescription>
+              {complianceSummary.counts.started} started ·{" "}
+              {complianceSummary.counts.dueToday} due today
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </section>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
@@ -124,8 +187,8 @@ export default async function TeamPerformancePage({
         <CardHeader>
           <CardTitle className="text-2xl">Workout compliance</CardTitle>
           <CardDescription>
-            Assigned means due today; missed is an incomplete past occurrence;
-            upcoming is scheduled after today.
+            Completed means an athlete submitted results, not that staff
+            verified training quality.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -153,6 +216,11 @@ export default async function TeamPerformancePage({
               );
             })}
           </div>
+
+          <p className="text-sm text-muted-foreground">
+            {complianceSummary.counts.upcoming} upcoming occurrences in this
+            window
+          </p>
 
           {assignmentCompliance.length === 0 ? (
             <p className="text-sm text-muted-foreground">

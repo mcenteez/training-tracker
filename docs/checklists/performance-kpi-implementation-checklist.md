@@ -50,7 +50,7 @@ Reference definitions and product rationale: [performance-kpi-recommendations.md
 - [ ] Rename display label `Missed` to `Overdue`.
 - [ ] Keep `Upcoming` unchanged.
 - [ ] Keep database status values unchanged; terminology changes are presentation-only.
-- [ ] Document that completed means results were submitted, not staff-verified quality.
+- [x] Document that completed means results were submitted, not staff-verified quality.
 
 ### Formulas
 
@@ -151,30 +151,30 @@ Give coaches a fast operational summary before assignment detail.
 
 ### Implementation Checklist
 
-- [ ] Add a four-column responsive KPI strip above assignment rows.
-- [ ] Show `Completion rate` as percentage plus fraction.
-- [ ] Show `Athletes needing attention` as a unique-athlete count.
-- [ ] Show `Overdue work` as occurrence count.
-- [ ] Show `Due now` with started and due-today detail.
-- [ ] Show `No due work` when completion-rate denominator is zero.
-- [ ] Keep upcoming workload outside the primary KPI strip.
-- [ ] Ensure all values update with the selected time window.
-- [ ] Add concise accessible descriptions for each KPI.
-- [ ] Do not use color as the only indicator of an exception.
-- [ ] Avoid decorative progress rings or gauges that obscure exact values.
+- [x] Add a four-column responsive KPI strip above assignment rows.
+- [x] Show `Completion rate` as percentage plus fraction.
+- [x] Show `Athletes needing attention` as a unique-athlete count.
+- [x] Show `Overdue work` as occurrence count.
+- [x] Show `Due now` with started and due-today detail.
+- [x] Show `No due work` when completion-rate denominator is zero.
+- [x] Keep upcoming workload outside the primary KPI strip.
+- [x] Ensure all values update with the selected time window.
+- [x] Add concise accessible descriptions for each KPI.
+- [x] Do not use color as the only indicator of an exception.
+- [x] Avoid decorative progress rings or gauges that obscure exact values.
 
 ### Empty and Error States
 
-- [ ] Team with no assignments explains that no compliance data exists.
-- [ ] Team with upcoming-only work shows no due work and the upcoming count separately.
-- [ ] Query failure retains the existing recoverable error state.
-- [ ] Loading layout preserves KPI-strip dimensions to avoid page shift.
+- [x] Team with no assignments explains that no compliance data exists.
+- [x] Team with upcoming-only work shows no due work and the upcoming count separately.
+- [x] Query failure retains the existing recoverable error state.
+- [x] Loading layout preserves KPI-strip dimensions to avoid page shift.
 
 ### Acceptance Criteria
 
-- [ ] A coach can identify current compliance and required attention without scanning assignment rows.
-- [ ] Rates always display their numerator and denominator.
-- [ ] Upcoming work cannot inflate or depress completion rate.
+- [x] A coach can identify current compliance and required attention without scanning assignment rows.
+- [x] Rates always display their numerator and denominator.
+- [x] Upcoming work cannot inflate or depress completion rate.
 
 ## Milestone 4: Assignment Priority Rows
 
