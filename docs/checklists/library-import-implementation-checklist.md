@@ -336,7 +336,7 @@ Notes:
 - [x] Render warnings and errors distinctly; warnings must not disable commit.
 - [x] Provide explicit loading, empty, error, and disabled states.
 - [x] Verify keyboard access, visible focus, and accessible names on the file input, the textarea, and both submit buttons.
-- [ ] Component-test the results view with Testing Library: error diagnostics disable commit; warnings alone do not; clean preview enables it.
+- [x] Component-test the results view with Testing Library: error diagnostics disable commit; warnings alone do not; clean preview enables it.
 
 ### 6. Documentation
 
