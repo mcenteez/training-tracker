@@ -16,12 +16,14 @@ interface AppHeaderClientProps {
   navigationItems: AppNavItem[];
   activeOrganizationName?: string;
   canSwitchOrganization?: boolean;
+  localAuthEnabled?: boolean;
 }
 
 export function AppHeaderClient({
   navigationItems,
   activeOrganizationName,
   canSwitchOrganization = false,
+  localAuthEnabled = false,
 }: AppHeaderClientProps) {
   const pathname = usePathname();
 
@@ -87,13 +89,19 @@ export function AppHeaderClient({
           <span className="hidden text-xs text-muted-foreground sm:inline">
             Account
           </span>
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "h-8 w-8 ring-1 ring-border/70",
-              },
-            }}
-          />
+          {localAuthEnabled ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dev/auth">Switch persona</Link>
+            </Button>
+          ) : (
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "h-8 w-8 ring-1 ring-border/70",
+                },
+              }}
+            />
+          )}
         </div>
       </div>
       {navigationItems.length > 0 ? (

@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
+import { getAuthenticationEntryPath } from "@/lib/auth/config";
+import { getAuthenticatedIdentity } from "@/lib/auth/identity";
 import { findTeamInvitationPreviewByToken } from "@/modules/teams/db/queries";
 
 import { acceptTeamInvitationAction } from "./actions";
@@ -25,12 +26,12 @@ export default async function AcceptTeamInvitePage({
   params,
   searchParams,
 }: AcceptTeamInvitePageProps) {
-  const { userId } = await auth();
+  const identity = await getAuthenticatedIdentity();
   const { token } = await params;
   const feedback = await searchParams;
 
-  if (!userId) {
-    redirect(`/sign-in?redirect_url=/accept-team-invite/${token}`);
+  if (!identity) {
+    redirect(getAuthenticationEntryPath(`/accept-team-invite/${token}`));
   }
 
   const invitation = await withDatabase((database) =>

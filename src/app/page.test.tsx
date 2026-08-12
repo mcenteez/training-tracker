@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authMock, redirectMock } = vi.hoisted(() => ({
-  authMock: vi.fn(),
+const { getAuthenticatedIdentityMock, redirectMock } = vi.hoisted(() => ({
+  getAuthenticatedIdentityMock: vi.fn(),
   redirectMock: vi.fn(),
 }));
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
+vi.mock("@/lib/auth/identity", () => ({
+  getAuthenticatedIdentity: getAuthenticatedIdentityMock,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -17,7 +17,7 @@ import Home from "./page";
 
 describe("Home", () => {
   beforeEach(() => {
-    authMock.mockReset();
+    getAuthenticatedIdentityMock.mockReset();
     redirectMock.mockReset();
     redirectMock.mockImplementation((path: string) => {
       throw new Error(`REDIRECT:${path}`);
@@ -25,7 +25,7 @@ describe("Home", () => {
   });
 
   it("redirects anonymous users to sign-in", async () => {
-    authMock.mockResolvedValue({ userId: null });
+    getAuthenticatedIdentityMock.mockResolvedValue(null);
 
     await expect(Home()).rejects.toThrow("REDIRECT:/sign-in");
 
@@ -33,7 +33,11 @@ describe("Home", () => {
   });
 
   it("routes authenticated users through the app landing dispatcher", async () => {
-    authMock.mockResolvedValue({ userId: "clerk_user_1" });
+    getAuthenticatedIdentityMock.mockResolvedValue({
+      externalId: "clerk_user_1",
+      email: "owner@example.com",
+      fullName: "Owner",
+    });
 
     await expect(Home()).rejects.toThrow("REDIRECT:/app");
 

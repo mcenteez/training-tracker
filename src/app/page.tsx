@@ -1,11 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const { userId } = await auth();
+import { getAuthenticationEntryPath } from "@/lib/auth/config";
+import { getAuthenticatedIdentity } from "@/lib/auth/identity";
 
-  if (!userId) {
-    redirect("/sign-in");
+export default async function Home() {
+  const identity = await getAuthenticatedIdentity();
+
+  if (!identity) {
+    redirect(getAuthenticationEntryPath());
   }
 
   redirect("/app");

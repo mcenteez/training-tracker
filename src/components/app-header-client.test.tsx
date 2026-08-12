@@ -32,4 +32,12 @@ describe("AppHeaderClient", () => {
       expect(link).toHaveAttribute("aria-current", "page");
     }
   });
+  it("renders the local persona switcher without Clerk UI", () => {
+    render(<AppHeaderClient navigationItems={[]} localAuthEnabled />);
+
+    expect(
+      screen.getByRole("link", { name: "Switch persona" }),
+    ).toHaveAttribute("href", "/dev/auth");
+    expect(screen.queryByText("Account menu")).not.toBeInTheDocument();
+  });
 });

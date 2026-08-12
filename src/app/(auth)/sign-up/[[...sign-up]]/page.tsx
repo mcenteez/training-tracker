@@ -1,8 +1,14 @@
 import { SignUp } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isLocalAuthEnabled } from "@/lib/auth/config";
 
 export default function SignUpPage() {
+  if (isLocalAuthEnabled()) {
+    redirect("/dev/auth");
+  }
+
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-5 py-10 sm:px-8">
       <div

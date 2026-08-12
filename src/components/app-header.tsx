@@ -1,8 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 
 import { withDatabase } from "@/db/client";
 import { loadAuthenticatedUser } from "@/lib/app-context";
+import { isLocalAuthEnabled } from "@/lib/auth/config";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { resolveLibraryAccess } from "@/modules/access-control/library-access";
 import { resolveLandingDestination } from "@/modules/access-control/landing";
@@ -60,12 +60,6 @@ function getNavigationItems(input: {
 }
 
 export async function AppHeader() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return <AppHeaderClient navigationItems={[]} />;
-  }
-
   const user = await loadAuthenticatedUser();
   const cookieStore = await cookies();
   const activeOrganization = await withDatabase((database) =>
@@ -81,6 +75,7 @@ export async function AppHeader() {
       <AppHeaderClient
         navigationItems={[]}
         canSwitchOrganization={activeOrganization.memberships.length > 1}
+        localAuthEnabled={isLocalAuthEnabled()}
       />
     );
   }
@@ -149,6 +144,7 @@ export async function AppHeader() {
       })}
       activeOrganizationName={activeOrganization.membership.organizationName}
       canSwitchOrganization={activeOrganization.memberships.length > 1}
+      localAuthEnabled={isLocalAuthEnabled()}
     />
   );
 }

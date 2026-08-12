@@ -1,15 +1,16 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { getAuthenticationEntryPath } from "@/lib/auth/config";
+import { getAuthenticatedIdentity } from "@/lib/auth/identity";
 
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const { userId } = await auth();
+  const identity = await getAuthenticatedIdentity();
 
-  if (!userId) {
-    redirect("/sign-in");
+  if (!identity) {
+    redirect(getAuthenticationEntryPath());
   }
 
   return (

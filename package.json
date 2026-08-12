@@ -15,12 +15,15 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "npm run db:seed:local && playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate": "npm run format:check && npm run lint && npm run type-check && npm test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed:local": "node --env-file-if-exists=.env.local scripts/seed-local-auth.mjs",
+    "dev:local": "npm run db:seed:local && node scripts/run-local-dev.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "7.7.1",
@@ -43,6 +46,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.4",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "7.0.1",

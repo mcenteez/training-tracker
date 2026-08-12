@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
+import { getAuthenticationEntryPath } from "@/lib/auth/config";
+import { getAuthenticatedIdentity } from "@/lib/auth/identity";
 import { findInvitationByToken } from "@/modules/organizations/db/queries";
 
 import { acceptOrganizationInvitationAction } from "./actions";
@@ -45,12 +46,12 @@ export default async function AcceptInvitePage({
   params,
   searchParams,
 }: AcceptInvitePageProps) {
-  const { userId } = await auth();
+  const identity = await getAuthenticatedIdentity();
   const { token } = await params;
   const query = await searchParams;
 
-  if (!userId) {
-    redirect(`/sign-in?redirect_url=/accept-invite/${token}`);
+  if (!identity) {
+    redirect(getAuthenticationEntryPath(`/accept-invite/${token}`));
   }
 
   const invitation = await withDatabase((database) =>
