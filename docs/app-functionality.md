@@ -38,7 +38,7 @@ Reference: [access-control.md](access-control.md)
 
 ### 2.1) Performance Dashboard And Admin Split
 
-KPI definitions and the recommended team-to-organization drill-down are documented in [performance-kpi-recommendations.md](performance-kpi-recommendations.md).
+KPI definitions and the recommended team-to-organization drill-down are documented in [performance-kpi-recommendations.md](performance-kpi-recommendations.md). Implementation work is tracked in [performance-kpi-implementation-checklist.md](performance-kpi-implementation-checklist.md).
 
 - `/app` dispatches each user to the highest applicable organization, team, or athlete landing surface.
 - `/app/performance/organization` is the read-focused organization Performance Dashboard for Owners, Managers, and Organization Viewers.

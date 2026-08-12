@@ -4,6 +4,8 @@
 
 Define the team and organization performance metrics that Training Tracker should present to strength and conditioning coaches, directors, and athletic departments.
 
+Implementation work is tracked in [performance-kpi-implementation-checklist.md](performance-kpi-implementation-checklist.md).
+
 The dashboard should answer three questions in order:
 
 1. **Where does staff attention need to go now?**
