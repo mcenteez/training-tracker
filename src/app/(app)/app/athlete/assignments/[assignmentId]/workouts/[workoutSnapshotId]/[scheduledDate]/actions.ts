@@ -122,6 +122,7 @@ export async function autosaveWorkoutOccurrenceAction(
   const ref = parseOccurrenceRef(formData);
   const sessionId = String(formData.get("sessionId") ?? "").trim();
   const expectedVersion = Number(formData.get("expectedVersion"));
+  const allowSubmittedEdit = formData.get("allowSubmittedEdit") === "1";
 
   if (!sessionId || !Number.isFinite(expectedVersion)) {
     redirect("/app/athlete?error=invalid_assignment");
@@ -141,6 +142,7 @@ export async function autosaveWorkoutOccurrenceAction(
           expectedVersion,
           mutationId: crypto.randomUUID(),
           results,
+          allowSubmittedEdit,
         },
       ),
     );

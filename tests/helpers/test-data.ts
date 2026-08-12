@@ -52,3 +52,20 @@ export async function publishWorkoutAssignment(
   await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
   return new URL(page.url()).pathname;
 }
+
+export async function completeAssignedWorkout(
+  page: Page,
+  workoutName: string,
+  actualReps = "6",
+): Promise<string> {
+  await page.goto("/app/athlete");
+  const assignment = page.locator("li").filter({ hasText: workoutName });
+  await assignment.getByRole("link", { name: "Open" }).click();
+  await page.getByRole("button", { name: "Start Workout" }).click();
+  await expect(page.getByText("Workout started.")).toBeVisible();
+  await page.getByText("Actuals and notes", { exact: true }).click();
+  await page.getByLabel("Actual reps").fill(actualReps);
+  await page.getByRole("button", { name: "Complete Workout" }).click();
+  await expect(page.getByText("Workout completed.")).toBeVisible();
+  return page.url();
+}

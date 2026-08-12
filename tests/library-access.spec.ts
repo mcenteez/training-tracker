@@ -188,4 +188,31 @@ test.describe("Training Tracker library access", () => {
     await page.goto("/app/library/exercises/new");
     await expect(page).toHaveURL(/\/app\/library\/exercises$/);
   });
+
+  test("library searches remain scoped to the active organization", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "manager");
+
+    await page.goto(
+      "/app/library/exercises?search=Foreign%20Organization%20Exercise",
+    );
+    await expect(
+      page.getByText("No exercises found", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Foreign Organization Exercise", { exact: true }),
+    ).toHaveCount(0);
+
+    await page.goto(
+      "/app/library/workouts?search=Foreign%20Organization%20Workout",
+    );
+    await expect(
+      page.getByText("No workouts found", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Foreign Organization Workout", { exact: true }),
+    ).toHaveCount(0);
+  });
 });

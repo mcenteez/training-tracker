@@ -308,7 +308,7 @@ export function createAssignmentSessionUnitOfWork(
             const [session] = await databaseTransaction
               .update(assignmentSessions)
               .set({
-                status: "in_progress",
+                status: input.preserveSubmitted ? "submitted" : "in_progress",
                 startedAt: sql`coalesce(${assignmentSessions.startedAt}, now())`,
                 updatedAt: new Date(),
                 version: sql`${assignmentSessions.version} + 1`,

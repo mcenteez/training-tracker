@@ -594,6 +594,44 @@ describe("assignment session service", () => {
     expect(transaction.touchSessionProgress).not.toHaveBeenCalled();
   });
 
+  it("allows an owned submitted session to update results in explicit edit mode", async () => {
+    const updatedSession = makeSession({
+      status: "submitted",
+      submittedAt: now,
+      version: 3,
+      lastMutationId: ids.mutationId,
+    });
+    const { transaction, unitOfWork } = setup({
+      findSessionByIdForAthlete: vi.fn(async () =>
+        makeSession({ status: "submitted", submittedAt: now, version: 2 }),
+      ),
+      touchSessionProgress: vi.fn(async () => updatedSession),
+    });
+
+    const result = await autosaveAssignmentSessionResults(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      sessionId: ids.sessionId,
+      expectedVersion: 2,
+      mutationId: ids.mutationId,
+      allowSubmittedEdit: true,
+      now,
+      results: [makeResult()],
+    });
+
+    expect(result.status).toBe("submitted");
+    expect(transaction.replaceSessionResults).toHaveBeenCalledOnce();
+    expect(transaction.touchSessionProgress).toHaveBeenCalledWith({
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      sessionId: ids.sessionId,
+      expectedVersion: 2,
+      mutationId: ids.mutationId,
+      preserveSubmitted: true,
+    });
+  });
+
   it("rejects autosave outside availability window", async () => {
     const { unitOfWork } = setup({
       findSessionByIdForAthlete: vi.fn(async () =>

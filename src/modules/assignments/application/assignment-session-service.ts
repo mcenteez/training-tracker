@@ -138,6 +138,7 @@ export interface AssignmentSessionTransaction {
     sessionId: string;
     expectedVersion: number;
     mutationId: string;
+    preserveSubmitted?: boolean;
   }): Promise<AssignmentSession | null>;
   submitSession(input: {
     organizationId: string;
@@ -546,6 +547,7 @@ export async function autosaveAssignmentSessionResults(
     expectedVersion: number;
     mutationId: string;
     results: readonly AssignmentSessionResultInput[];
+    allowSubmittedEdit?: boolean;
     now?: Date;
   },
 ): Promise<AssignmentSession> {
@@ -569,7 +571,7 @@ export async function autosaveAssignmentSessionResults(
       throw new AuthorizationError();
     }
 
-    if (session.status === "submitted") {
+    if (session.status === "submitted" && !input.allowSubmittedEdit) {
       throw new DomainInvariantError("Submitted sessions cannot be edited.");
     }
 
@@ -625,6 +627,7 @@ export async function autosaveAssignmentSessionResults(
       sessionId: parsed.sessionId,
       expectedVersion: parsed.expectedVersion,
       mutationId: parsed.mutationId,
+      preserveSubmitted: input.allowSubmittedEdit,
     });
 
     if (!updated) {

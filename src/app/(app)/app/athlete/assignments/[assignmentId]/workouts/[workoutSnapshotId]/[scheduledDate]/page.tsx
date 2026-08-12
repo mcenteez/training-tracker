@@ -213,11 +213,13 @@ export default async function WorkoutOccurrencePage({
   const reset = readFlag(resolvedSearchParams, "reset");
 
   const isSubmitted = session?.status === "submitted";
+  const editSubmitted = isSubmitted && readFlag(resolvedSearchParams, "edit");
   const canStart =
     session === null &&
     assignment.status === "published" &&
     occurrenceStatus !== "upcoming";
-  const canEdit = session !== null && !isSubmitted;
+  const canEdit = session !== null && (!isSubmitted || editSubmitted);
+  const canSubmit = canEdit && !isSubmitted;
 
   const scheduleRule = slot
     ? slot.scheduleType === "fixed_day"
@@ -284,6 +286,12 @@ export default async function WorkoutOccurrencePage({
             remain available.
           </CardContent>
         </Card>
+      ) : null}
+
+      {isSubmitted && !editSubmitted ? (
+        <Button asChild variant="outline">
+          <Link href="?edit=1">Edit results</Link>
+        </Button>
       ) : null}
 
       <Card>
@@ -358,6 +366,9 @@ export default async function WorkoutOccurrencePage({
               name="expectedVersion"
               value={session?.version ?? ""}
             />
+            {editSubmitted ? (
+              <input type="hidden" name="allowSubmittedEdit" value="1" />
+            ) : null}
 
             <div className="space-y-3">
               {workoutItems.map((item) => {
@@ -396,7 +407,7 @@ export default async function WorkoutOccurrencePage({
               <Button
                 type="submit"
                 formAction={submitWorkoutOccurrenceAction}
-                disabled={!canEdit}
+                disabled={!canSubmit}
               >
                 Complete Workout
               </Button>

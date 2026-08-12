@@ -54,7 +54,7 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Team compliance and staff review flows
 - [x] Cross-organization and cross-team security regression tests
 - [x] Shared Playwright helpers for persona-driven flows
-- [ ] A reusable test data factory for assignment and result scenarios
+- [x] A reusable test data factory for assignment and result scenarios
 - [x] Coverage for inaccessible route and UI states
 - [x] Documentation link between product capability docs and the E2E test matrix
 
@@ -153,7 +153,7 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 - [x] Add test for removing a team member from a managed team.
 - [x] Add unauthorized test for a Team Manager attempting to modify unmanaged teams.
 - [x] Add negative test for a Team Manager trying to access organization member management.
-- [ ] Add negative test for role changes that would broaden organization scope.
+- [x] Add negative test for role changes that would broaden organization scope.
 
 ### Acceptance Criteria
 
@@ -180,7 +180,7 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 - [x] Add test for rejecting activation of an invalid draft.
 - [x] Add test for successfully activating a valid workout.
 - [x] Add test for duplicating a workout into a new draft.
-- [ ] Add test for organization-scoped library separation.
+- [x] Add test for organization-scoped library separation.
 
 ### Acceptance Criteria
 
@@ -188,7 +188,7 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 - [x] Viewer roles cannot mutate the library.
 - [x] Incomplete workouts cannot be activated.
 - [x] Valid workouts can be activated and reused in assignments.
-- [ ] Library items remain scoped to the active organization.
+- [x] Library items remain scoped to the active organization.
 
 ## Milestone 4: Assignment Creation and Publication
 
@@ -229,8 +229,8 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 
 - [x] Add athlete flow test for viewing assigned workout and schedule.
 - [x] Add athlete test for logging a workout result.
-- [ ] Add athlete test for editing an already-submitted result.
-- [ ] Add athlete negative test for viewing another athlete's result data.
+- [x] Add athlete test for editing an already-submitted result.
+- [x] Add athlete negative test for viewing another athlete's result data.
 - [x] Add staff compliance page test for assigned athletes and session status.
 - [x] Add manager comment flow for submitted athlete results.
 - [x] Add viewer read-only flow for submitted results and comments.
@@ -238,7 +238,7 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 
 ### Acceptance Criteria
 
-- [ ] Athlete can log and update only their own result data.
+- [x] Athlete can log and update only their own result data.
 - [x] Team staff can view scoped compliance and result review pages.
 - [x] Team Viewer can read but not mutate.
 - [x] Team Manager can append allowed comments only for managed-team cases.
@@ -262,9 +262,9 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 
 ### Acceptance Criteria
 
-- [ ] Staff sees only authorized team performance details.
-- [ ] Athletes cannot access review routes for other athletes or other teams.
-- [ ] Result and compliance data remain tied to the correct team assignment scope.
+- [x] Staff sees only authorized team performance details.
+- [x] Athletes cannot access review routes for other athletes or other teams.
+- [x] Result and compliance data remain tied to the correct team assignment scope.
 
 ## Milestone 7: Tenant Isolation and Regression Coverage
 
@@ -313,7 +313,7 @@ Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-
 
 - [x] Local persona selector works in browser
 - [x] Manual QA can switch between roles without creating Clerk accounts
-- [ ] Manual scenario matrix matches Playwright persona matrix
+- [x] Manual scenario matrix matches Playwright persona matrix
 - [x] Browser-based validation confirms route access and UI states remain correct
 
 ## Done Definition

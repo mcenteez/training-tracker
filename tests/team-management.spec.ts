@@ -101,4 +101,45 @@ test.describe("Training Tracker team management", () => {
 
     expect(response?.status()).toBe(404);
   });
+
+  test("team role changes never broaden organization scope", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "owner");
+
+    try {
+      await page.goto(`/app/teams/${basketballTeamId}`);
+      const memberRow = page
+        .locator("li")
+        .filter({ hasText: "revoked-manager@local.test" });
+      await memberRow
+        .getByLabel("Team role for Revoked Team Manager")
+        .selectOption("viewer");
+      await memberRow.getByRole("button", { name: "Review role" }).click();
+      await page.getByRole("button", { name: "Confirm role change" }).click();
+      await expect(page).toHaveURL(
+        new RegExp(`/app/teams/${basketballTeamId}\\?memberSaved=1$`),
+      );
+
+      await page.goto("/app/admin");
+      const organizationMember = page
+        .locator("li")
+        .filter({ hasText: "revoked-manager@local.test" });
+      await expect(organizationMember).toContainText("athlete");
+    } finally {
+      await page.goto(`/app/teams/${basketballTeamId}`);
+      const memberRow = page
+        .locator("li")
+        .filter({ hasText: "revoked-manager@local.test" });
+      await memberRow
+        .getByLabel("Team role for Revoked Team Manager")
+        .selectOption("manager");
+      await memberRow.getByRole("button", { name: "Review role" }).click();
+      await page.getByRole("button", { name: "Confirm role change" }).click();
+      await expect(page).toHaveURL(
+        new RegExp(`/app/teams/${basketballTeamId}\\?memberSaved=1$`),
+      );
+    }
+  });
 });

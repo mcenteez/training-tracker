@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 import { testIds, usePersona } from "./helpers/persona";
-import { createExercise, createWorkout } from "./helpers/test-data";
+import {
+  completeAssignedWorkout,
+  createExercise,
+  createWorkout,
+} from "./helpers/test-data";
 
 const { basketballTeamId } = testIds;
 
@@ -208,20 +212,17 @@ test.describe("Training Tracker assignment and performance access", () => {
     const athleteAssignment = page
       .locator("li")
       .filter({ hasText: workoutName });
-    await athleteAssignment.getByRole("link", { name: "Open" }).click();
     await expect(
-      page.getByRole("button", { name: "Start Workout" }),
+      athleteAssignment.getByRole("link", { name: "Open" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Start Workout" }).click();
-    await expect(page.getByText("Workout started.")).toBeVisible();
+    await completeAssignedWorkout(page, workoutName, "6");
     await expect(page.getByText("Reps 5", { exact: true })).toBeVisible();
-    await page.getByText("Actuals and notes", { exact: true }).click();
-    await page.getByLabel("Actual reps").fill("6");
+    const athleteOccurrenceUrl = page.url();
+    await page.getByRole("link", { name: "Edit results" }).click();
+    await page.getByLabel("Actual reps").fill("8");
     await page.getByRole("button", { name: "Save Progress" }).click();
     await expect(page.getByText("Progress saved.")).toBeVisible();
-    await page.getByLabel("Actual reps").fill("7");
-    await page.getByRole("button", { name: "Complete Workout" }).click();
-    await expect(page.getByText("Workout completed.")).toBeVisible();
+    await expect(page.getByText("Status: Completed")).toBeVisible();
 
     await usePersona(context, "manager");
     await page.goto(`/app/performance/teams/${basketballTeamId}`);
@@ -247,5 +248,6 @@ test.describe("Training Tracker assignment and performance access", () => {
       page.getByText("Great consistency on this session.", { exact: true }),
     ).toBeVisible();
     await expect(page.getByLabel("Add staff comment")).toHaveCount(0);
+    expect(athleteOccurrenceUrl).toContain("submitted=1");
   });
 });

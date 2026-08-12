@@ -12,6 +12,10 @@ const organizationId = "10000000-0000-4000-8000-000000000001";
 const teamId = "20000000-0000-4000-8000-000000000001";
 const foreignOrganizationId = "10000000-0000-4000-8000-000000000099";
 const foreignTeamId = "20000000-0000-4000-8000-000000000099";
+const foreignExerciseId = "40000000-0000-4000-8000-000000000099";
+const foreignWorkoutId = "50000000-0000-4000-8000-000000000099";
+const foreignBlockId = "60000000-0000-4000-8000-000000000099";
+const foreignItemId = "70000000-0000-4000-8000-000000000099";
 const users = {
   owner: "30000000-0000-4000-8000-000000000001",
   manager: "30000000-0000-4000-8000-000000000002",
@@ -76,6 +80,30 @@ await sql.transaction([
     VALUES (${foreignTeamId}, ${foreignOrganizationId}, 'Foreign Team')
     ON CONFLICT (id) DO UPDATE
     SET name = EXCLUDED.name, updated_at = now()
+  `,
+  sql`
+    INSERT INTO exercises (id, organization_id, name, instructions, category, equipment, status)
+    VALUES (${foreignExerciseId}, ${foreignOrganizationId}, 'Foreign Organization Exercise', 'Foreign fixture.', 'strength', ARRAY['barbell'], 'active')
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name, status = EXCLUDED.status, updated_at = now()
+  `,
+  sql`
+    INSERT INTO workouts (id, organization_id, name, description, status)
+    VALUES (${foreignWorkoutId}, ${foreignOrganizationId}, 'Foreign Organization Workout', 'Foreign fixture.', 'active')
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name, status = EXCLUDED.status, updated_at = now()
+  `,
+  sql`
+    INSERT INTO workout_blocks (id, organization_id, workout_id, type, label, rounds, position)
+    VALUES (${foreignBlockId}, ${foreignOrganizationId}, ${foreignWorkoutId}, 'straight', 'Foreign block', 1, 0)
+    ON CONFLICT (id) DO UPDATE
+    SET label = EXCLUDED.label, rounds = EXCLUDED.rounds, position = EXCLUDED.position
+  `,
+  sql`
+    INSERT INTO workout_items (id, organization_id, workout_id, block_id, exercise_id, position, reps)
+    VALUES (${foreignItemId}, ${foreignOrganizationId}, ${foreignWorkoutId}, ${foreignBlockId}, ${foreignExerciseId}, 0, 5)
+    ON CONFLICT (id) DO UPDATE
+    SET reps = EXCLUDED.reps
   `,
 ]);
 
