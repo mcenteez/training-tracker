@@ -79,7 +79,7 @@ describe("staff session result page", () => {
     });
   });
 
-  it("shows submitted results and comment controls to Team Managers", async () => {
+  it("shows completed results and comment controls to Team Managers", async () => {
     render(await StaffSessionResultPage({ params }));
 
     expect(loadAuthorizedTeamContextMock).toHaveBeenCalledWith(
@@ -87,12 +87,13 @@ describe("staff session result page", () => {
       "results.read.all",
     );
     expect(screen.getByRole("heading", { name: "Athlete One" })).toBeVisible();
+    expect(screen.getByText("Completed results")).toBeVisible();
     expect(screen.getByText("Back Squat")).toBeVisible();
     expect(screen.getByText("5 reps - 95 kg")).toBeVisible();
     expect(screen.getByText("Comment form")).toBeVisible();
   });
 
-  it("shows submitted results without comment controls to Team Viewers", async () => {
+  it("shows completed results without comment controls to Team Viewers", async () => {
     loadAuthorizedTeamContextMock.mockResolvedValue({
       membership: { organizationId: "organization-1" },
       access: { organizationRole: "athlete", teamRole: "viewer" },

@@ -100,14 +100,23 @@ test.describe("Training Tracker local personas", () => {
 
     await expect(page).toHaveURL(/\/app\/performance\/organization$/);
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+    const complianceSummary = page.getByRole("group", {
+      name: "Organization compliance summary",
+    });
+    await expect(complianceSummary).toBeVisible();
     await expect(
-      page.getByRole("region", { name: "Organization compliance summary" }),
+      complianceSummary.getByText("Completion rate", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Completion rate", { exact: true }),
+      complianceSummary.getByText("Programming coverage", { exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("Programming coverage", { exact: true }),
+      page.getByRole("heading", { name: "Metric definitions" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /submission confirms logging, not verified training quality/i,
+      ),
     ).toBeVisible();
     await page.getByRole("link", { name: "90 days" }).click();
     await expect(page).toHaveURL(/\?window=90$/);
@@ -117,6 +126,10 @@ test.describe("Training Tracker local personas", () => {
     await expect(
       page.getByRole("link", { name: "Team Performance" }).first(),
     ).toBeVisible();
+
+    await page.getByRole("link", { name: "30 days" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\?window=30$/);
 
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(

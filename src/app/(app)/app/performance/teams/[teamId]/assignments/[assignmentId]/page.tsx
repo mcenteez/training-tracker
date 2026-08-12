@@ -117,10 +117,19 @@ export default async function TeamAssignmentPerformancePage({
                   <table className="w-full min-w-xl text-left text-sm">
                     <thead className="border-b text-xs text-muted-foreground">
                       <tr>
-                        <th className="px-2 py-2 font-medium">Date</th>
-                        <th className="px-2 py-2 font-medium">Workout</th>
-                        <th className="px-2 py-2 font-medium">Status</th>
-                        <th className="px-2 py-2 text-right font-medium">
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          Date
+                        </th>
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          Workout
+                        </th>
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          Status
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-2 py-2 text-right font-medium"
+                        >
                           Result
                         </th>
                       </tr>

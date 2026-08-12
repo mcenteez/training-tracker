@@ -70,7 +70,7 @@ export default async function StaffSessionResultPage({
         </Link>
         <h1 className="text-3xl font-semibold">{session.athleteName}</h1>
         <p className="text-sm text-muted-foreground">
-          {session.workoutName} - scheduled {session.scheduledDate} - submitted{" "}
+          {session.workoutName} - scheduled {session.scheduledDate} - completed{" "}
           {formatDateTime(session.submittedAt)}
         </p>
       </section>
@@ -81,7 +81,7 @@ export default async function StaffSessionResultPage({
       >
         <div>
           <h2 id="submitted-results-heading" className="text-xl font-semibold">
-            Submitted results
+            Completed results
           </h2>
           <p className="text-sm text-muted-foreground">
             Recorded exercise metrics in workout order.
@@ -92,7 +92,7 @@ export default async function StaffSessionResultPage({
             <CardHeader>
               <CardTitle>No recorded metrics</CardTitle>
               <CardDescription>
-                This submitted session does not contain exercise result entries.
+                This completed session does not contain exercise result entries.
               </CardDescription>
             </CardHeader>
           </Card>

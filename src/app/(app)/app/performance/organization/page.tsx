@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ComplianceDefinitions } from "@/components/compliance-definitions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +33,10 @@ function formatRate(rate: number): string {
     style: "percent",
     maximumFractionDigits: 0,
   }).format(rate);
+}
+
+function windowLabel(windowDays: number | null): string {
+  return windowDays === null ? "all-time" : `${windowDays}-day`;
 }
 
 export default async function OrganizationPerformancePage({
@@ -129,58 +134,69 @@ export default async function OrganizationPerformancePage({
         })}
       </div>
 
-      <section
+      <dl
+        role="group"
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Organization compliance summary"
       >
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Completion rate</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">Completion rate</dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {compliance.summary.completionRate === null
                 ? "No due work"
                 : formatRate(compliance.summary.completionRate)}
-            </CardTitle>
-            <CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
               {compliance.summary.counts.completed} of{" "}
               {compliance.summary.eligibleDue} due occurrences completed
-            </CardDescription>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Teams needing attention</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">
+              Teams needing attention
+            </dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {teamsNeedingAttention} of {compliance.teams.length}
-            </CardTitle>
-            <CardDescription>Teams with overdue work</CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
+              Teams with overdue work
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Athletes needing attention</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">
+              Athletes needing attention
+            </dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {compliance.summary.athletesNeedingAttention}
-            </CardTitle>
-            <CardDescription>Unique athletes with overdue work</CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
+              Unique athletes with overdue work
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Programming coverage</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">
+              Programming coverage
+            </dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {compliance.summary.athleteCoverage === null
                 ? "No athletes"
                 : formatRate(compliance.summary.athleteCoverage)}
-            </CardTitle>
-            <CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
               {compliance.summary.programmedAthletes} of{" "}
               {compliance.summary.rosteredAthletes} organization athletes have
               due work
-            </CardDescription>
+            </dd>
           </CardHeader>
         </Card>
-      </section>
+      </dl>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
@@ -271,6 +287,10 @@ export default async function OrganizationPerformancePage({
               })}
             </ul>
           )}
+          <ComplianceDefinitions
+            windowLabel={windowLabel(windowDays)}
+            showCoverage
+          />
         </CardContent>
       </Card>
 

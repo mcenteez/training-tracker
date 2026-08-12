@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ComplianceDefinitions } from "@/components/compliance-definitions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,6 +39,10 @@ function formatRate(rate: number): string {
     style: "percent",
     maximumFractionDigits: 0,
   }).format(rate);
+}
+
+function windowLabel(windowDays: number | null): string {
+  return windowDays === null ? "all-time" : `${windowDays}-day`;
 }
 
 export default async function TeamPerformancePage({
@@ -99,57 +104,64 @@ export default async function TeamPerformancePage({
         </Button>
       </nav>
 
-      <section
+      <dl
+        role="group"
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Team compliance summary"
       >
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Completion rate</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">Completion rate</dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {complianceSummary.completionRate === null
                 ? "No due work"
                 : formatRate(complianceSummary.completionRate)}
-            </CardTitle>
-            <CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
               {complianceSummary.counts.completed} of{" "}
               {complianceSummary.eligibleDue} due occurrences completed
-            </CardDescription>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Athletes needing attention</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">
+              Athletes needing attention
+            </dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {complianceSummary.athletesNeedingAttention}
-            </CardTitle>
-            <CardDescription>Unique athletes with overdue work</CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
+              Unique athletes with overdue work
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Overdue work</CardDescription>
-            <CardTitle className="text-3xl">
+            <dt className="text-sm text-muted-foreground">Overdue work</dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
               {complianceSummary.counts.overdue}
-            </CardTitle>
-            <CardDescription>
+            </dd>
+            <dd className="text-sm text-muted-foreground">
               {complianceSummary.oldestOverdueDate
                 ? `Oldest due ${complianceSummary.oldestOverdueDate}`
                 : "No overdue occurrences"}
-            </CardDescription>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
           <CardHeader className="gap-1">
-            <CardDescription>Due now</CardDescription>
-            <CardTitle className="text-3xl">{dueNow}</CardTitle>
-            <CardDescription>
+            <dt className="text-sm text-muted-foreground">Due now</dt>
+            <dd className="font-heading text-3xl leading-snug font-medium">
+              {dueNow}
+            </dd>
+            <dd className="text-sm text-muted-foreground">
               {complianceSummary.counts.started} started ·{" "}
               {complianceSummary.counts.dueToday} due today
-            </CardDescription>
+            </dd>
           </CardHeader>
         </Card>
-      </section>
+      </dl>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
@@ -279,6 +291,7 @@ export default async function TeamPerformancePage({
               ))}
             </ul>
           )}
+          <ComplianceDefinitions windowLabel={windowLabel(windowDays)} />
         </CardContent>
       </Card>
     </main>

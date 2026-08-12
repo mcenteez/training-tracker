@@ -68,11 +68,20 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByText("Workout compliance", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Metric definitions" }),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: "90 days" }).click();
     await expect(page).toHaveURL(/\?window=90$/);
     await page.getByRole("link", { name: "All time" }).click();
     await expect(page).toHaveURL(/\?window=all$/);
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   });
 
   test("viewer can read team performance but athlete cannot", async ({
@@ -228,6 +237,17 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.goto(`/app/performance/teams/${basketballTeamId}`);
     await expect(page.getByText(workoutName, { exact: true })).toBeVisible();
     await page.getByText(workoutName, { exact: true }).click();
+    await page.setViewportSize({ width: 375, height: 812 });
+    const athleteResult = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("link", { name: "Review" }) });
+    await expect(athleteResult).toBeVisible();
+    await expect(athleteResult).toContainText("Completed");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
     await page.getByRole("link", { name: "Review" }).click();
     await expect(page).toHaveURL(
       new RegExp(`/app/performance/teams/${basketballTeamId}/assignments/`),

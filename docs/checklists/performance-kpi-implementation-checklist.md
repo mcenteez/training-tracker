@@ -313,22 +313,22 @@ Users must be able to understand and trust every metric without relying on insti
 
 ### Implementation Checklist
 
-- [ ] Add concise in-product definitions for completion rate, due work, overdue work, and programming coverage.
-- [ ] Explain that completion reflects submitted logging, not verified training quality.
-- [ ] Explain selected-window behavior.
-- [ ] Explain `No due work` and unavailable percentages.
-- [ ] Use semantic `dl`, table headers, and status text where appropriate.
-- [ ] Ensure keyboard navigation through time filters and drill-down links.
-- [ ] Ensure warning states have text or icons in addition to color.
-- [ ] Verify mobile layouts do not truncate rates, fractions, or athlete names.
-- [ ] Verify screen-reader output includes metric label, value, and denominator.
-- [ ] Keep displayed terminology consistent across team, organization, assignment, and athlete views.
+- [x] Add concise in-product definitions for completion rate, due work, overdue work, and programming coverage.
+- [x] Explain that completion reflects submitted logging, not verified training quality.
+- [x] Explain selected-window behavior.
+- [x] Explain `No due work` and unavailable percentages.
+- [x] Use semantic `dl`, table headers, and status text where appropriate.
+- [x] Ensure keyboard navigation through time filters and drill-down links.
+- [x] Ensure warning states have text or icons in addition to color.
+- [x] Verify mobile layouts do not truncate rates, fractions, or athlete names.
+- [x] Verify screen-reader output includes metric label, value, and denominator.
+- [x] Keep displayed terminology consistent across team, organization, assignment, and athlete views.
 
 ### Acceptance Criteria
 
-- [ ] A new coach can interpret each KPI from the interface alone.
-- [ ] KPI meaning is consistent across all dashboard levels.
-- [ ] Accessibility checks pass for keyboard, focus, semantics, and contrast.
+- [x] A new coach can interpret each KPI from the interface alone.
+- [x] KPI meaning is consistent across all dashboard levels.
+- [x] Accessibility checks pass for keyboard, focus, semantics, and contrast.
 
 ## Milestone 9: Verification and Rollout
 
