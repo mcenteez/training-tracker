@@ -278,9 +278,8 @@ Three stages on one page:
 
 Notes:
 
-- Success does **not** redirect; the report stays on screen with a `sonner` toast and links to the created entities.
-- Add `shadcn add table alert` (neither component exists yet).
-- Diagnostics render in a `role="alert"` region; the summary uses `aria-live="polite"`.
+- Success does **not** redirect; the report stays on screen and links to the created entities.
+- Diagnostics render in a `role="alert"` region; the results region uses `aria-live="polite"`.
 - Give the results region a stable `section[aria-label="Import results"]` selector for Playwright.
 - Server Action body limit: confirm `serverActions.bodySizeLimit` in `next.config.ts` covers the 512 KB cap plus overhead.
 
@@ -325,19 +324,18 @@ Notes:
 
 ### 4. Routes and actions
 
-- [ ] Add `src/app/(app)/app/library/import/page.tsx` and `actions.ts`.
-- [ ] Implement `previewLibraryImportAction` (read-only) and `commitLibraryImportAction`, mapping `DomainInvariantError` / `AuthorizationError` / `ResourceNotFoundError` to user-safe messages.
-- [ ] Resolve the file or pasted-text source to a single string, rejecting both-provided and neither-provided.
-- [ ] `revalidatePath` the exercises, workouts, and plans list routes after a successful commit.
-- [ ] Add the Import tab to `library-nav.tsx`, gated on `manage`.
+- [x] Add `src/app/(app)/app/library/import/page.tsx` and `actions.ts`.
+- [x] Implement `previewLibraryImportAction` (read-only) and `commitLibraryImportAction`, mapping `DomainInvariantError` / `AuthorizationError` / `ResourceNotFoundError` to user-safe messages.
+- [x] Resolve the file or pasted-text source to a single string, rejecting both-provided and neither-provided.
+- [x] `revalidatePath` the exercises, workouts, and plans list routes after a successful commit.
+- [x] Add the Import tab to `library-nav.tsx`, gated on `manage`.
 
 ### 5. UI
 
-- [ ] `npx shadcn add table alert`.
-- [ ] Build the input form with both file and paste sources, format reference with copyable prompt template, and results view.
-- [ ] Render warnings and errors distinctly; warnings must not disable commit.
-- [ ] Provide explicit loading, empty, error, and disabled states.
-- [ ] Verify keyboard access, visible focus, and accessible names on the file input, the textarea, and both submit buttons.
+- [x] Build the input form with both file and paste sources, format reference with copyable prompt template, and results view. Built with semantic `table` and `section` markup plus existing primitives; no new shadcn components were needed.
+- [x] Render warnings and errors distinctly; warnings must not disable commit.
+- [x] Provide explicit loading, empty, error, and disabled states.
+- [x] Verify keyboard access, visible focus, and accessible names on the file input, the textarea, and both submit buttons.
 - [ ] Component-test the results view with Testing Library: error diagnostics disable commit; warnings alone do not; clean preview enables it.
 
 ### 6. Documentation

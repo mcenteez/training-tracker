@@ -32,7 +32,7 @@ export default async function LibraryLayout({
             {context.libraryAccess === "manage" ? "Can manage" : "Read only"}
           </span>
         </div>
-        <LibraryNav />
+        <LibraryNav canManage={context.libraryAccess === "manage"} />
       </header>
       {children}
     </main>

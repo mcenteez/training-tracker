@@ -11,12 +11,15 @@ const tabs = [
   { href: "/app/library/exercises", label: "Exercises" },
 ];
 
-export function LibraryNav() {
+const manageTabs = [{ href: "/app/library/import", label: "Import" }];
+
+export function LibraryNav({ canManage }: { canManage: boolean }) {
   const pathname = usePathname();
+  const visibleTabs = canManage ? [...tabs, ...manageTabs] : tabs;
 
   return (
     <nav aria-label="Library sections" className="mt-6 flex gap-6">
-      {tabs.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = pathname.startsWith(tab.href);
 
         return (
