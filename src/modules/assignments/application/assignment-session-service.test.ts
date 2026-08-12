@@ -46,6 +46,7 @@ function makeSession(
     scheduledDate: "2026-08-11",
     availableFrom: new Date("2026-08-11T12:00:00.000Z"),
     availableUntil: new Date("2026-08-11T18:00:00.000Z"),
+    dueAt: null,
     status: "assigned",
     startedAt: null,
     submittedAt: null,

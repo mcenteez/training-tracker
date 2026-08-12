@@ -66,6 +66,22 @@ export const assignments = pgTable(
     scheduledDate: date("scheduled_date"),
     availableFrom: timestamp("available_from", { withTimezone: true }),
     availableUntil: timestamp("available_until", { withTimezone: true }),
+    timelinessPolicyVersion: integer("timeliness_policy_version")
+      .default(1)
+      .notNull(),
+    timelinessPolicyEffectiveAt: timestamp("timeliness_policy_effective_at", {
+      withTimezone: true,
+    })
+      .defaultNow()
+      .notNull(),
+    fixedDueLocalMinute: integer("fixed_due_local_minute")
+      .default(1440)
+      .notNull(),
+    weeklyDueDay: integer("weekly_due_day").default(7).notNull(),
+    weeklyDueLocalMinute: integer("weekly_due_local_minute")
+      .default(1440)
+      .notNull(),
+    lateEntryDays: integer("late_entry_days").default(7).notNull(),
     status: assignmentStatus().default("draft").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     canceledAt: timestamp("canceled_at", { withTimezone: true }),
@@ -125,6 +141,26 @@ export const assignments = pgTable(
     check(
       "assignments_availability_order",
       sql`${table.availableFrom} IS NULL OR ${table.availableUntil} IS NULL OR ${table.availableFrom} < ${table.availableUntil}`,
+    ),
+    check(
+      "assignments_timeliness_policy_version_supported",
+      sql`${table.timelinessPolicyVersion} = 1`,
+    ),
+    check(
+      "assignments_fixed_due_minute_bounds",
+      sql`${table.fixedDueLocalMinute} >= 0 AND ${table.fixedDueLocalMinute} <= 1440`,
+    ),
+    check(
+      "assignments_weekly_due_day_bounds",
+      sql`${table.weeklyDueDay} >= 1 AND ${table.weeklyDueDay} <= 7`,
+    ),
+    check(
+      "assignments_weekly_due_minute_bounds",
+      sql`${table.weeklyDueLocalMinute} >= 0 AND ${table.weeklyDueLocalMinute} <= 1440`,
+    ),
+    check(
+      "assignments_late_entry_days_nonnegative",
+      sql`${table.lateEntryDays} >= 0`,
     ),
     check("assignments_version_positive", sql`${table.version} > 0`),
     index("assignments_organization_status_idx").on(
@@ -535,6 +571,7 @@ export const assignmentSessions = pgTable(
     availableUntil: timestamp("available_until", {
       withTimezone: true,
     }).notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }),
     status: assignmentSessionStatus().default("assigned").notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
@@ -603,6 +640,10 @@ export const assignmentSessions = pgTable(
       table.organizationId,
       table.athleteUserId,
       table.scheduledDate,
+    ),
+    index("assignment_sessions_organization_due_at_idx").on(
+      table.organizationId,
+      table.dueAt,
     ),
     index("assignment_sessions_assignment_idx").on(table.assignmentId),
   ],

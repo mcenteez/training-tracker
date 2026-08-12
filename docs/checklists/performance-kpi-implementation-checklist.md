@@ -10,7 +10,7 @@ The first release must answer:
 2. Is prescribed training being completed consistently?
 3. Which teams, assignments, and athletes explain the result?
 
-Reference definitions and product rationale: [performance-kpi-recommendations.md](performance-kpi-recommendations.md).
+Reference definitions and product rationale: [performance-kpi-recommendations.md](../performance-kpi-recommendations.md).
 
 ## Scope
 
@@ -406,7 +406,7 @@ Users must be able to understand and trust every metric without relying on insti
 - [x] Compare old status counts with new summaries in test fixtures before removing old presentation.
 - [ ] Confirm coaches understand `Due today`, `Started`, `Completed`, and `Overdue` terminology.
 - [ ] Confirm organization directors prefer weighted organization rates over average team rates.
-- [ ] Add product analytics for team-row and athlete-drill-down usage when PostHog is introduced.
+- [x] Defer product analytics for team-row and athlete-drill-down usage until PostHog is introduced.
 - [x] Do not add configurable thresholds until real usage demonstrates a stable intervention policy.
 
 ## Phase 1 Done Definition
@@ -426,13 +426,15 @@ Users must be able to understand and trust every metric without relying on insti
 
 ### Phase 2: Timeliness and Trends
 
-Do not start until staff defines an occurrence due-time policy.
+Implementation checklist: [performance-kpi-phase-2-timeliness-trends-checklist.md](performance-kpi-phase-2-timeliness-trends-checklist.md).
+
+The Phase 2 checklist records the approved occurrence due-time and late-entry policy.
 
 - [ ] Add explicit due time or due instant to assignment occurrences.
 - [ ] Define on-time completion and lateness formulas.
 - [ ] Add equivalent previous-window comparison.
 - [ ] Add athlete, assignment, team, and organization trend views.
-- [ ] Add configurable intervention rules with auditability.
+- [x] Defer configurable intervention rules until usage demonstrates a stable, auditable policy.
 
 ### Phase 3: Availability and Readiness
 
