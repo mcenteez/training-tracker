@@ -44,12 +44,12 @@ Reference definitions and product rationale: [performance-kpi-recommendations.md
 
 ### Terminology
 
-- [ ] Rename display label `Assigned` to `Due today`.
-- [ ] Rename display label `In progress` to `Started`.
-- [ ] Rename display label `Submitted` to `Completed`.
-- [ ] Rename display label `Missed` to `Overdue`.
-- [ ] Keep `Upcoming` unchanged.
-- [ ] Keep database status values unchanged; terminology changes are presentation-only.
+- [x] Rename display label `Assigned` to `Due today`.
+- [x] Rename display label `In progress` to `Started`.
+- [x] Rename display label `Submitted` to `Completed`.
+- [x] Rename display label `Missed` to `Overdue`.
+- [x] Keep `Upcoming` unchanged.
+- [x] Keep database status values unchanged; terminology changes are presentation-only.
 - [x] Document that completed means results were submitted, not staff-verified quality.
 
 ### Formulas
@@ -211,22 +211,22 @@ Explain every aggregate through athlete-level and occurrence-level detail.
 
 ### Implementation Checklist
 
-- [ ] Add per-athlete completion fraction.
-- [ ] Add per-athlete overdue count.
-- [ ] Add started and due-today context.
-- [ ] Keep the occurrence timeline with completed, overdue, started, due today, and upcoming states.
-- [ ] Sort athletes by overdue, started, due today, fully compliant, then upcoming-only.
-- [ ] Keep submitted-session review links.
-- [ ] Keep viewer access read-only.
-- [ ] Keep athlete access restricted to athlete-owned routes.
-- [ ] Preserve selected-window context while navigating back to team performance.
-- [ ] Ensure visible athlete totals reconcile with assignment-row totals.
+- [x] Add per-athlete completion fraction.
+- [x] Add per-athlete overdue count.
+- [x] Add started and due-today context.
+- [x] Keep the occurrence timeline with completed, overdue, started, due today, and upcoming states.
+- [x] Sort athletes by overdue, started, due today, fully compliant, then upcoming-only.
+- [x] Keep submitted-session review links.
+- [x] Keep viewer access read-only.
+- [x] Keep athlete access restricted to athlete-owned routes.
+- [x] Preserve selected-window context while navigating back to team performance.
+- [x] Ensure visible athlete totals reconcile with assignment-row totals.
 
 ### Acceptance Criteria
 
-- [ ] Coaches can identify exactly which athlete and occurrence explains each exception.
-- [ ] No athlete or result data leaks across team or organization scope.
-- [ ] Drill-down totals reconcile with team and assignment summaries.
+- [x] Coaches can identify exactly which athlete and occurrence explains each exception.
+- [x] No athlete or result data leaks across team or organization scope.
+- [x] Drill-down totals reconcile with team and assignment summaries.
 
 ## Milestone 6: Organization Compliance Read Model
 

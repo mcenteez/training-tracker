@@ -44,11 +44,11 @@ function formatOccurrenceDate(date: string): string {
 }
 
 const statusLabels: Record<PlanOccurrenceStatus, string> = {
-  available: "Available",
-  in_progress: "In progress",
+  available: "Due today",
+  in_progress: "Started",
   submitted: "Completed",
   upcoming: "Upcoming",
-  missed: "Missed",
+  missed: "Overdue",
 };
 
 export default async function AthleteAssignmentDetailPage({

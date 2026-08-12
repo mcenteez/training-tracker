@@ -22,6 +22,21 @@ function parseWindowDays(value: string | undefined): number | null {
   return value === "90" ? 90 : value === "all" ? null : 30;
 }
 
+function formatRate(rate: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(rate);
+}
+
+function statusLabel(status: string): string {
+  if (status === "assigned") return "Due today";
+  if (status === "in_progress") return "Started";
+  if (status === "submitted") return "Completed";
+  if (status === "missed") return "Overdue";
+  return "Upcoming";
+}
+
 export default async function TeamAssignmentPerformancePage({
   params,
   searchParams,
@@ -78,11 +93,21 @@ export default async function TeamAssignmentPerformancePage({
                 {recipient.fullName?.trim() || recipient.email}
               </CardTitle>
               <CardDescription>
-                {recipient.email} - {recipient.counts.submitted} submitted -{" "}
-                {recipient.counts.missed} missed
+                {recipient.email} ·{" "}
+                {recipient.summary.completionRate === null
+                  ? "No due work"
+                  : `${formatRate(recipient.summary.completionRate)} complete`}{" "}
+                · {recipient.summary.counts.completed} of{" "}
+                {recipient.summary.eligibleDue} due
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {recipient.summary.counts.overdue} overdue ·{" "}
+                {recipient.summary.counts.started} started ·{" "}
+                {recipient.summary.counts.dueToday} due today ·{" "}
+                {recipient.summary.counts.upcoming} upcoming
+              </p>
               {recipient.occurrences.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No occurrences fall within this time window.
@@ -114,8 +139,8 @@ export default async function TeamAssignmentPerformancePage({
                               </span>
                             ) : null}
                           </td>
-                          <td className="px-2 py-2 capitalize">
-                            {occurrence.status.replace("_", " ")}
+                          <td className="px-2 py-2">
+                            {statusLabel(occurrence.status)}
                           </td>
                           <td className="px-2 py-2 text-right">
                             {occurrence.status === "submitted" &&

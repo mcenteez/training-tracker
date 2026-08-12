@@ -144,4 +144,73 @@ describe("buildTeamAssignmentCompliance", () => {
     expect(result.counts.missed).toBe(2);
     expect(result.latestCompletionAt).toBeNull();
   });
+
+  it("sorts recipients by overdue, started, completed, and upcoming priority", () => {
+    const recipients = [
+      {
+        ...recipient,
+        id: "recipient-overdue",
+        athleteUserId: "athlete-overdue",
+        email: "overdue@example.com",
+      },
+      {
+        ...recipient,
+        id: "recipient-completed",
+        athleteUserId: "athlete-completed",
+        email: "completed@example.com",
+      },
+      {
+        ...recipient,
+        id: "recipient-started",
+        athleteUserId: "athlete-started",
+        email: "started@example.com",
+      },
+    ];
+    const result = buildTeamAssignmentCompliance({
+      assignment: {
+        ...assignment,
+        sourceType: "workout",
+        startDate: null,
+        endDate: null,
+        scheduledDate: "2026-08-11",
+      },
+      recipients,
+      slots: [],
+      sessions: [
+        {
+          id: "session-completed",
+          assignmentId: assignment.id,
+          recipientId: "recipient-completed",
+          workoutSnapshotId: "workout-1",
+          workoutName: "Lower Strength",
+          planSlotSnapshotId: null,
+          scheduledDate: "2026-08-11",
+          status: "submitted",
+          startedAt: new Date("2026-08-11T12:00:00.000Z"),
+          submittedAt: new Date("2026-08-11T13:00:00.000Z"),
+          updatedAt: new Date("2026-08-11T13:00:00.000Z"),
+        },
+        {
+          id: "session-started",
+          assignmentId: assignment.id,
+          recipientId: "recipient-started",
+          workoutSnapshotId: "workout-1",
+          workoutName: "Lower Strength",
+          planSlotSnapshotId: null,
+          scheduledDate: "2026-08-11",
+          status: "in_progress",
+          startedAt: new Date("2026-08-11T12:00:00.000Z"),
+          submittedAt: null,
+          updatedAt: new Date("2026-08-11T12:00:00.000Z"),
+        },
+      ],
+      now: new Date("2026-08-12T16:00:00.000Z"),
+    });
+
+    expect(result.recipients.map((item) => item.id)).toEqual([
+      "recipient-overdue",
+      "recipient-started",
+      "recipient-completed",
+    ]);
+  });
 });

@@ -168,6 +168,19 @@ function addOccurrence(
   increment(recipient.counts, occurrence.status);
 }
 
+function recipientPriority(recipient: TeamComplianceRecipient): number {
+  if (recipient.summary.counts.overdue > 0) return 0;
+  if (recipient.summary.counts.started > 0) return 1;
+  if (recipient.summary.counts.dueToday > 0) return 2;
+  if (
+    recipient.summary.eligibleDue > 0 &&
+    recipient.summary.counts.completed === recipient.summary.eligibleDue
+  ) {
+    return 3;
+  }
+  return 4;
+}
+
 function listWeekStarts(startDate: string, endDate: string): string[] {
   const weeks: string[] = [];
   for (
@@ -363,6 +376,19 @@ export function buildTeamAssignmentCompliance(input: {
         .map((occurrence) => occurrence.scheduledDate),
     })),
     rosteredAthleteIds: recipients.map((recipient) => recipient.athleteUserId),
+  });
+  recipients.sort((left, right) => {
+    const priorityDifference =
+      recipientPriority(left) - recipientPriority(right);
+    if (priorityDifference !== 0) return priorityDifference;
+
+    const overdueDifference =
+      right.summary.counts.overdue - left.summary.counts.overdue;
+    if (overdueDifference !== 0) return overdueDifference;
+
+    return (left.fullName ?? left.email).localeCompare(
+      right.fullName ?? right.email,
+    );
   });
 
   const latestActivityAt = input.sessions.reduce<Date | null>(

@@ -232,7 +232,7 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page).toHaveURL(
       new RegExp(`/app/performance/teams/${basketballTeamId}/assignments/`),
     );
-    await expect(page.getByText("submitted", { exact: true })).toBeVisible();
+    await expect(page.getByText("Completed", { exact: true })).toBeVisible();
     await page
       .getByLabel("Add staff comment")
       .fill("Great consistency on this session.");
