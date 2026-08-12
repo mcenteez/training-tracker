@@ -184,24 +184,24 @@ Replace equal-weight status counters with an action-oriented summary while retai
 
 ### Implementation Checklist
 
-- [ ] Show assignment name, source type, schedule, and lifecycle status.
-- [ ] Show completion rate and completed/eligible fraction prominently.
-- [ ] Show unique athletes needing attention.
-- [ ] Show started and due-today counts as due-now context.
-- [ ] Show upcoming count as secondary workload context.
-- [ ] Replace `Latest activity` with `Latest completion` when a submitted timestamp exists.
-- [ ] Show a neutral no-activity label when no completion exists.
-- [ ] Sort assignments with overdue attention first.
-- [ ] Then sort by due-now work, then upcoming-only work, then assignment name.
-- [ ] Use warning styling only when overdue work exists.
-- [ ] Keep lifecycle status visually secondary to compliance status.
-- [ ] Preserve the assignment-detail link and selected window query parameter.
+- [x] Show assignment name, source type, schedule, and lifecycle status.
+- [x] Show completion rate and completed/eligible fraction prominently.
+- [x] Show unique athletes needing attention.
+- [x] Show started and due-today counts as due-now context.
+- [x] Show upcoming count as secondary workload context.
+- [x] Replace `Latest activity` with `Latest completion` when a submitted timestamp exists.
+- [x] Show a neutral no-activity label when no completion exists.
+- [x] Sort assignments with overdue attention first.
+- [x] Then sort by due-now work, then upcoming-only work, then assignment name.
+- [x] Use warning styling only when overdue work exists.
+- [x] Keep lifecycle status visually secondary to compliance status.
+- [x] Preserve the assignment-detail link and selected window query parameter.
 
 ### Acceptance Criteria
 
-- [ ] Assignment rows can be compared despite different recipient and schedule sizes.
-- [ ] Highest-attention assignments appear first by default.
-- [ ] Raw status counts remain available through row detail or drill-down.
+- [x] Assignment rows can be compared despite different recipient and schedule sizes.
+- [x] Highest-attention assignments appear first by default.
+- [x] Raw status counts remain available through row detail or drill-down.
 
 ## Milestone 5: Athlete and Occurrence Drill-Down
 

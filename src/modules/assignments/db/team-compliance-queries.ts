@@ -63,7 +63,29 @@ function buildAssignments(
     .filter(
       (assignment) =>
         assignment.summary.eligibleDue + assignment.summary.counts.upcoming > 0,
-    );
+    )
+    .sort((left, right) => {
+      const attentionDifference =
+        right.summary.athletesNeedingAttention -
+        left.summary.athletesNeedingAttention;
+      if (attentionDifference !== 0) return attentionDifference;
+
+      const overdueDifference =
+        right.summary.counts.overdue - left.summary.counts.overdue;
+      if (overdueDifference !== 0) return overdueDifference;
+
+      const leftDueNow =
+        left.summary.counts.started + left.summary.counts.dueToday;
+      const rightDueNow =
+        right.summary.counts.started + right.summary.counts.dueToday;
+      if (rightDueNow !== leftDueNow) return rightDueNow - leftDueNow;
+
+      const upcomingDifference =
+        right.summary.counts.upcoming - left.summary.counts.upcoming;
+      if (upcomingDifference !== 0) return upcomingDifference;
+
+      return left.sourceName.localeCompare(right.sourceName);
+    });
 }
 
 async function loadTeamComplianceData(

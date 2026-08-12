@@ -108,6 +108,7 @@ export interface TeamAssignmentCompliance {
   counts: TeamComplianceCounts;
   summary: ComplianceSummary;
   latestActivityAt: Date | null;
+  latestCompletionAt: Date | null;
   recipients: TeamComplianceRecipient[];
 }
 
@@ -371,6 +372,16 @@ export function buildTeamAssignmentCompliance(input: {
         : latest,
     null,
   );
+  const latestCompletionAt = recipients
+    .flatMap((recipient) => recipient.occurrences)
+    .reduce<Date | null>(
+      (latest, occurrence) =>
+        occurrence.submittedAt &&
+        (!latest || occurrence.submittedAt.getTime() > latest.getTime())
+          ? occurrence.submittedAt
+          : latest,
+      null,
+    );
 
   return {
     ...input.assignment,
@@ -378,6 +389,7 @@ export function buildTeamAssignmentCompliance(input: {
     counts,
     summary,
     latestActivityAt,
+    latestCompletionAt,
     recipients,
   };
 }

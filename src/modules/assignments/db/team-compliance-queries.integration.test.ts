@@ -178,6 +178,8 @@ describe("team compliance queries", () => {
     });
 
     expect(dashboard.assignments).toHaveLength(3);
+    expect(dashboard.assignments[0]?.summary.counts.overdue).toBeGreaterThan(0);
+    expect(dashboard.assignments.at(-1)?.id).toBe(ids.assignment);
     expect(dashboard.summary.counts).toEqual({
       completed: 0,
       overdue: 2,

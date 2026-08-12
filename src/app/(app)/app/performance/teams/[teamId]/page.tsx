@@ -229,7 +229,14 @@ export default async function TeamPerformancePage({
           ) : (
             <ul className="divide-y rounded-md border">
               {assignmentCompliance.map((assignment) => (
-                <li key={assignment.id} className="space-y-3 px-4 py-4">
+                <li
+                  key={assignment.id}
+                  className={
+                    assignment.summary.counts.overdue > 0
+                      ? "space-y-3 border-l-2 border-l-destructive px-4 py-4"
+                      : "space-y-3 px-4 py-4"
+                  }
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <Link
@@ -247,49 +254,26 @@ export default async function TeamPerformancePage({
                       {assignment.status}
                     </span>
                   </div>
-                  <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        Assigned
-                      </dt>
-                      <dd className="font-semibold">
-                        {assignment.counts.assigned}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        In progress
-                      </dt>
-                      <dd className="font-semibold">
-                        {assignment.counts.inProgress}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        Submitted
-                      </dt>
-                      <dd className="font-semibold">
-                        {assignment.counts.submitted}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Missed</dt>
-                      <dd className="font-semibold">
-                        {assignment.counts.missed}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">
-                        Upcoming
-                      </dt>
-                      <dd className="font-semibold">
-                        {assignment.counts.upcoming}
-                      </dd>
-                    </div>
-                  </dl>
+                  <div className="space-y-1 text-sm">
+                    <p className="font-semibold">
+                      {assignment.summary.completionRate === null
+                        ? "No due work"
+                        : `${formatRate(assignment.summary.completionRate)} complete`}
+                      {" · "}
+                      {assignment.summary.counts.completed} of{" "}
+                      {assignment.summary.eligibleDue} due
+                    </p>
+                    <p className="text-muted-foreground">
+                      {assignment.summary.athletesNeedingAttention} athletes
+                      need attention · {assignment.summary.counts.started}{" "}
+                      started · {assignment.summary.counts.dueToday} due today ·{" "}
+                      {assignment.summary.counts.upcoming} upcoming
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Latest activity:{" "}
-                    {assignment.latestActivityAt?.toLocaleString() ?? "None"}
+                    {assignment.latestCompletionAt
+                      ? `Latest completion: ${assignment.latestCompletionAt.toLocaleString()}`
+                      : "No completions in this window"}
                   </p>
                 </li>
               ))}

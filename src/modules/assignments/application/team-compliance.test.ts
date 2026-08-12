@@ -68,6 +68,9 @@ describe("buildTeamAssignmentCompliance", () => {
       missed: 1,
       upcoming: 1,
     });
+    expect(result.latestCompletionAt).toEqual(
+      new Date("2026-08-10T13:00:00.000Z"),
+    );
   });
 
   it("classifies remaining weekly frequency targets by week", () => {
@@ -139,5 +142,6 @@ describe("buildTeamAssignmentCompliance", () => {
 
     expect(result.counts.upcoming).toBe(0);
     expect(result.counts.missed).toBe(2);
+    expect(result.latestCompletionAt).toBeNull();
   });
 });
