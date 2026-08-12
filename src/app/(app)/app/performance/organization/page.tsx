@@ -241,7 +241,7 @@ export default async function OrganizationPerformancePage({
                           attention · {team.summary.counts.overdue} overdue
                         </p>
                       </div>
-                      <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+                      <dl className="grid min-w-0 basis-full grid-cols-1 gap-x-6 gap-y-3 text-sm sm:basis-auto sm:flex-1 sm:grid-cols-3">
                         <div>
                           <dt className="text-xs text-muted-foreground">
                             Completion

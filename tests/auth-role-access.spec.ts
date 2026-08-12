@@ -94,7 +94,7 @@ test.describe("Training Tracker local personas", () => {
   test("viewer has read-only organization access", async ({
     context,
     page,
-  }) => {
+  }, testInfo) => {
     await usePersona(context, "viewer");
     await page.goto("/app");
 
@@ -126,6 +126,10 @@ test.describe("Training Tracker local personas", () => {
     await expect(
       page.getByRole("link", { name: "Team Performance" }).first(),
     ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("organization-dashboard-desktop.png"),
+      fullPage: true,
+    });
 
     await page.getByRole("link", { name: "30 days" }).focus();
     await page.keyboard.press("Enter");
@@ -140,6 +144,10 @@ test.describe("Training Tracker local personas", () => {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath("organization-dashboard-mobile.png"),
+      fullPage: true,
+    });
   });
 
   test("invalid personas remain unauthenticated", async ({ context, page }) => {

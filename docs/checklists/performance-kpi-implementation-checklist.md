@@ -104,8 +104,8 @@ Create one reusable application-layer summary model used by assignment, team, an
 
 ### Acceptance Criteria
 
-- [ ] Assignment, team, and organization KPIs use the same metric calculator.
-- [ ] No page computes compliance percentages independently.
+- [x] Assignment, team, and organization KPIs use the same metric calculator.
+- [x] No page computes compliance percentages independently.
 - [x] Formula tests document every denominator rule in the recommendations.
 
 ## Milestone 2: Team Compliance Read Model
@@ -334,93 +334,93 @@ Users must be able to understand and trust every metric without relying on insti
 
 ### Unit and Integration
 
-- [ ] Compliance summary unit tests pass.
-- [ ] Team compliance integration tests pass.
-- [ ] Organization compliance integration tests pass.
-- [ ] Existing assignment-session and tenant-isolation tests remain green.
+- [x] Compliance summary unit tests pass.
+- [x] Team compliance integration tests pass.
+- [x] Organization compliance integration tests pass.
+- [x] Existing assignment-session and tenant-isolation tests remain green.
 
 ### Browser / E2E
 
 #### Team Dashboard
 
-- [ ] Team Manager sees completion rate with completed/eligible fraction.
-- [ ] Team Manager sees unique athletes needing attention, overdue work, and due-now detail.
-- [ ] Team KPI strip uses `Due today`, `Started`, `Completed`, `Overdue`, and `Upcoming` terminology.
-- [ ] Upcoming-only work displays `No due work` rather than `100%` completion.
-- [ ] Upcoming occurrences do not change the displayed completion-rate denominator.
-- [ ] 30-day, 90-day, and all-time controls update every team KPI consistently.
-- [ ] Selected time window remains in assignment and back-navigation URLs.
-- [ ] Assignment rows display completion rate, fraction, attention count, due-now detail, and upcoming context.
-- [ ] Assignment rows with overdue work sort ahead of due-now and upcoming-only assignments.
-- [ ] Assignment rows without overdue work do not show warning treatment.
-- [ ] Team with no published assignments displays the compliance empty state.
+- [x] Team Manager sees completion rate with completed/eligible fraction.
+- [x] Team Manager sees unique athletes needing attention, overdue work, and due-now detail.
+- [x] Team KPI strip uses `Due today`, `Started`, `Completed`, `Overdue`, and `Upcoming` terminology.
+- [x] Upcoming-only work displays `No due work` rather than `100%` completion.
+- [x] Upcoming occurrences do not change the displayed completion-rate denominator.
+- [x] 30-day, 90-day, and all-time controls update every team KPI consistently.
+- [x] Selected time window remains in assignment and back-navigation URLs.
+- [x] Assignment rows display completion rate, fraction, attention count, due-now detail, and upcoming context.
+- [x] Assignment rows with overdue work sort ahead of due-now and upcoming-only assignments.
+- [x] Assignment rows without overdue work do not show warning treatment.
+- [x] Team with no published assignments displays the compliance empty state.
 
 #### Assignment and Athlete Drill-Down
 
-- [ ] Assignment drill-down totals reconcile with the selected assignment row.
-- [ ] Athlete rows display completion fraction and overdue count.
-- [ ] Athletes with overdue work sort ahead of started, due-today, compliant, and upcoming-only athletes.
-- [ ] Occurrence timeline uses the same terminology and status counts as the parent summaries.
-- [ ] Submitted occurrence exposes the existing result-review link.
-- [ ] Team Viewer can inspect KPI and result detail but cannot mutate comments or assignments.
-- [ ] Athlete cannot access another athlete's assignment, occurrence, or staff-review routes.
+- [x] Assignment drill-down totals reconcile with the selected assignment row.
+- [x] Athlete rows display completion fraction and overdue count.
+- [x] Athletes with overdue work sort ahead of started, due-today, compliant, and upcoming-only athletes.
+- [x] Occurrence timeline uses the same terminology and status counts as the parent summaries.
+- [x] Submitted occurrence exposes the existing result-review link.
+- [x] Team Viewer can inspect KPI and result detail but cannot mutate comments or assignments.
+- [x] Athlete cannot access another athlete's assignment, occurrence, or staff-review routes.
 
 #### Organization Dashboard
 
-- [ ] Organization KPI strip renders completion rate with the aggregate completed/eligible fraction.
-- [ ] Organization KPI strip renders teams needing attention with tracked-team denominator.
-- [ ] Organization KPI strip renders unique athletes needing attention and programming coverage.
-- [ ] Organization total is weighted from raw occurrence counts rather than averaging team percentages.
-- [ ] Organization with teams but no eligible due work displays `No due work`.
-- [ ] Organization with no teams displays setup guidance.
-- [ ] Team comparison rows display completion fraction, attention athletes, overdue work, due-now detail, and coverage.
-- [ ] Teams needing attention sort ahead of teams without overdue work.
-- [ ] Team comparison links to the scoped team dashboard and preserves the selected time window.
-- [ ] Operational roster and invitation counts remain visually secondary to compliance KPIs.
+- [x] Organization KPI strip renders completion rate with the aggregate completed/eligible fraction.
+- [x] Organization KPI strip renders teams needing attention with tracked-team denominator.
+- [x] Organization KPI strip renders unique athletes needing attention and programming coverage.
+- [x] Organization total is weighted from raw occurrence counts rather than averaging team percentages.
+- [x] Organization with teams but no eligible due work displays `No due work`.
+- [x] Organization with no teams displays setup guidance.
+- [x] Team comparison rows display completion fraction, attention athletes, overdue work, due-now detail, and coverage.
+- [x] Teams needing attention sort ahead of teams without overdue work.
+- [x] Team comparison links to the scoped team dashboard and preserves the selected time window.
+- [x] Operational roster and invitation counts remain visually secondary to compliance KPIs.
 
 #### Access and Isolation
 
-- [ ] Organization Viewer sees organization and team KPI surfaces in read-only mode.
-- [ ] Athlete cannot access team-staff or organization KPI routes.
-- [ ] Removed Team Manager loses KPI access on the next sensitive request.
-- [ ] Foreign-team and foreign-organization KPI routes fail safely without exposing names or counts.
-- [ ] Organization rollups exclude foreign-organization assignments and sessions.
+- [x] Organization Viewer sees organization and team KPI surfaces in read-only mode.
+- [x] Athlete cannot access team-staff or organization KPI routes.
+- [x] Removed Team Manager loses KPI access on the next sensitive request.
+- [x] Foreign-team and foreign-organization KPI routes fail safely without exposing names or counts.
+- [x] Organization rollups exclude foreign-organization assignments and sessions.
 
 ### Visual Verification
 
-- [ ] Capture desktop and mobile screenshots of team dashboard.
-- [ ] Capture desktop and mobile screenshots of organization dashboard.
-- [ ] Verify dense data remains scannable without nested cards.
-- [ ] Verify no overlap, truncation, or horizontal overflow.
-- [ ] Verify all zero, empty, warning, and normal states.
+- [x] Capture desktop and mobile screenshots of team dashboard.
+- [x] Capture desktop and mobile screenshots of organization dashboard.
+- [x] Verify dense data remains scannable without nested cards.
+- [x] Verify no overlap, truncation, or horizontal overflow.
+- [x] Verify all zero, empty, warning, and normal states.
 
 ### Required Repository Checks
 
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
-- [ ] Database migrations are not required for Phase 1.
-- [ ] Product documentation reflects final implemented formulas and labels.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
+- [x] Database migrations are not required for Phase 1.
+- [x] Product documentation reflects final implemented formulas and labels.
 
 ### Rollout
 
-- [ ] Compare old status counts with new summaries in test fixtures before removing old presentation.
+- [x] Compare old status counts with new summaries in test fixtures before removing old presentation.
 - [ ] Confirm coaches understand `Due today`, `Started`, `Completed`, and `Overdue` terminology.
 - [ ] Confirm organization directors prefer weighted organization rates over average team rates.
 - [ ] Add product analytics for team-row and athlete-drill-down usage when PostHog is introduced.
-- [ ] Do not add configurable thresholds until real usage demonstrates a stable intervention policy.
+- [x] Do not add configurable thresholds until real usage demonstrates a stable intervention policy.
 
 ## Phase 1 Done Definition
 
-- [ ] Team dashboard leads with completion rate and actionable exceptions.
-- [ ] Assignment rows use normalized rates and attention counts.
-- [ ] Athlete drill-down explains every team-level exception.
-- [ ] Organization dashboard rolls up compliance and compares teams.
-- [ ] Team and organization metrics share one formula implementation.
-- [ ] Every percentage shows or exposes its denominator.
-- [ ] Zero-due-work states never display a misleading 100%.
-- [ ] Publish-time scope and tenant isolation are preserved.
-- [ ] Unit, integration, E2E, accessibility, and visual checks pass.
-- [ ] `npm run validate` and `npm run build` pass.
+- [x] Team dashboard leads with completion rate and actionable exceptions.
+- [x] Assignment rows use normalized rates and attention counts.
+- [x] Athlete drill-down explains every team-level exception.
+- [x] Organization dashboard rolls up compliance and compares teams.
+- [x] Team and organization metrics share one formula implementation.
+- [x] Every percentage shows or exposes its denominator.
+- [x] Zero-due-work states never display a misleading 100%.
+- [x] Publish-time scope and tenant isolation are preserved.
+- [x] Unit, integration, E2E, accessibility, and visual checks pass.
+- [x] `npm run validate` and `npm run build` pass.
 
 ## Future Phase Gates
 

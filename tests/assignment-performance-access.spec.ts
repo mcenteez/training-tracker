@@ -57,7 +57,7 @@ test.describe("Training Tracker assignment and performance access", () => {
   test("manager can view empty team performance windows", async ({
     context,
     page,
-  }) => {
+  }, testInfo) => {
     await usePersona(context, "manager");
     await page.goto(`/app/performance/teams/${basketballTeamId}`);
 
@@ -71,6 +71,10 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByRole("heading", { name: "Metric definitions" }),
     ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("team-dashboard-desktop.png"),
+      fullPage: true,
+    });
 
     await page.getByRole("link", { name: "90 days" }).click();
     await expect(page).toHaveURL(/\?window=90$/);
@@ -82,6 +86,10 @@ test.describe("Training Tracker assignment and performance access", () => {
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath("team-dashboard-mobile.png"),
+      fullPage: true,
+    });
   });
 
   test("viewer can read team performance but athlete cannot", async ({
