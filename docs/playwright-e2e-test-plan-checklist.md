@@ -45,17 +45,17 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Slice D: Assignment publication and snapshot integrity — happy path implemented
 - [x] Slice E: Athlete result logging and review — happy path implemented
 - [x] Slice F: Team performance and compliance review — access and review coverage implemented
-- [ ] Slice G: Tenant isolation and regression coverage — not started
+- [x] Slice G: Tenant isolation and regression coverage — complete
 
 ### Missing or Incomplete
 
 - [x] Assignment publication and assignment-snapshot verification
 - [x] Athlete result logging and in-progress edit flow coverage
 - [x] Team compliance and staff review flows
-- [ ] Cross-organization and cross-team security regression tests
+- [x] Cross-organization and cross-team security regression tests
 - [ ] Shared Playwright helpers for persona-driven flows
 - [ ] A reusable test data factory for assignment and result scenarios
-- [ ] Coverage for inaccessible route and UI states
+- [x] Coverage for inaccessible route and UI states
 - [ ] Documentation link between product capability docs and the E2E test matrix
 
 ### Completed this iteration
@@ -201,18 +201,18 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Add test for creating a simple assignment from an existing template.
 - [x] Add test for publishing an assignment to a team target.
 - [ ] Add test for publishing to athlete target(s) only within managed scope.
-- [ ] Add test for rejection when a target is outside allowed team or athlete scope.
+- [x] Add test for rejection when a target is outside allowed team or athlete scope.
 - [x] Add test for assignment list and detail pages reflecting correct recipients and status.
 - [x] Add test for snapshot behavior after editing a library workout that was already assigned.
-- [ ] Add test for assignment coverage and compliance summary views.
+- [x] Add test for assignment coverage and compliance summary views.
 - [ ] Add test for a Viewer or Athlete not being able to publish or edit assignments.
 
 ### Acceptance Criteria
 
 - [x] Valid assignments publish successfully.
-- [ ] Invalid targets are rejected before a mutation completes.
+- [x] Invalid targets are rejected before a mutation completes.
 - [x] Assignment detail reflects the publish-time snapshot rather than live library mutations.
-- [ ] Team roles cannot assign outside their managed scope.
+- [x] Team roles cannot assign outside their managed scope.
 
 ## Milestone 5: Athlete Result Logging and Review
 
@@ -232,14 +232,14 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Add staff compliance page test for assigned athletes and session status.
 - [x] Add manager comment flow for submitted athlete results.
 - [x] Add viewer read-only flow for submitted results and comments.
-- [ ] Add negative test for team viewer trying to add comments.
+- [x] Add negative test for team viewer trying to add comments.
 
 ### Acceptance Criteria
 
 - [ ] Athlete can log and update only their own result data.
-- [ ] Team staff can view scoped compliance and result review pages.
-- [ ] Team Viewer can read but not mutate.
-- [ ] Team Manager can append allowed comments only for managed-team cases.
+- [x] Team staff can view scoped compliance and result review pages.
+- [x] Team Viewer can read but not mutate.
+- [x] Team Manager can append allowed comments only for managed-team cases.
 
 ## Milestone 6: Team Performance and Staff Review
 
@@ -252,10 +252,10 @@ The test strategy should exercise the same server-side authorization and data bo
 ### Implementation Checklist
 
 - [x] Add test for team performance dashboard rendering for valid manager role.
-- [ ] Add test for assignment drill-down by athlete and occurrence.
+- [x] Add test for assignment drill-down by athlete and occurrence.
 - [x] Add test for timeline and status totals across 30-day / 90-day / all-time views.
 - [x] Add test for viewer-only read access on team performance surfaces.
-- [ ] Add negative test for trying to access foreign team results.
+- [x] Add negative test for trying to access foreign team results.
 - [x] Add negative test for athlete access to staff result review routes.
 
 ### Acceptance Criteria
@@ -291,40 +291,40 @@ The test strategy should exercise the same server-side authorization and data bo
 
 ### Unit and Integration
 
-- [ ] Local persona auth configuration tests
-- [ ] Route and landing decision tests
-- [ ] Access-control guard tests
-- [ ] Invitation and membership lifecycle tests
-- [ ] Assignment and result service tests
+- [x] Local persona auth configuration tests
+- [x] Route and landing decision tests
+- [x] Access-control guard tests
+- [x] Invitation and membership lifecycle tests
+- [x] Assignment and result service tests
 
 ### Browser / E2E
 
-- [ ] Role landing flow tests
-- [ ] Team management tests
-- [ ] Library CRUD tests
-- [ ] Assignment publication tests
-- [ ] Athlete result logging tests
-- [ ] Team performance and comment tests
-- [ ] Security regression tests
+- [x] Role landing flow tests
+- [x] Team management tests
+- [x] Library CRUD tests
+- [x] Assignment publication tests
+- [x] Athlete result logging tests
+- [x] Team performance and comment tests
+- [x] Security regression tests
 
 ### Manual QA Parity
 
-- [ ] Local persona selector works in browser
-- [ ] Manual QA can switch between roles without creating Clerk accounts
+- [x] Local persona selector works in browser
+- [x] Manual QA can switch between roles without creating Clerk accounts
 - [ ] Manual scenario matrix matches Playwright persona matrix
-- [ ] Browser-based validation confirms route access and UI states remain correct
+- [x] Browser-based validation confirms route access and UI states remain correct
 
 ## Done Definition
 
-- [ ] Core auth and route-protection suite exists and passes.
-- [ ] Team management flow tests exist and pass.
-- [ ] Library creation and activation tests exist and pass.
-- [ ] Assignment publication and snapshot tests exist and pass.
-- [ ] Athlete result logging and review tests exist and pass.
-- [ ] Security and tenant-isolation tests exist and pass.
-- [ ] Documentation and manual-run instructions remain up to date.
-- [ ] npm run validate passes.
-- [ ] npm run build passes.
+- [x] Core auth and route-protection suite exists and passes.
+- [x] Team management flow tests exist and pass.
+- [x] Library creation and activation tests exist and pass.
+- [x] Assignment publication and snapshot tests exist and pass.
+- [x] Athlete result logging and review tests exist and pass.
+- [x] Security and tenant-isolation tests exist and pass.
+- [x] Documentation and manual-run instructions remain up to date.
+- [x] npm run validate passes.
+- [x] npm run build passes.
 
 ## Suggested Execution Slices
 
@@ -334,4 +334,4 @@ The test strategy should exercise the same server-side authorization and data bo
 4. [x] Slice D: Assignment publication and history tests
 5. [x] Slice E: Athlete result and result-review tests
 6. [x] Slice F: Team performance and compliance tests
-7. [ ] Slice G: Cross-tenant security regressions and cleanup
+7. [x] Slice G: Cross-tenant security regressions and cleanup
