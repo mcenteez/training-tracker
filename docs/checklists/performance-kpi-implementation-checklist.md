@@ -54,24 +54,24 @@ Reference definitions and product rationale: [performance-kpi-recommendations.md
 
 ### Formulas
 
-- [ ] Define `eligibleDue = completed + overdue + started + dueToday`.
-- [ ] Define `completionRate = completed / eligibleDue`.
-- [ ] Define `outstandingRate = (overdue + started + dueToday) / eligibleDue`.
-- [ ] Exclude upcoming occurrences from rate denominators.
-- [ ] Return `null` rather than `100%` when `eligibleDue = 0`.
-- [ ] Define `athletesNeedingAttention` as unique athletes with at least one overdue occurrence.
-- [ ] Define `athleteCoverage` as athletes with eligible due work divided by rostered athletes.
-- [ ] Define `engagementRate` as athletes with started or completed work divided by athletes with eligible due work.
-- [ ] Preserve raw counts alongside rates for context.
+- [x] Define `eligibleDue = completed + overdue + started + dueToday`.
+- [x] Define `completionRate = completed / eligibleDue`.
+- [x] Define `outstandingRate = (overdue + started + dueToday) / eligibleDue`.
+- [x] Exclude upcoming occurrences from rate denominators.
+- [x] Return `null` rather than `100%` when `eligibleDue = 0`.
+- [x] Define `athletesNeedingAttention` as unique athletes with at least one overdue occurrence.
+- [x] Define `athleteCoverage` as athletes with eligible due work divided by rostered athletes.
+- [x] Define `engagementRate` as athletes with started or completed work divided by athletes with eligible due work.
+- [x] Preserve raw counts alongside rates for context.
 
 ### Denominator and Historical Rules
 
-- [ ] Include started and due-today work as eligible but incomplete.
-- [ ] Preserve canceled-assignment historical sessions and occurrences according to current domain rules.
+- [x] Include started and due-today work as eligible but incomplete.
+- [x] Preserve canceled-assignment historical sessions and occurrences according to current domain rules.
 - [ ] Use publish-time recipient-to-team scope for all team and organization compliance calculations.
-- [ ] Deduplicate athletes across teams in organization-level athlete counts.
-- [ ] Apply assignment timezone when deriving occurrence status.
-- [ ] Apply the selected 30-day, 90-day, or all-time window consistently at every aggregation level.
+- [x] Deduplicate athletes across teams in organization-level athlete counts.
+- [x] Apply assignment timezone when deriving occurrence status.
+- [x] Apply the selected 30-day, 90-day, or all-time window consistently at every aggregation level.
 
 ## Milestone 1: Shared Compliance Summary Domain
 
@@ -81,32 +81,32 @@ Create one reusable application-layer summary model used by assignment, team, an
 
 ### Implementation Checklist
 
-- [ ] Add a `ComplianceCounts` type with completed, overdue, started, dueToday, and upcoming counts.
-- [ ] Add a `ComplianceSummary` type with counts, eligibleDue, completionRate, outstandingRate, and attention counts.
-- [ ] Add a pure `buildComplianceSummary` function.
-- [ ] Add helpers for unique athlete attention and programming-coverage calculations.
-- [ ] Keep the existing occurrence classification logic as the source of truth.
-- [ ] Avoid duplicating rate formulas in pages or React components.
-- [ ] Use `null` for unavailable ratios and format them at the presentation boundary.
-- [ ] Add short comments only where denominator or deduplication behavior is non-obvious.
+- [x] Add a `ComplianceCounts` type with completed, overdue, started, dueToday, and upcoming counts.
+- [x] Add a `ComplianceSummary` type with counts, eligibleDue, completionRate, outstandingRate, and attention counts.
+- [x] Add a pure `buildComplianceSummary` function.
+- [x] Add helpers for unique athlete attention and programming-coverage calculations.
+- [x] Keep the existing occurrence classification logic as the source of truth.
+- [x] Avoid duplicating rate formulas in pages or React components.
+- [x] Use `null` for unavailable ratios and format them at the presentation boundary.
+- [x] Add short comments only where denominator or deduplication behavior is non-obvious.
 
 ### Unit Tests
 
-- [ ] Calculates completion rate from mutually exclusive occurrence counts.
-- [ ] Excludes upcoming work from eligible due work.
-- [ ] Includes started and due-today work as incomplete eligible work.
-- [ ] Returns no rate when no work is due.
-- [ ] Counts each overdue athlete once across multiple assignments.
-- [ ] Deduplicates an athlete across multiple teams for organization attention counts.
-- [ ] Calculates programming coverage using rostered-athlete denominator.
-- [ ] Preserves canceled-assignment historical behavior.
-- [ ] Handles empty teams and organizations.
+- [x] Calculates completion rate from mutually exclusive occurrence counts.
+- [x] Excludes upcoming work from eligible due work.
+- [x] Includes started and due-today work as incomplete eligible work.
+- [x] Returns no rate when no work is due.
+- [x] Counts each overdue athlete once across multiple assignments.
+- [x] Deduplicates an athlete across multiple teams for organization attention counts.
+- [x] Calculates programming coverage using rostered-athlete denominator.
+- [x] Preserves canceled-assignment historical behavior.
+- [x] Handles empty teams and organizations.
 
 ### Acceptance Criteria
 
 - [ ] Assignment, team, and organization KPIs use the same metric calculator.
 - [ ] No page computes compliance percentages independently.
-- [ ] Formula tests document every denominator rule in the recommendations.
+- [x] Formula tests document every denominator rule in the recommendations.
 
 ## Milestone 2: Team Compliance Read Model
 
