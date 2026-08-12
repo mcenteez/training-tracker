@@ -15,6 +15,7 @@ const foreignTeamId = "20000000-0000-4000-8000-000000000099";
 const users = {
   owner: "30000000-0000-4000-8000-000000000001",
   manager: "30000000-0000-4000-8000-000000000002",
+  revokedManager: "30000000-0000-4000-8000-000000000005",
   athlete: "30000000-0000-4000-8000-000000000003",
   viewer: "30000000-0000-4000-8000-000000000004",
 };
@@ -31,6 +32,7 @@ await sql.transaction([
     VALUES
       (${users.owner}, 'local:owner', 'owner@local.test', 'Local Owner'),
       (${users.manager}, 'local:manager', 'manager@local.test', 'Local Team Manager'),
+      (${users.revokedManager}, 'local:revoked-manager', 'revoked-manager@local.test', 'Revoked Team Manager'),
       (${users.athlete}, 'local:athlete', 'athlete@local.test', 'Local Athlete'),
       (${users.viewer}, 'local:viewer', 'viewer@local.test', 'Local Viewer')
     ON CONFLICT (clerk_user_id) DO UPDATE
@@ -41,6 +43,7 @@ await sql.transaction([
     VALUES
       (${organizationId}, ${users.owner}, 'owner'),
       (${organizationId}, ${users.manager}, 'athlete'),
+      (${organizationId}, ${users.revokedManager}, 'athlete'),
       (${organizationId}, ${users.athlete}, 'athlete'),
       (${organizationId}, ${users.viewer}, 'viewer')
     ON CONFLICT (organization_id, user_id) DO UPDATE
@@ -56,6 +59,7 @@ await sql.transaction([
     INSERT INTO team_memberships (organization_id, team_id, user_id, role)
     VALUES
       (${organizationId}, ${teamId}, ${users.manager}, 'manager'),
+      (${organizationId}, ${teamId}, ${users.revokedManager}, 'manager'),
       (${organizationId}, ${teamId}, ${users.athlete}, 'athlete'),
       (${organizationId}, ${teamId}, ${users.viewer}, 'viewer')
     ON CONFLICT (team_id, user_id) DO UPDATE

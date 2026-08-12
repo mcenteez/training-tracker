@@ -277,14 +277,14 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Add test for a Team Manager in one team not seeing another team's performance details.
 - [x] Add test for stale organization selection falling back safely to the current organization.
 - [x] Add test for invalid direct route parameters failing safely.
-- [ ] Add test for a removed team manager losing access on the next sensitive request.
-- [ ] Add regression test for attempted tampering with assignment target IDs.
+- [x] Add test for a removed team manager losing access on the next sensitive request.
+- [x] Add regression test for attempted tampering with assignment target IDs.
 - [x] Add regression test for read-only mutation controls not being available to unauthorized users.
 
 ### Acceptance Criteria
 
 - [x] No cross-organization data is visible in browser tests.
-- [ ] Team-scoped access remains enforced after membership changes.
+- [x] Team-scoped access remains enforced after membership changes.
 - [x] Parameter tampering fails safely without exposing unrelated data.
 
 ## Test Plan Checklist

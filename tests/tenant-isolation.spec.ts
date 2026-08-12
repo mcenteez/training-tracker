@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 
-type LocalPersona = "manager" | "athlete" | "viewer";
+type LocalPersona =
+  "manager" | "revokedManager" | "athlete" | "viewer" | "owner";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const basketballTeamId = "20000000-0000-4000-8000-000000000001";
@@ -95,5 +96,97 @@ test.describe("Training Tracker tenant isolation", () => {
     await expect(page.getByText("Team settings", { exact: true })).toHaveCount(
       0,
     );
+  });
+
+  test("removed team manager loses sensitive access on the next request", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "revokedManager");
+    await page.goto(`/app/performance/teams/${basketballTeamId}`);
+    await expect(page.getByText("Basketball", { exact: true })).toBeVisible();
+
+    try {
+      await usePersona(context, "owner");
+      await page.goto(`/app/teams/${basketballTeamId}`);
+      const revokedManagerRow = page
+        .locator("li")
+        .filter({ hasText: "revoked-manager@local.test" });
+      await revokedManagerRow.getByRole("button", { name: "Remove" }).click();
+      await page.getByRole("button", { name: "Confirm removal" }).click();
+      await expect(page).toHaveURL(
+        new RegExp(`/app/teams/${basketballTeamId}\\?memberRemoved=1$`),
+      );
+
+      await usePersona(context, "revokedManager");
+      await page.goto(`/app/performance/teams/${basketballTeamId}`);
+      await expect(
+        page.getByText("This page could not be found."),
+      ).toBeVisible();
+    } finally {
+      await usePersona(context, "owner");
+      await page.goto(`/app/teams/${basketballTeamId}`);
+      await page
+        .getByLabel("Organization member email")
+        .fill("revoked-manager@local.test");
+      await page.locator("#new-member-role").selectOption("manager");
+      await page.getByRole("button", { name: "Add member" }).click();
+      await expect(page).toHaveURL(
+        new RegExp(`/app/teams/${basketballTeamId}\\?memberSaved=1$`),
+      );
+    }
+  });
+
+  test("server rejects a tampered foreign assignment target", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(60_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Tamper Exercise ${suffix}`;
+    const workoutName = `Playwright Tamper Workout ${suffix}`;
+
+    await usePersona(context, "manager");
+    await page.goto("/app/library/exercises/new");
+    await page.getByLabel("Exercise name").fill(exerciseName);
+    await page.getByLabel("Category").selectOption("strength");
+    await page.getByRole("button", { name: "Create exercise" }).click();
+    await expect(page).toHaveURL(/\/app\/library\/exercises\?created=1$/);
+
+    await page.goto("/app/library/workouts/new");
+    await page.getByLabel("Workout name").fill(workoutName);
+    await page.getByRole("button", { name: "Add block" }).click();
+    const block = page.getByRole("region", { name: "Block 1" });
+    await block.getByRole("button", { name: "Add exercise" }).click();
+    await block.getByLabel("Exercise").selectOption({ label: exerciseName });
+    await block.getByLabel("Reps").fill("5");
+    await page.getByRole("button", { name: "Activate workout" }).click();
+    await expect(page).toHaveURL(/\/app\/library\/workouts\/[^/]+\?saved=1$/);
+
+    await page.goto("/app/assignments/new");
+    await page
+      .locator('label:has(input[aria-label="Assign a workout"])')
+      .click();
+    await page
+      .getByLabel("Choose a workout")
+      .selectOption({ label: workoutName });
+    await page
+      .getByLabel("Scheduled date")
+      .fill(new Date().toISOString().slice(0, 10));
+    await page.locator("form").evaluate((form, targetId) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "teamIds";
+      input.value = targetId as string;
+      form.appendChild(input);
+    }, foreignTeamId);
+    await page.getByRole("button", { name: "Save Draft and Review" }).click();
+
+    await expect(page).toHaveURL(
+      /\/app\/assignments\?error=assignment_action_failed$/,
+    );
+    await expect(
+      page.getByText("No assignments yet", { exact: true }),
+    ).toHaveCount(0);
   });
 });

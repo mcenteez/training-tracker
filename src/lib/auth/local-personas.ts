@@ -15,6 +15,12 @@ export const localPersonas = {
     fullName: "Local Team Manager",
     label: "Basketball Team Manager",
   },
+  revokedManager: {
+    externalId: "local:revoked-manager",
+    email: "revoked-manager@local.test",
+    fullName: "Revoked Team Manager",
+    label: "Revoked Team Manager",
+  },
   athlete: {
     externalId: "local:athlete",
     email: "athlete@local.test",
