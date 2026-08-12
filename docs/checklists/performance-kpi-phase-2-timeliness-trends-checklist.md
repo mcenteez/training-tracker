@@ -107,16 +107,16 @@ averageCompletedLateness = average(firstSubmittedAt - dueAt for lateCompleted)
 
 ### Trend Formulas
 
-- [ ] Compare 30 days with the immediately preceding non-overlapping 30 days.
-- [ ] Compare 90 days with the immediately preceding non-overlapping 90 days.
-- [ ] Define half-open window boundaries once and reuse them at every aggregation level.
-- [ ] Capture one `asOf` instant per request and use it for current and previous summaries.
-- [ ] Express rate changes in percentage points, not percent change.
-- [ ] Define `change = currentRate - previousRate`.
-- [ ] Define direction as `improved`, `declined`, or `unchanged` from the exact change; do not add a configurable threshold.
-- [ ] Return an unavailable trend when either compared rate is `null`.
-- [ ] Do not calculate an all-time trend.
-- [ ] Preserve current and previous numerators and denominators in every trend result.
+- [x] Compare 30 days with the immediately preceding non-overlapping 30 days.
+- [x] Compare 90 days with the immediately preceding non-overlapping 90 days.
+- [x] Define half-open window boundaries once and reuse them at every aggregation level.
+- [x] Capture one `asOf` instant per request and use it for current and previous summaries.
+- [x] Express rate changes in percentage points, not percent change.
+- [x] Define `change = currentRate - previousRate`.
+- [x] Define direction as `improved`, `declined`, or `unchanged` from the exact change; do not add a configurable threshold.
+- [x] Return an unavailable trend when either compared rate is `null`.
+- [x] Do not calculate an all-time trend.
+- [x] Preserve current and previous numerators and denominators in every trend result.
 
 ## Priority Sequence
 
@@ -261,7 +261,7 @@ Build timeliness as a shared application-layer model beside, not inside pages or
 - [x] Keep compliance status and timeliness state independently testable.
 - [x] Deduplicate athletes needing timeliness attention by athlete ID.
 - [x] Use one merge path for assignment, team, and organization summaries.
-- [ ] Return structured unavailable reasons such as `no_due_work` and `insufficient_history`.
+- [x] Return structured unavailable reasons such as `no_due_work` and `insufficient_history`.
 
 ### Unit Tests
 
@@ -292,30 +292,30 @@ Compare summaries without overlapping windows, averaging percentages, or hiding 
 
 ### Implementation Checklist
 
-- [ ] Add `MetricComparison` with current value, previous value, percentage-point change, and direction.
-- [ ] Add `ComplianceTrendSummary` containing current and previous raw summaries.
-- [ ] Build comparisons from summary numerators and denominators.
-- [ ] Keep current and previous occurrence sets disjoint at exact boundaries.
-- [ ] Use the same policy-effective and tenant filters in both windows.
-- [ ] Return `insufficient_history` when either side lacks eligible data.
-- [ ] Keep all-time comparison unavailable by contract.
-- [ ] Avoid invented statistical significance or risk thresholds.
+- [x] Add `MetricComparison` with current value, previous value, percentage-point change, and direction.
+- [x] Add `ComplianceTrendSummary` containing current and previous raw summaries.
+- [x] Build comparisons from summary numerators and denominators.
+- [x] Keep current and previous occurrence sets disjoint at exact boundaries.
+- [x] Use the same policy-effective and tenant filters in both windows.
+- [x] Return `insufficient_history` when either side lacks eligible data.
+- [x] Keep all-time comparison unavailable by contract.
+- [x] Avoid invented statistical significance or risk thresholds.
 
 ### Unit Tests
 
-- [ ] Positive percentage-point change is improved.
-- [ ] Negative percentage-point change is declined.
-- [ ] Equal rates are unchanged.
-- [ ] Equal percentages with different denominators preserve both fractions.
-- [ ] Missing current or previous denominator is unavailable.
-- [ ] A boundary occurrence appears in exactly one window.
-- [ ] Current and previous summaries use the same `asOf` instant.
+- [x] Positive percentage-point change is improved.
+- [x] Negative percentage-point change is declined.
+- [x] Equal rates are unchanged.
+- [x] Equal percentages with different denominators preserve both fractions.
+- [x] Missing current or previous denominator is unavailable.
+- [x] A boundary occurrence appears in exactly one window.
+- [x] Current and previous summaries use the same `asOf` instant.
 
 ### Acceptance Criteria
 
-- [ ] Trend direction can always be explained by visible raw counts.
-- [ ] No team or organization trend is calculated by averaging child rates.
-- [ ] All-time views remain free of misleading trend indicators.
+- [x] Trend direction can always be explained by visible raw counts.
+- [x] No team or organization trend is calculated by averaging child rates.
+- [x] All-time views remain free of misleading trend indicators.
 
 ## Milestone 6: Team Timeliness and Trend Read Model
 
