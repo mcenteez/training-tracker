@@ -430,10 +430,10 @@ Implementation checklist: [performance-kpi-phase-2-timeliness-trends-checklist.m
 
 The Phase 2 checklist records the approved occurrence due-time and late-entry policy.
 
-- [ ] Add explicit due time or due instant to assignment occurrences.
-- [ ] Define on-time completion and lateness formulas.
-- [ ] Add equivalent previous-window comparison.
-- [ ] Add athlete, assignment, team, and organization trend views.
+- [x] Add explicit due time or due instant to assignment occurrences.
+- [x] Define on-time completion and lateness formulas.
+- [x] Add equivalent previous-window comparison.
+- [x] Add athlete, assignment, team, and organization trend views.
 - [x] Defer configurable intervention rules until usage demonstrates a stable, auditable policy.
 
 ### Phase 3: Availability and Readiness

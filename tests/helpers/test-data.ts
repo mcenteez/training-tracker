@@ -1,4 +1,67 @@
 import { expect, type Page } from "@playwright/test";
+import { neon } from "@neondatabase/serverless";
+
+function testDatabase() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl)
+    throw new Error("DATABASE_URL is required for E2E fixtures");
+  return neon(databaseUrl);
+}
+
+export async function markCompletedAssignmentLate(
+  assignmentId: string,
+): Promise<void> {
+  const sql = testDatabase();
+  await sql.transaction([
+    sql`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = now() - interval '2 hours'
+      WHERE id = ${assignmentId}
+    `,
+    sql`
+      UPDATE assignment_sessions
+      SET due_at = submitted_at - interval '1 hour'
+      WHERE assignment_id = ${assignmentId}
+        AND submitted_at IS NOT NULL
+    `,
+  ]);
+}
+
+export async function backdateAssignmentBeyondLateWindow(
+  assignmentId: string,
+): Promise<void> {
+  const sql = testDatabase();
+  await sql`
+    UPDATE assignments
+    SET scheduled_date = current_date - 8,
+        timeliness_policy_effective_at = now() - interval '10 days',
+        available_from = NULL,
+        available_until = NULL
+    WHERE id = ${assignmentId}
+  `;
+}
+
+export async function readPublishedPlanPolicy(assignmentId: string): Promise<{
+  policyVersion: number;
+  scheduleTypes: string[];
+}> {
+  const sql = testDatabase();
+  const assignments = await sql`
+    SELECT timeliness_policy_version
+    FROM assignments
+    WHERE id = ${assignmentId}
+  `;
+  const slots = await sql`
+    SELECT schedule_type
+    FROM assignment_plan_slot_snapshots
+    WHERE assignment_id = ${assignmentId}
+    ORDER BY position
+  `;
+  return {
+    policyVersion: Number(assignments[0]?.timeliness_policy_version),
+    scheduleTypes: slots.map((slot) => String(slot.schedule_type)),
+  };
+}
 
 export async function createExercise(
   page: Page,

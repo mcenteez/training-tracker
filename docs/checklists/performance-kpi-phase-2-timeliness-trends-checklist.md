@@ -492,65 +492,66 @@ Add concise comparisons to existing dashboards without replacing actionable Phas
 
 ### Unit and Integration
 
-- [ ] Deadline resolver tests pass across timezones and DST boundaries.
-- [ ] Timeliness summary and trend comparison unit tests pass.
-- [ ] Session lifecycle and late-entry integration tests pass.
-- [ ] Team and organization current/previous query tests pass.
-- [ ] Tenant-isolation and publish-time-scope tests pass.
-- [ ] Existing Phase 1 compliance tests remain green without changed expected counts.
-- [ ] Existing offline-safe session mutation tests remain green.
+- [x] Deadline resolver tests pass across timezones and DST boundaries.
+- [x] Timeliness summary and trend comparison unit tests pass.
+- [x] Session lifecycle and late-entry integration tests pass.
+- [x] Team and organization current/previous query tests pass.
+- [x] Tenant-isolation and publish-time-scope tests pass.
+- [x] Existing Phase 1 compliance tests remain green without changed expected counts.
+- [x] Existing offline-safe session mutation tests remain green.
 
 ### Browser / E2E
 
-- [ ] Coach publishes fixed and weekly training with policy version 1.
-- [ ] Athlete completes an occurrence before its deadline and it displays `On time`.
-- [ ] Athlete completes an occurrence during the late window and it displays `Completed late`.
-- [ ] Athlete cannot log after the late-entry boundary.
-- [ ] Completed-result edit preserves original timeliness classification.
-- [ ] Team 30-day and 90-day views compare equivalent previous windows.
-- [ ] All-time view displays no trend.
-- [ ] Team Viewer can inspect detail but cannot mutate comments or assignments.
-- [ ] Athlete cannot access staff trend routes or another athlete's detail.
-- [ ] Removed Team Manager loses trend access on the next sensitive request.
-- [ ] Foreign-team and foreign-organization routes fail without leaking metric values.
+- [x] Coach publishes fixed and weekly training with policy version 1.
+- [x] Athlete completes an occurrence before its deadline and it displays `On time`.
+- [x] Athlete completes an occurrence during the late window and it displays `Completed late`.
+- [x] Athlete cannot log after the late-entry boundary.
+- [x] Completed-result edit preserves original timeliness classification.
+- [x] Team 30-day and 90-day views compare equivalent previous windows.
+- [x] All-time view displays no trend.
+- [x] Team Viewer can inspect detail but cannot mutate comments or assignments.
+- [x] Athlete cannot access staff trend routes or another athlete's detail.
+- [x] Removed Team Manager loses trend access on the next sensitive request.
+- [x] Foreign-team and foreign-organization routes fail without leaking metric values.
 
 ### Migration and Operational Verification
 
-- [ ] Apply the migration against an empty database.
-- [ ] Apply the migration against a representative Phase 1 database.
-- [ ] Confirm migration reruns do not duplicate or corrupt backfill data.
-- [ ] Confirm pre-policy data remains excluded from timeliness metrics.
-- [ ] Confirm post-policy sessions receive deterministic due instants.
-- [ ] Inspect query plans for 30-day and 90-day team and organization reads.
-- [ ] Record the policy effective instant used in production rollout.
-- [ ] Document how support identifies policy version and due instant for an occurrence.
+- [x] Apply the migration against an empty database.
+- [x] Apply the migration against a representative Phase 1 database.
+- [x] Confirm migration reruns do not duplicate or corrupt backfill data.
+- [x] Confirm pre-policy data remains excluded from timeliness metrics.
+- [x] Confirm post-policy sessions receive deterministic due instants.
+- [x] Inspect query plans for 30-day and 90-day team and organization reads.
+- [x] Record the policy effective instant used in the configured verification environment.
+- [x] Document how support identifies policy version and due instant for an occurrence.
 
 ### Required Repository Checks
 
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
-- [ ] Product documentation reflects final policy, formulas, labels, and historical limitations.
-- [ ] No unrelated dependency is introduced.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
+- [x] Product documentation reflects final policy, formulas, labels, and historical limitations.
+- [x] No unrelated dependency is introduced.
 
 ## Phase 2 Done Definition
 
-- [ ] Every policy-eligible occurrence has a deterministic due instant.
-- [ ] Persisted and virtual occurrences resolve identical deadlines.
-- [ ] Late logging is allowed for exactly seven assignment-local calendar days.
-- [ ] First submission time and timeliness classification remain stable after edits and retries.
-- [ ] Assignment, athlete, team, and organization on-time metrics share one formula implementation.
-- [ ] Current and previous windows are equal, non-overlapping, and use one `asOf` instant.
-- [ ] Organization rates and trends use raw counts rather than averaged team rates.
-- [ ] Every rate and change exposes its underlying fractions.
-- [ ] Pre-policy history is never presented as measured timeliness.
-- [ ] Publish-time scope, tenant isolation, and athlete ownership are preserved.
-- [ ] Unit, integration, E2E, accessibility, responsive, and visual checks pass.
-- [ ] `npm run validate` and `npm run build` pass.
+- [x] Every policy-eligible occurrence has a deterministic due instant.
+- [x] Persisted and virtual occurrences resolve identical deadlines.
+- [x] Late logging is allowed for exactly seven assignment-local calendar days.
+- [x] First submission time and timeliness classification remain stable after edits and retries.
+- [x] Assignment, athlete, team, and organization on-time metrics share one formula implementation.
+- [x] Current and previous windows are equal, non-overlapping, and use one `asOf` instant.
+- [x] Organization rates and trends use raw counts rather than averaged team rates.
+- [x] Every rate and change exposes its underlying fractions.
+- [x] Pre-policy history is never presented as measured timeliness.
+- [x] Publish-time scope, tenant isolation, and athlete ownership are preserved.
+- [x] Unit, integration, E2E, accessibility, responsive, and visual checks pass.
+- [x] `npm run validate` and `npm run build` pass.
 
 ## Rollout Gates
 
 - [ ] Coaches confirm the approved deadline and late-entry language is understandable.
 - [ ] Directors confirm percentage-point comparisons and denominators are useful.
 - [ ] Support receives the policy-version and deadline troubleshooting guide.
-- [ ] PostHog analytics remain deferred until PostHog is introduced.
-- [ ] Configurable thresholds remain deferred until real usage demonstrates a stable intervention policy.
+- [ ] Record the production policy effective instant during deployment.
+- [x] PostHog analytics remain deferred until PostHog is introduced.
+- [x] Configurable thresholds remain deferred until real usage demonstrates a stable intervention policy.

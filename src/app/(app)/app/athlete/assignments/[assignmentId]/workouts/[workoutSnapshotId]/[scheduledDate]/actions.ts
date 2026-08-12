@@ -77,6 +77,7 @@ function sessionErrorReason(error: Error): string {
   if (message.includes("different day")) return "wrong_weekday";
   if (message.includes("outside the assignment schedule"))
     return "outside_schedule";
+  if (message.includes("late-entry window")) return "late_entry_closed";
   if (message.includes("not available to start")) return "not_yet_available";
   if (message.includes("submitted")) return "already_submitted";
   if (message.includes("updated elsewhere")) return "version_conflict";

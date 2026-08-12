@@ -2,9 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { testIds, usePersona } from "./helpers/persona";
 import {
+  backdateAssignmentBeyondLateWindow,
   completeAssignedWorkout,
   createExercise,
   createWorkout,
+  markCompletedAssignmentLate,
+  publishWorkoutAssignment,
+  readPublishedPlanPolicy,
 } from "./helpers/test-data";
 
 const { basketballTeamId } = testIds;
@@ -161,6 +165,116 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page.getByText("This page could not be found.")).toBeVisible();
   });
 
+  test("late completion is visible and closed late-entry is rejected", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Timeliness Exercise ${suffix}`;
+    const lateWorkoutName = `Playwright Late Workout ${suffix}`;
+    const closedWorkoutName = `Playwright Closed Workout ${suffix}`;
+    const today = new Date().toISOString().slice(0, 10);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, lateWorkoutName, exerciseName);
+    const lateAssignmentPath = await publishWorkoutAssignment(
+      page,
+      lateWorkoutName,
+      today,
+    );
+    const lateAssignmentId = lateAssignmentPath.split("/").pop()!;
+
+    await usePersona(context, "athlete");
+    await completeAssignedWorkout(page, lateWorkoutName);
+    await markCompletedAssignmentLate(lateAssignmentId);
+
+    await usePersona(context, "manager");
+    await page.goto(`/app/performance/teams/${basketballTeamId}`);
+    await page.getByText(lateWorkoutName, { exact: true }).click();
+    const lateResult = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("link", { name: "Review" }) });
+    await expect(lateResult).toContainText("Completed late");
+
+    await createWorkout(page, closedWorkoutName, exerciseName);
+    const closedAssignmentPath = await publishWorkoutAssignment(
+      page,
+      closedWorkoutName,
+      today,
+    );
+    const closedAssignmentId = closedAssignmentPath.split("/").pop()!;
+    await backdateAssignmentBeyondLateWindow(closedAssignmentId);
+
+    await usePersona(context, "athlete");
+    await page.goto("/app/athlete");
+    const closedAssignment = page
+      .locator("li")
+      .filter({ hasText: closedWorkoutName });
+    await closedAssignment.getByRole("link", { name: "Open" }).click();
+    await page.getByRole("button", { name: "Start Workout" }).click();
+    await expect(
+      page.getByText(
+        "The seven-day late-entry window for this workout has closed.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("manager publishes fixed and weekly plan training with policy version one", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(60_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Plan Exercise ${suffix}`;
+    const workoutName = `Playwright Plan Workout ${suffix}`;
+    const planName = `Playwright Mixed Plan ${suffix}`;
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + 14);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName);
+    await page.goto("/app/library/plans/new");
+    await page.getByLabel("Plan name").fill(planName);
+    await page.getByRole("button", { name: "Add session" }).click();
+    const fixed = page.getByRole("region", { name: "Scheduled session 1" });
+    await fixed.getByLabel("Workout template").selectOption({
+      label: workoutName,
+    });
+    await page.getByRole("button", { name: "Add session" }).click();
+    const weekly = page.getByRole("region", { name: "Scheduled session 2" });
+    await weekly.getByLabel("Schedule mode").selectOption("weekly_frequency");
+    await weekly.getByLabel("Sessions per week").fill("2");
+    await weekly.getByLabel("Workout template").selectOption({
+      label: workoutName,
+    });
+    await page.getByRole("button", { name: "Activate plan" }).click();
+    await expect(page).toHaveURL(/\/app\/library\/plans\/[^/]+\?saved=1$/);
+
+    await page.goto("/app/assignments/new");
+    await page.getByLabel("Choose a plan").selectOption({ label: planName });
+    await page
+      .getByLabel("Start date")
+      .fill(startDate.toISOString().slice(0, 10));
+    await page.getByLabel("End date").fill(endDate.toISOString().slice(0, 10));
+    await page.getByRole("button", { name: "Teams" }).click();
+    await page.getByRole("option", { name: "Basketball" }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Save Draft and Review" }).click();
+    await page.getByRole("button", { name: "Publish Assignment" }).click();
+    await page.getByRole("button", { name: "Confirm Publication" }).click();
+    await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
+    const assignmentId = new URL(page.url()).pathname.split("/").pop()!;
+
+    await expect(readPublishedPlanPolicy(assignmentId)).resolves.toEqual({
+      policyVersion: 1,
+      scheduleTypes: ["fixed_day", "weekly_frequency"],
+    });
+  });
+
   test("manager can publish a workout and athlete can complete it", async ({
     context,
     page,
@@ -266,6 +380,7 @@ test.describe("Training Tracker assignment and performance access", () => {
       .filter({ has: page.getByRole("link", { name: "Review" }) });
     await expect(athleteResult).toBeVisible();
     await expect(athleteResult).toContainText("Completed");
+    await expect(athleteResult).toContainText("On time");
     await expect(
       page
         .getByRole("region", { name: "Assignment timeliness summary" })
@@ -284,7 +399,9 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page).toHaveURL(
       new RegExp(`/app/performance/teams/${basketballTeamId}/assignments/`),
     );
-    await expect(page.getByText("Completed", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Completed results" }),
+    ).toBeVisible();
     await page
       .getByLabel("Add staff comment")
       .fill("Great consistency on this session.");

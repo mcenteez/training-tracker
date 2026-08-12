@@ -17,12 +17,27 @@ export default async function cleanupPlaywrightData() {
     sql`
       DELETE FROM assignments
       WHERE organization_id = ${organizationId}
+        AND source_plan_id IN (
+          SELECT id
+          FROM plans
+          WHERE organization_id = ${organizationId}
+            AND name LIKE 'Playwright %'
+        )
+    `,
+    sql`
+      DELETE FROM assignments
+      WHERE organization_id = ${organizationId}
         AND source_workout_id IN (
           SELECT id
           FROM workouts
           WHERE organization_id = ${organizationId}
             AND name LIKE 'Playwright %'
         )
+    `,
+    sql`
+      DELETE FROM plans
+      WHERE organization_id = ${organizationId}
+        AND name LIKE 'Playwright %'
     `,
     sql`
       DELETE FROM workouts

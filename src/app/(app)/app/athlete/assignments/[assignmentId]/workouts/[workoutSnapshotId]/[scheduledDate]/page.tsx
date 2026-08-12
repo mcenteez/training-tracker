@@ -60,6 +60,8 @@ const errorCopy: Record<string, string> = {
     "Flexible workouts can only be started during the current week.",
   wrong_weekday: "This workout is scheduled for a different day of the week.",
   outside_schedule: "This workout date is outside the assignment schedule.",
+  late_entry_closed:
+    "The seven-day late-entry window for this workout has closed.",
   not_yet_available: "This workout is not available to start yet.",
   already_submitted: "This workout was already completed and cannot change.",
   version_conflict:

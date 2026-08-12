@@ -560,9 +560,8 @@ export function buildTeamTimelinessDashboard(input: {
             });
             if (
               classified &&
-              ((currentWindow.startAt &&
-                classified.dueAt < currentWindow.startAt) ||
-                classified.dueAt > currentWindow.endAt)
+              currentWindow.startAt &&
+              classified.dueAt < currentWindow.startAt
             ) {
               return [];
             }

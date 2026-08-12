@@ -80,7 +80,7 @@ This is the complement of completion rate and provides an operational queue.
 
 ### On-Time Completion Rate
 
-Not currently available. It requires comparing submission time to a defined due-time boundary. The current model stores a scheduled date and availability window but no explicit due time.
+Phase 2 defines an explicit assignment-local due instant, preserves the first submission timestamp, and reports on-time completion separately from late completion and open overdue work. See [timeliness-policy.md](timeliness-policy.md) for the implemented boundary, historical, and late-entry rules.
 
 ### Athlete Coverage
 
@@ -270,10 +270,10 @@ The current `load` result is free-form text and cannot be safely summed. A submi
 
 ### Phase 2: Timeliness and Trends
 
-- Define explicit occurrence due time
-- Add on-time completion and average lateness
-- Add current-window versus previous-window comparison
-- Add athlete and team compliance trends
+- Resolve explicit occurrence due instants in the assignment timezone
+- Report on-time completion, average completed lateness, and open overdue work
+- Compare current 30-day and 90-day windows with equivalent previous windows
+- Explain trends through athlete, assignment, team, and organization detail
 - Add configurable intervention rules
 
 ### Phase 3: Availability and Readiness

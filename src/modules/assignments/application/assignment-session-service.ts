@@ -337,12 +337,14 @@ export async function startAssignmentSession(
       policy: timelinessPolicy(assignment),
     });
 
-    if (
-      now < availability.availableFrom ||
-      now >= availability.availableUntil
-    ) {
+    if (now < availability.availableFrom) {
       throw new DomainInvariantError(
         "This assignment is not currently available to start.",
+      );
+    }
+    if (now >= availability.availableUntil) {
+      throw new DomainInvariantError(
+        "This assignment's late-entry window has closed.",
       );
     }
 
