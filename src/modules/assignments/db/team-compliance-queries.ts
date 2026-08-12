@@ -81,11 +81,13 @@ export interface OrganizationTeamComplianceSummary {
   teamId: string;
   teamName: string;
   summary: ComplianceSummary;
+  timeliness: TeamTimelinessDashboard;
 }
 
 export interface OrganizationComplianceDashboard {
   summary: ComplianceSummary;
   teams: OrganizationTeamComplianceSummary[];
+  timeliness: TeamTimelinessDashboard;
 }
 
 function buildAssignments(
@@ -568,6 +570,12 @@ export async function getOrganizationComplianceDashboard(
           scheduledDate: assignments.scheduledDate,
           publishedAt: assignments.publishedAt,
           canceledAt: assignments.canceledAt,
+          timelinessPolicyVersion: assignments.timelinessPolicyVersion,
+          timelinessPolicyEffectiveAt: assignments.timelinessPolicyEffectiveAt,
+          fixedDueLocalMinute: assignments.fixedDueLocalMinute,
+          weeklyDueDay: assignments.weeklyDueDay,
+          weeklyDueLocalMinute: assignments.weeklyDueLocalMinute,
+          lateEntryDays: assignments.lateEntryDays,
           planName: plans.name,
           workoutName: workouts.name,
         })
@@ -646,12 +654,23 @@ export async function getOrganizationComplianceDashboard(
       scheduledDate: assignment.scheduledDate,
       publishedAt: assignment.publishedAt,
       canceledAt: assignment.canceledAt,
+      timelinessPolicyVersion: assignment.timelinessPolicyVersion,
+      timelinessPolicyEffectiveAt: assignment.timelinessPolicyEffectiveAt,
+      fixedDueLocalMinute: assignment.fixedDueLocalMinute,
+      weeklyDueDay: assignment.weeklyDueDay,
+      weeklyDueLocalMinute: assignment.weeklyDueLocalMinute,
+      lateEntryDays: assignment.lateEntryDays,
     }));
   const assignmentIds = complianceAssignments.map(
     (assignment) => assignment.id,
   );
 
   if (assignmentIds.length === 0) {
+    const emptyTimeliness = buildTeamTimelinessDashboard({
+      assignments: [],
+      asOf: input.now ?? new Date(),
+      windowDays: input.windowDays,
+    });
     return {
       summary: buildComplianceSummary({
         athletes: [],
@@ -666,7 +685,9 @@ export async function getOrganizationComplianceDashboard(
             .filter((row) => row.teamId === team.id)
             .map((row) => row.athleteUserId),
         }),
+        timeliness: emptyTimeliness,
       })),
+      timeliness: emptyTimeliness,
     };
   }
 
@@ -704,6 +725,7 @@ export async function getOrganizationComplianceDashboard(
             startedAt: assignmentSessions.startedAt,
             submittedAt: assignmentSessions.submittedAt,
             updatedAt: assignmentSessions.updatedAt,
+            dueAt: assignmentSessions.dueAt,
           })
           .from(assignmentSessions)
           .innerJoin(
@@ -777,6 +799,10 @@ export async function getOrganizationComplianceDashboard(
     now,
     windowDays: input.windowDays,
   });
+  const organizationTimelinessAssignments = buildAssignments(data, {
+    now,
+    windowDays: null,
+  });
   const summarize = (
     assignmentsToSummarize: TeamAssignmentCompliance[],
     rosteredAthleteIds: string[],
@@ -799,6 +825,11 @@ export async function getOrganizationComplianceDashboard(
       organizationAssignments,
       rosterRows.map((row) => row.athleteUserId),
     ),
+    timeliness: buildTeamTimelinessDashboard({
+      assignments: organizationTimelinessAssignments,
+      asOf: now,
+      windowDays: input.windowDays,
+    }),
     teams: teamRows.map((team) => {
       const teamRecipientIds = new Set(
         scopeRows
@@ -817,6 +848,18 @@ export async function getOrganizationComplianceDashboard(
         },
         { now, windowDays: input.windowDays },
       );
+      const teamTimelinessAssignments = buildAssignments(
+        {
+          ...data,
+          recipients: recipients.filter((recipient) =>
+            teamRecipientIds.has(recipient.id),
+          ),
+          sessions: sessions.filter((session) =>
+            teamRecipientIds.has(session.recipientId),
+          ),
+        },
+        { now, windowDays: null },
+      );
 
       return {
         teamId: team.id,
@@ -827,6 +870,11 @@ export async function getOrganizationComplianceDashboard(
             .filter((row) => row.teamId === team.id)
             .map((row) => row.athleteUserId),
         ),
+        timeliness: buildTeamTimelinessDashboard({
+          assignments: teamTimelinessAssignments,
+          asOf: now,
+          windowDays: input.windowDays,
+        }),
       };
     }),
   };

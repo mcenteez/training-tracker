@@ -398,6 +398,10 @@ describe("team compliance queries", () => {
 
   it("returns raw organization totals with deduplicated athletes and publish-time team comparisons", async () => {
     await client.exec(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-05-01T00:00:00Z'
+      WHERE organization_id = '${ids.organization}';
+
       UPDATE assignment_sessions
       SET status = 'submitted', submitted_at = '2026-08-12T13:00:00Z'
       WHERE id = '${ids.session}';
@@ -413,6 +417,11 @@ describe("team compliance queries", () => {
       organizationId: ids.organization,
       windowDays: null,
       now: new Date("2026-08-12T16:00:00.000Z"),
+    });
+    const afterDue = await getOrganizationComplianceDashboard(database, {
+      organizationId: ids.organization,
+      windowDays: null,
+      now: new Date("2026-08-14T16:00:00.000Z"),
     });
 
     expect(dashboard.summary.counts).toEqual({
@@ -452,6 +461,35 @@ describe("team compliance queries", () => {
       ),
     ).toBe(1);
     expect(dashboard.summary.counts.dueToday).toBe(2);
+    expect(dashboard.timeliness.current).toMatchObject({
+      timelinessEligible: 2,
+      onTimeCompletionRate: 0,
+      athletesNeedingTimelinessAttention: 1,
+    });
+    expect(dashboard.timeliness.current.counts).toEqual({
+      onTimeCompleted: 0,
+      lateCompleted: 0,
+      openOverdue: 2,
+      notYetDue: 0,
+    });
+    expect(
+      afterDue.teams.reduce(
+        (total, team) => total + team.timeliness.current.timelinessEligible,
+        0,
+      ),
+    ).toBe(5);
+    expect(
+      afterDue.teams.reduce(
+        (total, team) => total + team.timeliness.current.counts.openOverdue,
+        0,
+      ),
+    ).toBe(3);
+    expect(afterDue.timeliness.current).toMatchObject({
+      timelinessEligible: 5,
+      onTimeCompletionRate: 0.2,
+      athletesNeedingTimelinessAttention: 2,
+    });
+    expect(afterDue.timeliness.current.counts.openOverdue).toBe(4);
   });
 
   it("applies organization windows, excludes foreign data, and handles no due work", async () => {
@@ -463,7 +501,7 @@ describe("team compliance queries", () => {
     });
     const empty = await getOrganizationComplianceDashboard(database, {
       organizationId: ids.emptyOrganization,
-      windowDays: null,
+      windowDays: 30,
       now,
     });
 
@@ -477,5 +515,9 @@ describe("team compliance queries", () => {
     });
     expect(empty.summary.completionRate).toBeNull();
     expect(empty.teams).toEqual([]);
+    expect(empty.timeliness.current.unavailableReason).toBe("no_due_work");
+    expect(empty.timeliness.trend?.onTimeCompletion.unavailableReason).toBe(
+      "insufficient_history",
+    );
   });
 });

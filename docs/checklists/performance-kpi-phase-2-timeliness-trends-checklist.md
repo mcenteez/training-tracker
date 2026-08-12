@@ -102,7 +102,7 @@ averageCompletedLateness = average(firstSubmittedAt - dueAt for lateCompleted)
 - [x] Return `null` for average lateness when no late completion exists.
 - [x] Keep raw counts and exact denominators alongside every rate.
 - [x] Report open-overdue age separately from completed lateness.
-- [ ] Aggregate organization rates from raw counts rather than averaging team percentages.
+- [x] Aggregate organization rates from raw counts rather than averaging team percentages.
 - [x] Deduplicate athlete attention counts across assignments and teams.
 
 ### Trend Formulas
@@ -362,31 +362,31 @@ Aggregate organization trends from raw occurrence facts while deduplicating athl
 
 ### Implementation Checklist
 
-- [ ] Return current and previous organization timeliness summaries.
-- [ ] Return one current/previous comparison per team.
-- [ ] Aggregate organization numerators and denominators from occurrences, not team rates.
-- [ ] Deduplicate multi-team athletes in organization attention counts.
-- [ ] Preserve team IDs and names for canonical drill-down links.
-- [ ] Include direct-athlete assignments in organization totals.
-- [ ] Exclude direct-athlete assignments from team rows without publish-time scope.
-- [ ] Use identical policy, cancellation, and window filters across organization and team summaries.
-- [ ] Exclude foreign-organization assignments, recipients, sessions, and scopes at the database boundary.
+- [x] Return current and previous organization timeliness summaries.
+- [x] Return one current/previous comparison per team.
+- [x] Aggregate organization numerators and denominators from occurrences, not team rates.
+- [x] Deduplicate multi-team athletes in organization attention counts.
+- [x] Preserve team IDs and names for canonical drill-down links.
+- [x] Include direct-athlete assignments in organization totals.
+- [x] Exclude direct-athlete assignments from team rows without publish-time scope.
+- [x] Use identical policy, cancellation, and window filters across organization and team summaries.
+- [x] Exclude foreign-organization assignments, recipients, sessions, and scopes at the database boundary.
 
 ### Integration Tests
 
-- [ ] Weighted organization trend differs correctly from an average of team rates.
-- [ ] Multi-team athletes are deduplicated in each window.
-- [ ] Direct-athlete work follows the documented organization-only rule.
-- [ ] Team rows reconcile with organization totals where scopes overlap.
-- [ ] Foreign-organization facts cannot influence either compared window.
-- [ ] Empty organizations return unavailable metrics.
-- [ ] New organizations return insufficient history until both windows qualify.
+- [x] Weighted organization trend differs correctly from an average of team rates.
+- [x] Multi-team athletes are deduplicated in each window.
+- [x] Direct-athlete work follows the documented organization-only rule.
+- [x] Team rows reconcile with organization totals where scopes overlap.
+- [x] Foreign-organization facts cannot influence either compared window.
+- [x] Empty organizations return unavailable metrics.
+- [x] New organizations return insufficient history until both windows qualify.
 
 ### Acceptance Criteria
 
-- [ ] Directors can compare teams without size bias.
-- [ ] Organization changes can be explained through team and assignment facts.
-- [ ] No cross-tenant data enters trend calculations.
+- [x] Directors can compare teams without size bias.
+- [x] Organization changes can be explained through team and assignment facts.
+- [x] No cross-tenant data enters trend calculations.
 
 ## Milestone 8: Assignment and Athlete Timeliness Drill-Down
 
