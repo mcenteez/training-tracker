@@ -1,27 +1,8 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-type LocalPersona =
-  "manager" | "revokedManager" | "athlete" | "viewer" | "owner";
+import { baseURL, testIds, usePersona } from "./helpers/persona";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const basketballTeamId = "20000000-0000-4000-8000-000000000001";
-const foreignTeamId = "20000000-0000-4000-8000-000000000099";
-const foreignOrganizationId = "10000000-0000-4000-8000-000000000099";
-
-async function usePersona(
-  context: BrowserContext,
-  persona: LocalPersona,
-): Promise<void> {
-  await context.addCookies([
-    {
-      name: "training_tracker_local_persona",
-      value: persona,
-      url: baseURL,
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-  ]);
-}
+const { basketballTeamId, foreignTeamId, foreignOrganizationId } = testIds;
 
 test.describe("Training Tracker tenant isolation", () => {
   test("a local user cannot access a foreign organization team", async ({

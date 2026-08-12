@@ -1,24 +1,9 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-type LocalPersona = "manager" | "athlete" | "viewer";
+import { testIds, usePersona } from "./helpers/persona";
+import { createExercise, createWorkout } from "./helpers/test-data";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const basketballTeamId = "20000000-0000-4000-8000-000000000001";
-
-async function usePersona(
-  context: BrowserContext,
-  persona: LocalPersona,
-): Promise<void> {
-  await context.addCookies([
-    {
-      name: "training_tracker_local_persona",
-      value: persona,
-      url: baseURL,
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-  ]);
-}
+const { basketballTeamId } = testIds;
 
 test.describe("Training Tracker assignment and performance access", () => {
   test("team manager can open assignment creation for managed targets", async ({
@@ -107,6 +92,49 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page.getByText("This page could not be found.")).toBeVisible();
   });
 
+  test("manager can publish directly to a managed athlete", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Direct Exercise ${suffix}`;
+    const workoutName = `Playwright Direct Workout ${suffix}`;
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName);
+
+    await page.goto("/app/assignments/new");
+    await page
+      .locator('label:has(input[aria-label="Assign a workout"])')
+      .click();
+    await page
+      .getByLabel("Choose a workout")
+      .selectOption({ label: workoutName });
+    await page
+      .getByLabel("Scheduled date")
+      .fill(new Date().toISOString().slice(0, 10));
+    await page.getByRole("button", { name: "Individual athletes" }).click();
+    await page.getByRole("option", { name: /Local Athlete/ }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Save Draft and Review" }).click();
+    await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?created=1$/);
+    await page.getByRole("button", { name: "Publish Assignment" }).click();
+    await page.getByRole("button", { name: "Confirm Publication" }).click();
+    await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
+    const assignmentId = new URL(page.url()).pathname.split("/").pop();
+    expect(assignmentId).toBeTruthy();
+
+    await usePersona(context, "athlete");
+    await page.goto("/app/athlete");
+    const assignment = page.locator("li").filter({ hasText: workoutName });
+    await expect(assignment.getByRole("link", { name: "Open" })).toBeVisible();
+
+    await usePersona(context, "revokedManager");
+    await page.goto(`/app/athlete/assignments/${assignmentId}`);
+    await expect(page.getByText("This page could not be found.")).toBeVisible();
+  });
+
   test("manager can publish a workout and athlete can complete it", async ({
     context,
     page,
@@ -156,7 +184,20 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByText("Assignment published and visible to recipients."),
     ).toBeVisible();
+    const assignmentPath = new URL(page.url()).pathname;
 
+    await usePersona(context, "viewer");
+    await page.goto(assignmentPath);
+    await expect(page).toHaveURL(/\/app\/performance\/organization$/);
+    await expect(
+      page.getByRole("button", { name: "Publish Assignment" }),
+    ).toHaveCount(0);
+
+    await usePersona(context, "athlete");
+    await page.goto(assignmentPath);
+    await expect(page).toHaveURL(/\/app\/athlete$/);
+
+    await usePersona(context, "manager");
     await page.goto(`${workoutPath}/edit`);
     await page.getByLabel("Reps").fill("10");
     await page.getByRole("button", { name: "Save draft" }).click();

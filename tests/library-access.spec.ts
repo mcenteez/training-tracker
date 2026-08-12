@@ -1,23 +1,7 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-type LocalPersona = "owner" | "manager" | "athlete" | "viewer";
-
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-
-async function usePersona(
-  context: BrowserContext,
-  persona: LocalPersona | "invalid",
-) {
-  await context.addCookies([
-    {
-      name: "training_tracker_local_persona",
-      value: persona,
-      url: baseURL,
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-  ]);
-}
+import { usePersona } from "./helpers/persona";
+import { createExercise, createWorkout } from "./helpers/test-data";
 
 test.describe("Training Tracker library access", () => {
   test("manager can create an exercise from the library flow", async ({
@@ -146,6 +130,43 @@ test.describe("Training Tracker library access", () => {
       page.getByText("Active workouts require at least one item", {
         exact: false,
       }),
+    ).toBeVisible();
+  });
+
+  test("manager can duplicate an active workout into an independent draft", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Duplicate Exercise ${suffix}`;
+    const workoutName = `Playwright Duplicate Workout ${suffix}`;
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName);
+
+    await page.goto("/app/library/workouts");
+    const sourceCard = page
+      .locator('section[aria-label="Workouts"] > div')
+      .filter({ hasText: workoutName });
+    await sourceCard.getByRole("button", { name: "Duplicate" }).click();
+
+    await expect(page).toHaveURL(/\/app\/library\/workouts\/[^/]+\/edit$/);
+    await expect(page.getByLabel("Workout name")).toHaveValue(
+      `${workoutName} Copy`,
+    );
+    await expect(page.getByRole("region", { name: "Block 1" })).toBeVisible();
+    await page.getByLabel("Workout name").fill(`${workoutName} Copy Final`);
+    await page.getByRole("button", { name: "Activate workout" }).click();
+
+    await expect(page).toHaveURL(/\/app\/library\/workouts\/[^/]+\?saved=1$/);
+    await expect(
+      page.getByText(`${workoutName} Copy Final`, { exact: true }),
+    ).toBeVisible();
+    await page.goto("/app/library/workouts");
+    await expect(page.getByText(workoutName, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(`${workoutName} Copy Final`, { exact: true }),
     ).toBeVisible();
   });
 

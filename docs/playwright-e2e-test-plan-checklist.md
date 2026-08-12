@@ -53,10 +53,12 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Athlete result logging and in-progress edit flow coverage
 - [x] Team compliance and staff review flows
 - [x] Cross-organization and cross-team security regression tests
-- [ ] Shared Playwright helpers for persona-driven flows
+- [x] Shared Playwright helpers for persona-driven flows
 - [ ] A reusable test data factory for assignment and result scenarios
 - [x] Coverage for inaccessible route and UI states
-- [ ] Documentation link between product capability docs and the E2E test matrix
+- [x] Documentation link between product capability docs and the E2E test matrix
+
+Persona and capability coverage is mapped in [docs/test-persona-matrix.md](test-persona-matrix.md).
 
 ### Completed this iteration
 
@@ -177,7 +179,7 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Add test for saving a workout as a draft.
 - [x] Add test for rejecting activation of an invalid draft.
 - [x] Add test for successfully activating a valid workout.
-- [ ] Add test for duplicating a workout into a new draft.
+- [x] Add test for duplicating a workout into a new draft.
 - [ ] Add test for organization-scoped library separation.
 
 ### Acceptance Criteria
@@ -200,12 +202,12 @@ The test strategy should exercise the same server-side authorization and data bo
 
 - [x] Add test for creating a simple assignment from an existing template.
 - [x] Add test for publishing an assignment to a team target.
-- [ ] Add test for publishing to athlete target(s) only within managed scope.
+- [x] Add test for publishing to athlete target(s) only within managed scope.
 - [x] Add test for rejection when a target is outside allowed team or athlete scope.
 - [x] Add test for assignment list and detail pages reflecting correct recipients and status.
 - [x] Add test for snapshot behavior after editing a library workout that was already assigned.
 - [x] Add test for assignment coverage and compliance summary views.
-- [ ] Add test for a Viewer or Athlete not being able to publish or edit assignments.
+- [x] Add test for a Viewer or Athlete not being able to publish or edit assignments.
 
 ### Acceptance Criteria
 

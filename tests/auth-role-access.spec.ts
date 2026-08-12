@@ -1,23 +1,6 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-type LocalPersona = "owner" | "manager" | "athlete" | "viewer";
-
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-
-async function usePersona(
-  context: BrowserContext,
-  persona: LocalPersona | "invalid",
-) {
-  await context.addCookies([
-    {
-      name: "training_tracker_local_persona",
-      value: persona,
-      url: baseURL,
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-  ]);
-}
+import { usePersona } from "./helpers/persona";
 
 test.describe("Training Tracker local personas", () => {
   test("manual selector signs in as the organization owner", async ({

@@ -1,24 +1,8 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-type LocalPersona = "owner" | "manager" | "athlete" | "viewer";
+import { testIds, usePersona } from "./helpers/persona";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const basketballTeamId = "20000000-0000-4000-8000-000000000001";
-
-async function usePersona(
-  context: BrowserContext,
-  persona: LocalPersona,
-): Promise<void> {
-  await context.addCookies([
-    {
-      name: "training_tracker_local_persona",
-      value: persona,
-      url: baseURL,
-      httpOnly: true,
-      sameSite: "Lax",
-    },
-  ]);
-}
+const { basketballTeamId } = testIds;
 
 test.describe("Training Tracker team management", () => {
   test("manager sees only the managed team in the team portfolio", async ({
