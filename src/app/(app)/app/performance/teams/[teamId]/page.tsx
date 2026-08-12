@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ComplianceDefinitions } from "@/components/compliance-definitions";
+import { TimelinessSummary } from "@/components/timeliness-summary";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -163,6 +164,11 @@ export default async function TeamPerformancePage({
         </Card>
       </dl>
 
+      <TimelinessSummary
+        timeliness={complianceDashboard.timeliness}
+        label="Team timeliness summary"
+      />
+
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
           <CardTitle className="text-2xl">Roster readiness</CardTitle>
@@ -281,6 +287,26 @@ export default async function TeamPerformancePage({
                       started · {assignment.summary.counts.dueToday} due today ·{" "}
                       {assignment.summary.counts.upcoming} upcoming
                     </p>
+                    {(() => {
+                      const timing =
+                        complianceDashboard.timeliness.assignments.find(
+                          (candidate) =>
+                            candidate.assignmentId === assignment.id,
+                        );
+                      if (!timing) return null;
+                      const comparison = timing.trend?.onTimeCompletion;
+                      return (
+                        <p className="text-muted-foreground">
+                          On time {timing.current.counts.onTimeCompleted}/
+                          {timing.current.timelinessEligible} ·{" "}
+                          {comparison?.unavailableReason
+                            ? "insufficient history"
+                            : comparison
+                              ? `${comparison.percentagePointChange! > 0 ? "+" : ""}${comparison.percentagePointChange!.toFixed(0)} points ${comparison.direction}`
+                              : "no all-time trend"}
+                        </p>
+                      );
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {assignment.latestCompletionAt

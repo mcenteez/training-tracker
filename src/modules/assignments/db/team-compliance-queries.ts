@@ -79,6 +79,7 @@ export interface TeamAssignmentTimelinessSummary {
 }
 
 export interface TeamTimelinessDashboard {
+  asOf: Date;
   current: TimelinessSummary;
   previous: TimelinessSummary | null;
   trend: ComplianceTrendSummary | null;
@@ -530,6 +531,7 @@ export function buildTeamTimelinessDashboard(input: {
   const team = summarize(allOccurrences);
 
   return {
+    asOf: input.asOf,
     ...team,
     assignments: input.assignments.map((assignment) => {
       const assignmentOccurrences = assignment.recipients.flatMap((recipient) =>

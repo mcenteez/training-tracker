@@ -53,6 +53,76 @@ function summary(
   };
 }
 
+function timeliness(
+  input: {
+    onTime?: number;
+    eligible?: number;
+    previousOnTime?: number;
+    previousEligible?: number;
+    direction?: "improved" | "declined" | "unchanged" | null;
+    change?: number | null;
+  } = {},
+) {
+  const onTime = input.onTime ?? 0;
+  const eligible = input.eligible ?? 0;
+  const previousOnTime = input.previousOnTime ?? 0;
+  const previousEligible = input.previousEligible ?? 0;
+  const current = {
+    counts: {
+      onTimeCompleted: onTime,
+      lateCompleted: 0,
+      openOverdue: Math.max(0, eligible - onTime),
+      notYetDue: 0,
+    },
+    timelinessEligible: eligible,
+    onTimeCompletionRate: eligible === 0 ? null : onTime / eligible,
+    lateCompletionRate: eligible === 0 ? null : 0,
+    averageCompletedLatenessMilliseconds: null,
+    oldestOpenOverdueAt: null,
+    athletesNeedingTimelinessAttention: 0,
+    unavailableReason: eligible === 0 ? "no_due_work" : null,
+  };
+  const previous = {
+    ...current,
+    counts: {
+      ...current.counts,
+      onTimeCompleted: previousOnTime,
+      openOverdue: Math.max(0, previousEligible - previousOnTime),
+    },
+    timelinessEligible: previousEligible,
+    onTimeCompletionRate:
+      previousEligible === 0 ? null : previousOnTime / previousEligible,
+  };
+  return {
+    asOf: new Date("2026-08-12T12:00:00Z"),
+    current,
+    previous,
+    trend: {
+      current,
+      previous,
+      onTimeCompletion: {
+        current: {
+          numerator: onTime,
+          denominator: eligible,
+          rate: current.onTimeCompletionRate,
+        },
+        previous: {
+          numerator: previousOnTime,
+          denominator: previousEligible,
+          rate: previous.onTimeCompletionRate,
+        },
+        percentagePointChange: input.change ?? null,
+        direction: input.direction ?? null,
+        unavailableReason:
+          input.direction === null || input.direction === undefined
+            ? "insufficient_history"
+            : null,
+      },
+    },
+    assignments: [],
+  };
+}
+
 describe("organization performance page", () => {
   afterEach(cleanup);
 
@@ -96,11 +166,20 @@ describe("organization performance page", () => {
           rosteredAthletes: 3,
           athleteCoverage: 2 / 3,
         }),
+        timeliness: timeliness({
+          onTime: 3,
+          eligible: 4,
+          previousOnTime: 1,
+          previousEligible: 2,
+          direction: "improved",
+          change: 25,
+        }),
         teams: [
           {
             teamId: "team-1",
             teamName: "Junior Varsity",
             summary: summary({ rosteredAthletes: 1 }),
+            timeliness: timeliness(),
           },
           {
             teamId: "team-2",
@@ -116,6 +195,14 @@ describe("organization performance page", () => {
               programmedAthletes: 2,
               rosteredAthletes: 2,
               athleteCoverage: 1,
+            }),
+            timeliness: timeliness({
+              onTime: 3,
+              eligible: 4,
+              previousOnTime: 1,
+              previousEligible: 2,
+              direction: "improved",
+              change: 25,
             }),
           },
         ],
@@ -134,7 +221,14 @@ describe("organization performance page", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
     expect(screen.getByText("67%")).toBeInTheDocument();
-    expect(screen.getByText("No due work")).toBeInTheDocument();
+    expect(screen.getAllByText("75%").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/\+25 points · improved/i).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/1 improving · 0 declining · 1 unavailable/i),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("No due work").length).toBeGreaterThan(0);
     const teamLinks = screen
       .getAllByRole("link")
       .filter((link) =>
@@ -156,7 +250,7 @@ describe("organization performance page", () => {
       [],
       [],
       [],
-      { summary: summary(), teams: [] },
+      { summary: summary(), timeliness: timeliness(), teams: [] },
     ]);
 
     render(
@@ -168,7 +262,7 @@ describe("organization performance page", () => {
     expect(
       screen.getByText("No teams have been created yet."),
     ).toBeInTheDocument();
-    expect(screen.getByText("No due work")).toBeInTheDocument();
+    expect(screen.getAllByText("No due work").length).toBeGreaterThan(0);
   });
 
   it("redirects athletes away from organization performance", async () => {

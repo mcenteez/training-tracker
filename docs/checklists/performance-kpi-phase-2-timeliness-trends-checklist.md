@@ -423,38 +423,38 @@ Add concise comparisons to existing dashboards without replacing actionable Phas
 
 ### Team Dashboard
 
-- [ ] Add on-time completion rate with fraction.
-- [ ] Add percentage-point change versus the equivalent previous window.
-- [ ] Add average completed lateness with sample count.
-- [ ] Add open-overdue count and oldest age.
-- [ ] Add assignment comparison details without nested cards.
-- [ ] Keep Phase 1 completion rate and attention KPIs visible.
-- [ ] Do not show trend for all-time.
-- [ ] Show `Insufficient history` rather than a neutral arrow.
+- [x] Add on-time completion rate with fraction.
+- [x] Add percentage-point change versus the equivalent previous window.
+- [x] Add average completed lateness with sample count.
+- [x] Add open-overdue count and oldest age.
+- [x] Add assignment comparison details without nested cards.
+- [x] Keep Phase 1 completion rate and attention KPIs visible.
+- [x] Do not show trend for all-time.
+- [x] Show `Insufficient history` rather than a neutral arrow.
 
 ### Organization Dashboard
 
-- [ ] Add weighted organization on-time rate with fraction.
-- [ ] Add percentage-point change versus the equivalent previous window.
-- [ ] Add teams improving, declining, and unavailable counts without configurable thresholds.
-- [ ] Add team comparison columns for current, previous, change, and denominators.
-- [ ] Sort open-overdue intervention needs before trend direction.
-- [ ] Preserve selected-window links to team dashboards.
-- [ ] Keep operational roster counts visually secondary.
+- [x] Add weighted organization on-time rate with fraction.
+- [x] Add percentage-point change versus the equivalent previous window.
+- [x] Add teams improving, declining, and unavailable counts without configurable thresholds.
+- [x] Add team comparison columns for current, previous, change, and denominators.
+- [x] Sort open-overdue intervention needs before trend direction.
+- [x] Preserve selected-window links to team dashboards.
+- [x] Keep operational roster counts visually secondary.
 
 ### Trend Visualization
 
-- [ ] Start with accessible text and dense comparison tables.
-- [ ] Add a chart only when it improves interpretation beyond current/previous values.
-- [ ] If a chart is added, use the established chart library and provide an equivalent accessible table.
-- [ ] Do not encode direction by color alone.
-- [ ] Do not imply statistical significance.
+- [x] Start with accessible text and dense comparison tables.
+- [x] Add a chart only when it improves interpretation beyond current/previous values.
+- [x] If a chart is added, use the established chart library and provide an equivalent accessible table.
+- [x] Do not encode direction by color alone.
+- [x] Do not imply statistical significance.
 
 ### Acceptance Criteria
 
-- [ ] Staff can distinguish current performance from change over time.
-- [ ] Every change exposes both compared fractions.
-- [ ] Dashboard hierarchy still prioritizes actionable overdue work.
+- [x] Staff can distinguish current performance from change over time.
+- [x] Every change exposes both compared fractions.
+- [x] Dashboard hierarchy still prioritizes actionable overdue work.
 
 ## Milestone 10: Definitions, Accessibility, and Responsive UX
 

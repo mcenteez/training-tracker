@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ComplianceDefinitions } from "@/components/compliance-definitions";
+import { TimelinessSummary } from "@/components/timeliness-summary";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,6 +38,20 @@ function formatRate(rate: number): string {
 
 function windowLabel(windowDays: number | null): string {
   return windowDays === null ? "all-time" : `${windowDays}-day`;
+}
+
+function teamTrendLabel(
+  team: Awaited<
+    ReturnType<typeof getOrganizationComplianceDashboard>
+  >["teams"][number],
+): string {
+  if (team.timeliness.previous === null) return "No all-time trend";
+  const comparison = team.timeliness.trend?.onTimeCompletion;
+  if (!comparison || comparison.unavailableReason) {
+    return `${team.timeliness.previous.counts.onTimeCompleted}/${team.timeliness.previous.timelinessEligible} previous · insufficient history`;
+  }
+  const change = comparison.percentagePointChange ?? 0;
+  return `${team.timeliness.previous.counts.onTimeCompleted}/${team.timeliness.previous.timelinessEligible} previous · ${change > 0 ? "+" : ""}${change.toFixed(0)} points ${comparison.direction}`;
 }
 
 export default async function OrganizationPerformancePage({
@@ -92,6 +107,17 @@ export default async function OrganizationPerformancePage({
 
     return left.teamName.localeCompare(right.teamName);
   });
+  const teamTrendCounts = compliance.teams.reduce(
+    (counts, team) => {
+      const direction = team.timeliness.trend?.onTimeCompletion.direction;
+      if (direction === "improved") counts.improved += 1;
+      else if (direction === "declined") counts.declined += 1;
+      else if (direction === null || direction === undefined)
+        counts.unavailable += 1;
+      return counts;
+    },
+    { improved: 0, declined: 0, unavailable: 0 },
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -198,6 +224,11 @@ export default async function OrganizationPerformancePage({
         </Card>
       </dl>
 
+      <TimelinessSummary
+        timeliness={compliance.timeliness}
+        label="Organization timeliness summary"
+      />
+
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
           <CardTitle className="text-2xl">Team compliance</CardTitle>
@@ -207,6 +238,10 @@ export default async function OrganizationPerformancePage({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {teamTrendCounts.improved} improving · {teamTrendCounts.declined}{" "}
+            declining · {teamTrendCounts.unavailable} unavailable
+          </p>
           {teams.length === 0 ? (
             <div className="space-y-2 text-sm">
               <p className="font-medium">No teams have been created yet.</p>
@@ -241,7 +276,7 @@ export default async function OrganizationPerformancePage({
                           attention · {team.summary.counts.overdue} overdue
                         </p>
                       </div>
-                      <dl className="grid min-w-0 basis-full grid-cols-1 gap-x-6 gap-y-3 text-sm sm:basis-auto sm:flex-1 sm:grid-cols-3">
+                      <dl className="grid min-w-0 basis-full grid-cols-1 gap-x-6 gap-y-3 text-sm sm:basis-auto sm:flex-1 sm:grid-cols-4">
                         <div>
                           <dt className="text-xs text-muted-foreground">
                             Completion
@@ -254,6 +289,26 @@ export default async function OrganizationPerformancePage({
                               {team.summary.counts.completed}/
                               {team.summary.eligibleDue}
                             </span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            On-time trend
+                          </dt>
+                          <dd className="font-semibold">
+                            {team.timeliness.current.onTimeCompletionRate ===
+                            null
+                              ? "No due work"
+                              : formatRate(
+                                  team.timeliness.current.onTimeCompletionRate,
+                                )}{" "}
+                            <span className="font-normal text-muted-foreground">
+                              {team.timeliness.current.counts.onTimeCompleted}/
+                              {team.timeliness.current.timelinessEligible}
+                            </span>
+                          </dd>
+                          <dd className="text-xs text-muted-foreground">
+                            {teamTrendLabel(team)}
                           </dd>
                         </div>
                         <div>
