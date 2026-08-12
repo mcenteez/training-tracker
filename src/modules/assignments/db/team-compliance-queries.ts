@@ -12,6 +12,10 @@ import {
   type TeamComplianceSlotInput,
 } from "@/modules/assignments/application/team-compliance";
 import {
+  buildComplianceSummary,
+  type ComplianceSummary,
+} from "@/modules/assignments/application/compliance-summary";
+import {
   assignments,
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
@@ -21,6 +25,7 @@ import {
 } from "@/modules/assignments/db/schema";
 import { plans } from "@/modules/plans/db/schema";
 import { users } from "@/modules/users/db/schema";
+import { teamMemberships } from "@/modules/teams/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
 
 interface TeamComplianceData {
@@ -28,6 +33,37 @@ interface TeamComplianceData {
   recipients: TeamComplianceRecipientInput[];
   slots: TeamComplianceSlotInput[];
   sessions: TeamComplianceSessionInput[];
+}
+
+export interface TeamComplianceDashboard {
+  assignments: TeamAssignmentCompliance[];
+  summary: ComplianceSummary;
+  rosteredAthleteIds: string[];
+}
+
+function buildAssignments(
+  data: TeamComplianceData,
+  input: { now: Date; windowDays?: number | null },
+): TeamAssignmentCompliance[] {
+  return data.assignments
+    .map((assignment) =>
+      buildTeamAssignmentCompliance({
+        assignment,
+        recipients: data.recipients.filter(
+          (recipient) => recipient.assignmentId === assignment.id,
+        ),
+        slots: data.slots.filter((slot) => slot.assignmentId === assignment.id),
+        sessions: data.sessions.filter(
+          (session) => session.assignmentId === assignment.id,
+        ),
+        now: input.now,
+        windowDays: input.windowDays,
+      }),
+    )
+    .filter(
+      (assignment) =>
+        assignment.summary.eligibleDue + assignment.summary.counts.upcoming > 0,
+    );
 }
 
 async function loadTeamComplianceData(
@@ -240,20 +276,53 @@ export async function listTeamAssignmentCompliance(
   const data = await loadTeamComplianceData(database, input);
   const now = input.now ?? new Date();
 
-  return data.assignments.map((assignment) =>
-    buildTeamAssignmentCompliance({
-      assignment,
-      recipients: data.recipients.filter(
-        (recipient) => recipient.assignmentId === assignment.id,
+  return buildAssignments(data, { now, windowDays: input.windowDays });
+}
+
+export async function getTeamComplianceDashboard(
+  database: Database,
+  input: {
+    organizationId: string;
+    teamId: string;
+    windowDays?: number | null;
+    now?: Date;
+  },
+): Promise<TeamComplianceDashboard> {
+  const [data, rosterRows] = await Promise.all([
+    loadTeamComplianceData(database, input),
+    database
+      .select({ athleteUserId: teamMemberships.userId })
+      .from(teamMemberships)
+      .where(
+        and(
+          eq(teamMemberships.organizationId, input.organizationId),
+          eq(teamMemberships.teamId, input.teamId),
+          eq(teamMemberships.role, "athlete"),
+        ),
       ),
-      slots: data.slots.filter((slot) => slot.assignmentId === assignment.id),
-      sessions: data.sessions.filter(
-        (session) => session.assignmentId === assignment.id,
+  ]);
+  const assignments = buildAssignments(data, {
+    now: input.now ?? new Date(),
+    windowDays: input.windowDays,
+  });
+  const rosteredAthleteIds = rosterRows.map((row) => row.athleteUserId);
+
+  return {
+    assignments,
+    summary: buildComplianceSummary({
+      athletes: assignments.flatMap((assignment) =>
+        assignment.recipients.map((recipient) => ({
+          athleteUserId: recipient.athleteUserId,
+          counts: recipient.summary.counts,
+          overdueDates: recipient.occurrences
+            .filter((occurrence) => occurrence.status === "missed")
+            .map((occurrence) => occurrence.scheduledDate),
+        })),
       ),
-      now,
-      windowDays: input.windowDays,
+      rosteredAthleteIds,
     }),
-  );
+    rosteredAthleteIds,
+  };
 }
 
 export async function findTeamAssignmentCompliance(

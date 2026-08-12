@@ -68,7 +68,7 @@ Reference definitions and product rationale: [performance-kpi-recommendations.md
 
 - [x] Include started and due-today work as eligible but incomplete.
 - [x] Preserve canceled-assignment historical sessions and occurrences according to current domain rules.
-- [ ] Use publish-time recipient-to-team scope for all team and organization compliance calculations.
+- [x] Use publish-time recipient-to-team scope for all team and organization compliance calculations.
 - [x] Deduplicate athletes across teams in organization-level athlete counts.
 - [x] Apply assignment timezone when deriving occurrence status.
 - [x] Apply the selected 30-day, 90-day, or all-time window consistently at every aggregation level.
@@ -116,32 +116,32 @@ Extend the existing team compliance query so the page receives assignment summar
 
 ### Implementation Checklist
 
-- [ ] Add a team-level summary across all visible assignments in the selected window.
-- [ ] Add unique athletes needing attention.
-- [ ] Add athlete programming-coverage numerator and denominator.
-- [ ] Add oldest overdue scheduled date or overdue age when available.
-- [ ] Add per-assignment compliance summary fields.
-- [ ] Add per-recipient compliance summary fields for drill-down sorting.
-- [ ] Preserve current organization and team authorization filters.
-- [ ] Preserve publish-time team provenance.
-- [ ] Avoid N+1 queries while calculating assignment and athlete summaries.
-- [ ] Keep assignment and session IDs available for existing drill-down routes.
+- [x] Add a team-level summary across all visible assignments in the selected window.
+- [x] Add unique athletes needing attention.
+- [x] Add athlete programming-coverage numerator and denominator.
+- [x] Add oldest overdue scheduled date or overdue age when available.
+- [x] Add per-assignment compliance summary fields.
+- [x] Add per-recipient compliance summary fields for drill-down sorting.
+- [x] Preserve current organization and team authorization filters.
+- [x] Preserve publish-time team provenance.
+- [x] Avoid N+1 queries while calculating assignment and athlete summaries.
+- [x] Keep assignment and session IDs available for existing drill-down routes.
 
 ### Integration Tests
 
-- [ ] Returns team totals matching the sum of assignment occurrence summaries.
-- [ ] Returns unique attention-athlete count across multiple assignments.
-- [ ] Excludes another team and another organization.
-- [ ] Uses publish-time scope after roster membership changes.
-- [ ] Applies 30-day, 90-day, and all-time windows consistently.
-- [ ] Handles canceled assignments with historical sessions.
-- [ ] Handles a team with no published assignments.
+- [x] Returns team totals matching the sum of assignment occurrence summaries.
+- [x] Returns unique attention-athlete count across multiple assignments.
+- [x] Excludes another team and another organization.
+- [x] Uses publish-time scope after roster membership changes.
+- [x] Applies 30-day, 90-day, and all-time windows consistently.
+- [x] Handles canceled assignments with historical sessions.
+- [x] Handles a team with no published assignments.
 
 ### Acceptance Criteria
 
-- [ ] One team query provides all data needed by the team KPI strip and assignment list.
-- [ ] Team totals and drill-down totals reconcile exactly.
-- [ ] Tenant and team isolation remain enforced at the query boundary.
+- [x] One team query provides all data needed by the team KPI strip and assignment list.
+- [x] Team totals and drill-down totals reconcile exactly.
+- [x] Tenant and team isolation remain enforced at the query boundary.
 
 ## Milestone 3: Team Dashboard KPI Strip
 

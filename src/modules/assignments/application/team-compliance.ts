@@ -1,6 +1,12 @@
 import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
 
 import {
+  buildComplianceSummary,
+  type ComplianceCounts,
+  type ComplianceSummary,
+} from "./compliance-summary";
+
+import {
   addDays,
   compareDates,
   listFixedDayDates,
@@ -83,6 +89,7 @@ export interface TeamComplianceRecipient {
   fullName: string | null;
   email: string;
   counts: TeamComplianceCounts;
+  summary: ComplianceSummary;
   occurrences: TeamComplianceOccurrence[];
 }
 
@@ -99,6 +106,7 @@ export interface TeamAssignmentCompliance {
   canceledAt: Date | null;
   recipientCount: number;
   counts: TeamComplianceCounts;
+  summary: ComplianceSummary;
   latestActivityAt: Date | null;
   recipients: TeamComplianceRecipient[];
 }
@@ -110,6 +118,18 @@ function emptyCounts(): TeamComplianceCounts {
     submitted: 0,
     missed: 0,
     upcoming: 0,
+  };
+}
+
+export function toComplianceCounts(
+  counts: TeamComplianceCounts,
+): ComplianceCounts {
+  return {
+    completed: counts.submitted,
+    overdue: counts.missed,
+    started: counts.inProgress,
+    dueToday: counts.assigned,
+    upcoming: counts.upcoming,
   };
 }
 
@@ -195,6 +215,7 @@ export function buildTeamAssignmentCompliance(input: {
       fullName: recipient.fullName,
       email: recipient.email,
       counts: emptyCounts(),
+      summary: buildComplianceSummary({ athletes: [] }),
       occurrences: [],
     }),
   );
@@ -318,7 +339,30 @@ export function buildTeamAssignmentCompliance(input: {
     counts.submitted += recipient.counts.submitted;
     counts.missed += recipient.counts.missed;
     counts.upcoming += recipient.counts.upcoming;
+    recipient.summary = buildComplianceSummary({
+      athletes: [
+        {
+          athleteUserId: recipient.athleteUserId,
+          counts: toComplianceCounts(recipient.counts),
+          overdueDates: recipient.occurrences
+            .filter((occurrence) => occurrence.status === "missed")
+            .map((occurrence) => occurrence.scheduledDate),
+        },
+      ],
+      rosteredAthleteIds: [recipient.athleteUserId],
+    });
   }
+
+  const summary = buildComplianceSummary({
+    athletes: recipients.map((recipient) => ({
+      athleteUserId: recipient.athleteUserId,
+      counts: toComplianceCounts(recipient.counts),
+      overdueDates: recipient.occurrences
+        .filter((occurrence) => occurrence.status === "missed")
+        .map((occurrence) => occurrence.scheduledDate),
+    })),
+    rosteredAthleteIds: recipients.map((recipient) => recipient.athleteUserId),
+  });
 
   const latestActivityAt = input.sessions.reduce<Date | null>(
     (latest, session) =>
@@ -332,6 +376,7 @@ export function buildTeamAssignmentCompliance(input: {
     ...input.assignment,
     recipientCount: recipients.length,
     counts,
+    summary,
     latestActivityAt,
     recipients,
   };
