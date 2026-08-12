@@ -61,19 +61,24 @@ JSON is the only supported format. The nested exercise/block/item and plan/slot 
 
 - `position` for workout blocks, workout items, and plan schedule slots is derived from array order. A `position` key is rejected as an unknown key.
 
+### Created Status
+
+- Imported exercises are created `active`, matching the only status a new exercise can have.
+- Imported workouts and plans are created `draft`. An import is unreviewed content, and a draft cannot be assigned to athletes until a coach opens and activates it.
+
 ### Limits
 
 Enforced during parsing and surfaced in the format documentation:
 
-| Limit | Value |
-| --- | --- |
-| Upload size | 512 KB |
-| Exercises per file | 500 |
-| Workouts per file | 200 |
-| Plans per file | 50 |
-| Blocks per workout | 30 |
-| Items per block | 50 |
-| Schedule slots per plan | 300 |
+| Limit                   | Value  |
+| ----------------------- | ------ |
+| Upload size             | 512 KB |
+| Exercises per file      | 500    |
+| Workouts per file       | 200    |
+| Plans per file          | 50     |
+| Blocks per workout      | 30     |
+| Items per block         | 50     |
+| Schedule slots per plan | 300    |
 
 Existing per-entity Zod limits (name 2–120 chars, description ≤ 2000, rounds ≤ 100, weekly target 1–14) apply unchanged.
 
@@ -99,7 +104,10 @@ export function buildLibraryImportJsonSchema(origin: string) {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: `${origin}${LIBRARY_IMPORT_SCHEMA_PATH}`,
     title: "Training Tracker library import bundle",
-    ...z.toJSONSchema(libraryImportBundleSchema, { target: "draft-2020-12", io: "input" }),
+    ...z.toJSONSchema(libraryImportBundleSchema, {
+      target: "draft-2020-12",
+      io: "input",
+    }),
   };
 }
 ```
@@ -265,6 +273,7 @@ Three stages on one page:
    - a `<textarea>` for pasted JSON
 
    Exactly one must be provided; supplying both is a validation error. Both feed the identical validator, and the server resolves the file to text before parsing. The form posts to `previewLibraryImportAction` via `useActionState` and performs no writes.
+
 3. **Preview and commit** — summary counts, a table of planned creates and skips, and a diagnostics list grouped by severity. Commit is disabled unless `canCommit`. The validated bundle is round-tripped to the commit action in a hidden field so the user does not re-upload or re-paste.
 
 Notes:
@@ -289,30 +298,30 @@ Notes:
 
 ### 1. Format and validation
 
-- [ ] Add `format.ts` with `LIBRARY_IMPORT_FORMAT_VERSION` and limit constants.
-- [ ] Define strict Zod bundle schemas in `bundle-input.ts`, reusing `exerciseCategories`, `workoutBlockTypes`, `planScheduleTypes`, `planDaysOfWeek`, and `maxWeeklyFrequencyTarget` from the existing module schemas. Add `.meta({ title, description, examples })` to every field so the generated JSON Schema is self-documenting.
-- [ ] Allow and ignore a top-level `$schema` string key.
-- [ ] Map Zod issues to `ImportDiagnostic` with dotted JSON paths derived from `issue.path`.
-- [ ] Unit-test: syntax error, non-object root, unknown key, missing `formatVersion`, unsupported `formatVersion`, all arrays empty.
+- [x] Add `format.ts` with `LIBRARY_IMPORT_FORMAT_VERSION` and limit constants.
+- [x] Define strict Zod bundle schemas in `bundle-input.ts`, reusing `exerciseCategories`, `workoutBlockTypes`, `planScheduleTypes`, `planDaysOfWeek`, and `maxWeeklyFrequencyTarget` from the existing module schemas. Add `.meta({ title, description, examples })` to every field so the generated JSON Schema is self-documenting.
+- [x] Allow and ignore a top-level `$schema` string key.
+- [x] Map Zod issues to `ImportDiagnostic` with dotted JSON paths derived from `issue.path`.
+- [x] Unit-test: syntax error, non-object root, unknown key, missing `formatVersion`, unsupported `formatVersion`, all arrays empty.
 
 ### 1b. Published JSON Schema
 
-- [ ] Add `json-schema.ts` with `buildLibraryImportJsonSchema` using `z.toJSONSchema(..., { target: "draft-2020-12", io: "input" })`.
-- [ ] Add the public route handler at `src/app/schemas/library-import/v1.json/route.ts`, generating at request time, with correct content type, caching, and CORS headers.
-- [ ] Unit-test the generated document: expected `$id`, `$schema`, top-level `exercises`/`workouts`/`plans` properties, and the plan-slot `oneOf` discriminated shape.
-- [ ] Document the two refinements that JSON Schema cannot express.
+- [x] Add `json-schema.ts` with `buildLibraryImportJsonSchema` using `z.toJSONSchema(..., { target: "draft-2020-12", io: "input" })`.
+- [x] Add the public route handler at `src/app/schemas/library-import/v1.json/route.ts`, generating at request time, with correct content type, caching, and CORS headers.
+- [x] Unit-test the generated document: expected `$id`, `$schema`, top-level `exercises`/`workouts`/`plans` properties, and the plan-slot `oneOf` discriminated shape.
+- [x] Document the two refinements that JSON Schema cannot express.
 
 ### 2. Planning
 
-- [ ] Implement `buildImportPlan` with in-file duplicate detection, case-insensitive existing-name matching, reference resolution, conflict strategy, and dependency ordering.
-- [ ] Emit `already_exists` warnings for skipped entities and confirm warnings alone leave `canCommit` true.
-- [ ] Unit-test: in-file duplicate, existing-name skip warning, existing-name fail, unknown exercise reference, unknown workout reference, forward reference within file, plan XOR violation, limit exceeded, empty file.
+- [x] Implement `buildImportPlan` with in-file duplicate detection, case-insensitive existing-name matching, reference resolution, conflict strategy, and dependency ordering.
+- [x] Emit `already_exists` warnings for skipped entities and confirm warnings alone leave `canCommit` true.
+- [x] Unit-test: in-file duplicate, existing-name skip warning, existing-name fail, unknown exercise reference, unknown workout reference, forward reference within file, plan XOR violation, limit exceeded, empty file.
 
 ### 3. Persistence
 
-- [ ] Add `db/queries.ts` name-lookup functions and `db/unit-of-work.ts` with the batch transaction interface.
-- [ ] Implement `importLibraryBundle` in `import-service.ts`: guard, re-read names, create in dependency order, return created counts.
-- [ ] Unit-test the service with `vi.fn()` fakes: manager allowed, viewer rejected, athlete rejected, cross-tenant `organizationId` ignored, rollback on mid-import failure.
+- [x] Add `db/unit-of-work.ts` with the batch transaction interface and name lookups.
+- [x] Implement `previewLibraryImport` and `commitLibraryImport` in `import-service.ts`: guard, re-read names, create in dependency order, return created counts.
+- [x] Unit-test the service with `vi.fn()` fakes: org manager allowed, team manager allowed, viewer rejected, athlete rejected, non-member rejected, every read and write scoped to the caller's organization, rollback on mid-import failure.
 
 ### 4. Routes and actions
 
