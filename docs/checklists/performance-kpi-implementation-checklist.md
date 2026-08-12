@@ -274,36 +274,36 @@ Replace the compliance placeholder and demote roster administration counts below
 
 ### Implementation Checklist
 
-- [ ] Add 30-day, 90-day, and all-time controls.
-- [ ] Add organization completion rate with fraction.
-- [ ] Add teams needing attention with tracked-team denominator.
-- [ ] Add unique athletes needing attention.
-- [ ] Add programming coverage with fraction.
-- [ ] Move teams, athletes, roster entries, and invitation counts into a secondary operational summary.
-- [ ] Replace the compliance placeholder card with live metrics.
-- [ ] Add a team comparison table or dense list.
-- [ ] Show team completion rate and fraction.
-- [ ] Show team athletes needing attention.
-- [ ] Show team overdue count.
-- [ ] Show team started and due-today counts.
-- [ ] Show team programming coverage.
-- [ ] Sort teams needing intervention first.
-- [ ] Link each team row to its canonical team-performance dashboard with the selected window.
-- [ ] Avoid trend arrows until equivalent previous-window comparison is implemented.
+- [x] Add 30-day, 90-day, and all-time controls.
+- [x] Add organization completion rate with fraction.
+- [x] Add teams needing attention with tracked-team denominator.
+- [x] Add unique athletes needing attention.
+- [x] Add programming coverage with fraction.
+- [x] Move teams, athletes, roster entries, and invitation counts into a secondary operational summary.
+- [x] Replace the compliance placeholder card with live metrics.
+- [x] Add a team comparison table or dense list.
+- [x] Show team completion rate and fraction.
+- [x] Show team athletes needing attention.
+- [x] Show team overdue count.
+- [x] Show team started and due-today counts.
+- [x] Show team programming coverage.
+- [x] Sort teams needing intervention first.
+- [x] Link each team row to its canonical team-performance dashboard with the selected window.
+- [x] Avoid trend arrows until equivalent previous-window comparison is implemented.
 
 ### Empty and Access States
 
-- [ ] Organization with no teams shows setup guidance.
-- [ ] Organization with teams but no due work shows no due work, not 100%.
-- [ ] Organization Viewer sees read-only compliance data.
-- [ ] Athlete remains unable to access organization performance.
-- [ ] Team roles from another organization cannot influence organization metrics.
+- [x] Organization with no teams shows setup guidance.
+- [x] Organization with teams but no due work shows no due work, not 100%.
+- [x] Organization Viewer sees read-only compliance data.
+- [x] Athlete remains unable to access organization performance.
+- [x] Team roles from another organization cannot influence organization metrics.
 
 ### Acceptance Criteria
 
-- [ ] Directors can identify which teams require intervention from one screen.
-- [ ] Organization rates expose exact denominators.
-- [ ] Operational roster counts do not compete visually with compliance outcomes.
+- [x] Directors can identify which teams require intervention from one screen.
+- [x] Organization rates expose exact denominators.
+- [x] Operational roster counts do not compete visually with compliance outcomes.
 
 ## Milestone 8: KPI Definitions and Accessibility
 

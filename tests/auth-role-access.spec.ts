@@ -101,8 +101,32 @@ test.describe("Training Tracker local personas", () => {
     await expect(page).toHaveURL(/\/app\/performance\/organization$/);
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
     await expect(
+      page.getByRole("region", { name: "Organization compliance summary" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Completion rate", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Programming coverage", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("link", { name: "90 days" }).click();
+    await expect(page).toHaveURL(/\?window=90$/);
+    await expect(
+      page.getByRole("link", { name: "Basketball", exact: true }),
+    ).toHaveAttribute("href", /\/app\/performance\/teams\/.+\?window=90$/);
+    await expect(
       page.getByRole("link", { name: "Team Performance" }).first(),
     ).toBeVisible();
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(
+      page.getByText("Team compliance", { exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   });
 
   test("invalid personas remain unauthenticated", async ({ context, page }) => {

@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
+import { getOrganizationComplianceDashboard } from "@/modules/assignments/db/team-compliance-queries";
 import { listOrganizationInvitationsByOrganizationId } from "@/modules/organizations/db/queries";
 import {
   listOrganizationMembersByOrganizationId,
@@ -16,22 +19,45 @@ import {
   listTeamsByOrganizationId,
 } from "@/modules/teams/db/queries";
 
-export default async function OrganizationPerformancePage() {
+type OrganizationPerformancePageProps = {
+  searchParams: Promise<{ window?: string }>;
+};
+
+function parseWindowDays(value: string | undefined): number | null {
+  return value === "90" ? 90 : value === "all" ? null : 30;
+}
+
+function formatRate(rate: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(rate);
+}
+
+export default async function OrganizationPerformancePage({
+  searchParams,
+}: OrganizationPerformancePageProps) {
   const context = await loadActiveAppContext();
 
   if (context.membership.organizationRole === "athlete") {
     redirect("/app");
   }
 
+  const filters = await searchParams;
+  const windowDays = parseWindowDays(filters.window);
   const { organizationId, organizationName, organizationRole } =
     context.membership;
-  const [teams, organizationMembers, teamMembers, invitations] =
+  const [teams, organizationMembers, teamMembers, invitations, compliance] =
     await withDatabase((database) =>
       Promise.all([
         listTeamsByOrganizationId(database, organizationId),
         listOrganizationMembersByOrganizationId(database, organizationId),
         listTeamMembersByOrganizationId(database, organizationId),
         listOrganizationInvitationsByOrganizationId(database, organizationId),
+        getOrganizationComplianceDashboard(database, {
+          organizationId,
+          windowDays,
+        }),
       ]),
     );
   const pendingInvitationCount = invitations.filter(
@@ -40,11 +66,27 @@ export default async function OrganizationPerformancePage() {
   const athleteCount = organizationMembers.filter(
     (member) => member.organizationRole === "athlete",
   ).length;
-  const teamSummaries = teams.map((team) => ({
-    ...team,
-    memberCount: teamMembers.filter((member) => member.teamId === team.id)
-      .length,
-  }));
+  const teamsNeedingAttention = compliance.teams.filter(
+    (team) => team.summary.counts.overdue > 0,
+  ).length;
+  const sortedTeamCompliance = compliance.teams.toSorted((left, right) => {
+    const attentionDifference =
+      right.summary.athletesNeedingAttention -
+      left.summary.athletesNeedingAttention;
+    if (attentionDifference !== 0) return attentionDifference;
+
+    const overdueDifference =
+      right.summary.counts.overdue - left.summary.counts.overdue;
+    if (overdueDifference !== 0) return overdueDifference;
+
+    const rightDueNow =
+      right.summary.counts.started + right.summary.counts.dueToday;
+    const leftDueNow =
+      left.summary.counts.started + left.summary.counts.dueToday;
+    if (rightDueNow !== leftDueNow) return rightDueNow - leftDueNow;
+
+    return left.teamName.localeCompare(right.teamName);
+  });
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-7 px-5 py-8 sm:px-8 sm:py-10">
@@ -57,7 +99,7 @@ export default async function OrganizationPerformancePage() {
             {organizationName}
           </CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Organization-wide readiness, participation, and compliance overview.
+            Organization-wide workout compliance and programming coverage.
           </CardDescription>
           <p className="text-xs text-muted-foreground">
             Organization role: {organizationRole}
@@ -65,64 +107,196 @@ export default async function OrganizationPerformancePage() {
         </CardHeader>
       </Card>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="flex flex-wrap gap-2" aria-label="Compliance time window">
         {[
-          ["Teams tracked", teams.length],
-          ["Athletes", athleteCount],
-          ["Roster entries", teamMembers.length],
-          ["Pending invitations", pendingInvitationCount],
-        ].map(([label, value]) => (
-          <Card
-            key={label}
-            className="border-border/70 bg-card/95 shadow-md shadow-black/10"
-          >
-            <CardHeader className="pb-2">
-              <CardDescription>{label}</CardDescription>
-              <CardTitle className="text-3xl">{value}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
+          { value: "30", label: "30 days" },
+          { value: "90", label: "90 days" },
+          { value: "all", label: "All time" },
+        ].map((option) => {
+          const active =
+            (windowDays === null && option.value === "all") ||
+            String(windowDays) === option.value;
+          return (
+            <Button
+              key={option.value}
+              asChild
+              size="sm"
+              variant={active ? "default" : "outline"}
+            >
+              <Link href={`?window=${option.value}`}>{option.label}</Link>
+            </Button>
+          );
+        })}
+      </div>
+
+      <section
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        aria-label="Organization compliance summary"
+      >
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Completion rate</CardDescription>
+            <CardTitle className="text-3xl">
+              {compliance.summary.completionRate === null
+                ? "No due work"
+                : formatRate(compliance.summary.completionRate)}
+            </CardTitle>
+            <CardDescription>
+              {compliance.summary.counts.completed} of{" "}
+              {compliance.summary.eligibleDue} due occurrences completed
+            </CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Teams needing attention</CardDescription>
+            <CardTitle className="text-3xl">
+              {teamsNeedingAttention} of {compliance.teams.length}
+            </CardTitle>
+            <CardDescription>Teams with overdue work</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Athletes needing attention</CardDescription>
+            <CardTitle className="text-3xl">
+              {compliance.summary.athletesNeedingAttention}
+            </CardTitle>
+            <CardDescription>Unique athletes with overdue work</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
+          <CardHeader className="gap-1">
+            <CardDescription>Programming coverage</CardDescription>
+            <CardTitle className="text-3xl">
+              {compliance.summary.athleteCoverage === null
+                ? "No athletes"
+                : formatRate(compliance.summary.athleteCoverage)}
+            </CardTitle>
+            <CardDescription>
+              {compliance.summary.programmedAthletes} of{" "}
+              {compliance.summary.rosteredAthletes} organization athletes have
+              due work
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </section>
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>
-          <CardTitle className="text-2xl">Team participation</CardTitle>
+          <CardTitle className="text-2xl">Team compliance</CardTitle>
           <CardDescription>
-            Current roster coverage across the organization.
+            Teams with overdue athletes appear first. Rates use each team&apos;s
+            due occurrences in the selected window.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {teamSummaries.length > 0 ? (
-            <ul className="space-y-2.5">
-              {teamSummaries.map((team) => (
-                <li
-                  key={team.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2"
-                >
-                  <p className="text-sm font-medium">{team.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {team.memberCount} roster entries
-                  </p>
-                </li>
-              ))}
-            </ul>
+          {teams.length === 0 ? (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">No teams have been created yet.</p>
+              <p className="text-muted-foreground">
+                Create a team and add athletes before publishing team training.
+              </p>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No teams have been created yet.
-            </p>
+            <ul className="divide-y rounded-md border">
+              {sortedTeamCompliance.map((team) => {
+                const dueNow =
+                  team.summary.counts.started + team.summary.counts.dueToday;
+                return (
+                  <li
+                    key={team.teamId}
+                    className={
+                      team.summary.counts.overdue > 0
+                        ? "border-l-2 border-l-destructive px-4 py-4"
+                        : "px-4 py-4"
+                    }
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="min-w-52 space-y-1">
+                        <Link
+                          href={`/app/performance/teams/${team.teamId}?window=${windowDays ?? "all"}`}
+                          className="font-medium underline-offset-4 hover:underline"
+                        >
+                          {team.teamName}
+                        </Link>
+                        <p className="text-sm text-muted-foreground">
+                          {team.summary.athletesNeedingAttention} athletes need
+                          attention · {team.summary.counts.overdue} overdue
+                        </p>
+                      </div>
+                      <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            Completion
+                          </dt>
+                          <dd className="font-semibold">
+                            {team.summary.completionRate === null
+                              ? "No due work"
+                              : formatRate(team.summary.completionRate)}
+                            <span className="ml-1 font-normal text-muted-foreground">
+                              {team.summary.counts.completed}/
+                              {team.summary.eligibleDue}
+                            </span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            Due now
+                          </dt>
+                          <dd className="font-semibold">{dueNow}</dd>
+                          <dd className="text-xs text-muted-foreground">
+                            {team.summary.counts.started} started ·{" "}
+                            {team.summary.counts.dueToday} due today
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs text-muted-foreground">
+                            Coverage
+                          </dt>
+                          <dd className="font-semibold">
+                            {team.summary.athleteCoverage === null
+                              ? "No athletes"
+                              : formatRate(team.summary.athleteCoverage)}
+                            <span className="ml-1 font-normal text-muted-foreground">
+                              {team.summary.programmedAthletes}/
+                              {team.summary.rosteredAthletes}
+                            </span>
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
-        <CardHeader>
-          <CardTitle className="text-2xl">Compliance</CardTitle>
-          <CardDescription>
-            Workout assignment and completion metrics will appear here when the
-            workout domain is available.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <section aria-labelledby="operations-heading" className="space-y-3">
+        <div>
+          <h2 id="operations-heading" className="text-lg font-semibold">
+            Organization operations
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Current roster and invitation counts.
+          </p>
+        </div>
+        <dl className="grid gap-px overflow-hidden rounded-md border bg-border sm:grid-cols-4">
+          {[
+            ["Teams", teams.length],
+            ["Athletes", athleteCount],
+            ["Roster entries", teamMembers.length],
+            ["Pending invitations", pendingInvitationCount],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-card px-4 py-3">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-1 text-lg font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </main>
   );
 }
