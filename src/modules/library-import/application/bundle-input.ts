@@ -42,7 +42,8 @@ export const importExerciseSchema = z
     videoUrl: z
       .union([z.url({ protocol: /^https?$/ }).max(500), z.literal("")])
       .nullish()
-      .transform((value) => value || null),
+      .transform((value) => value || null)
+      .meta({ description: "Must be an http or https URL." }),
   })
   .strict()
   .meta({ id: "ImportExercise", title: "Exercise" });
@@ -142,13 +143,9 @@ export const importPlanSchema = z
 
 export const libraryImportBundleSchema = z
   .object({
-    $schema: z
-      .string()
-      .max(500)
-      .optional()
-      .meta({
-        description: "Ignored. Present so editors can validate the file.",
-      }),
+    $schema: z.string().max(500).optional().meta({
+      description: "Ignored. Present so editors can validate the file.",
+    }),
     formatVersion: z.literal(libraryImportFormatVersion),
     exercises: z
       .array(importExerciseSchema)
