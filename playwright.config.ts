@@ -10,6 +10,8 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
+  globalSetup: "./scripts/playwright-global-setup.mjs",
+  globalTeardown: "./scripts/playwright-global-teardown.mjs",
   reporter: [["list"], ["html", { open: "never" }]],
   webServer: configuredBaseURL
     ? undefined
