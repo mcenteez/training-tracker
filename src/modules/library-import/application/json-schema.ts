@@ -17,6 +17,6 @@ export function buildLibraryImportJsonSchema(
     $id: `${origin}${libraryImportSchemaPath}`,
     title: "Training Tracker library import bundle",
     description:
-      "Bulk import format for exercises, workouts, and plans. Workout items reference an exercise by name and plan slots reference a workout by name; each name must be defined earlier in the same file or already exist in the organization's library. Two rules cannot be expressed in JSON Schema and are enforced on import: every workout item needs at least one of reps, load, durationSeconds, distanceMeters, restSeconds, tempo, or notes; and the bundle must contain at least one exercise, workout, or plan.",
+      "Bulk import format for exercises, workouts, and plans. Workout items reference an exercise by name and plan slots reference a workout by name; each name must be defined in the same file or already exist in the organization's library. Two rules cannot be expressed in JSON Schema and are enforced on import: every workout item needs at least one of reps, load, durationSeconds, distanceMeters, restSeconds, tempo, or notes; and the bundle must contain at least one exercise, workout, or plan.",
   };
 }

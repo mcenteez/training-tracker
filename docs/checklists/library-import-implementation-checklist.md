@@ -33,7 +33,7 @@ JSON is the only supported format. The nested exercise/block/item and plan/slot 
 ### Reference Model
 
 - The file never contains UUIDs. Workout items reference an exercise **by name**; plan slots reference a workout **by name**.
-- References resolve first against entities defined earlier in the same file, then against existing organization records.
+- References resolve against every entity in the file and against existing organization records. Order within the file does not matter, because exercises are always created before workouts and workouts before plans.
 - Name matching is case-insensitive and trim-normalized, mirroring the database's `lower(name)` partial unique indexes.
 - Exercises resolve against `status = 'active'`. Workouts resolve against `status <> 'archived'`.
 - An unresolved reference is a validation error, never a silent create.

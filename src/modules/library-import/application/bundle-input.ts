@@ -52,7 +52,7 @@ export const importWorkoutItemSchema = z
   .object({
     exercise: entityName.meta({
       description:
-        "Name of an exercise defined earlier in this file or already in the library.",
+        "Name of an exercise defined in this file or already in the library.",
     }),
     reps: optionalCount(10_000),
     load: optionalText(80),
@@ -106,7 +106,7 @@ export const importPlanScheduleSlotSchema = z
         scheduleType: z.literal("fixed_day"),
         workout: entityName.meta({
           description:
-            "Name of a workout defined earlier in this file or already in the library.",
+            "Name of a workout defined in this file or already in the library.",
         }),
         dayOfWeek: z.enum(planDaysOfWeek),
         label: optionalText(120),
@@ -117,7 +117,7 @@ export const importPlanScheduleSlotSchema = z
         scheduleType: z.literal("weekly_frequency"),
         workout: entityName.meta({
           description:
-            "Name of a workout defined earlier in this file or already in the library.",
+            "Name of a workout defined in this file or already in the library.",
         }),
         targetSessionsPerWeek: z
           .number()
