@@ -339,15 +339,50 @@ Users must be able to understand and trust every metric without relying on insti
 
 ### Browser / E2E
 
-- [ ] Team KPI strip renders correct rates and counts for seeded scenarios.
-- [ ] Assignment rows prioritize overdue work.
-- [ ] Window controls update every KPI consistently.
-- [ ] Assignment drill-down reconciles with row totals.
-- [ ] Organization KPI strip renders correct aggregate rates.
-- [ ] Organization team comparison links to scoped team dashboards.
-- [ ] Organization Viewer remains read-only.
-- [ ] Athlete cannot access staff or organization KPI routes.
-- [ ] Foreign-team and foreign-organization routes fail safely.
+#### Team Dashboard
+
+- [ ] Team Manager sees completion rate with completed/eligible fraction.
+- [ ] Team Manager sees unique athletes needing attention, overdue work, and due-now detail.
+- [ ] Team KPI strip uses `Due today`, `Started`, `Completed`, `Overdue`, and `Upcoming` terminology.
+- [ ] Upcoming-only work displays `No due work` rather than `100%` completion.
+- [ ] Upcoming occurrences do not change the displayed completion-rate denominator.
+- [ ] 30-day, 90-day, and all-time controls update every team KPI consistently.
+- [ ] Selected time window remains in assignment and back-navigation URLs.
+- [ ] Assignment rows display completion rate, fraction, attention count, due-now detail, and upcoming context.
+- [ ] Assignment rows with overdue work sort ahead of due-now and upcoming-only assignments.
+- [ ] Assignment rows without overdue work do not show warning treatment.
+- [ ] Team with no published assignments displays the compliance empty state.
+
+#### Assignment and Athlete Drill-Down
+
+- [ ] Assignment drill-down totals reconcile with the selected assignment row.
+- [ ] Athlete rows display completion fraction and overdue count.
+- [ ] Athletes with overdue work sort ahead of started, due-today, compliant, and upcoming-only athletes.
+- [ ] Occurrence timeline uses the same terminology and status counts as the parent summaries.
+- [ ] Submitted occurrence exposes the existing result-review link.
+- [ ] Team Viewer can inspect KPI and result detail but cannot mutate comments or assignments.
+- [ ] Athlete cannot access another athlete's assignment, occurrence, or staff-review routes.
+
+#### Organization Dashboard
+
+- [ ] Organization KPI strip renders completion rate with the aggregate completed/eligible fraction.
+- [ ] Organization KPI strip renders teams needing attention with tracked-team denominator.
+- [ ] Organization KPI strip renders unique athletes needing attention and programming coverage.
+- [ ] Organization total is weighted from raw occurrence counts rather than averaging team percentages.
+- [ ] Organization with teams but no eligible due work displays `No due work`.
+- [ ] Organization with no teams displays setup guidance.
+- [ ] Team comparison rows display completion fraction, attention athletes, overdue work, due-now detail, and coverage.
+- [ ] Teams needing attention sort ahead of teams without overdue work.
+- [ ] Team comparison links to the scoped team dashboard and preserves the selected time window.
+- [ ] Operational roster and invitation counts remain visually secondary to compliance KPIs.
+
+#### Access and Isolation
+
+- [ ] Organization Viewer sees organization and team KPI surfaces in read-only mode.
+- [ ] Athlete cannot access team-staff or organization KPI routes.
+- [ ] Removed Team Manager loses KPI access on the next sensitive request.
+- [ ] Foreign-team and foreign-organization KPI routes fail safely without exposing names or counts.
+- [ ] Organization rollups exclude foreign-organization assignments and sessions.
 
 ### Visual Verification
 
