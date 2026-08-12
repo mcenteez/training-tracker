@@ -26,6 +26,16 @@ function changeLabel(timeliness: TeamTimelinessDashboard): string {
   return `${prefix}${change.toFixed(0)} points · ${comparison.direction}`;
 }
 
+function comparisonAriaLabel(timeliness: TeamTimelinessDashboard): string {
+  const current = timeliness.current;
+  const currentFraction = `${current.counts.onTimeCompleted} of ${current.timelinessEligible}`;
+  if (timeliness.previous === null) {
+    return `Current on-time completion ${currentFraction}. All-time has no previous comparison.`;
+  }
+  const previous = `${timeliness.previous.counts.onTimeCompleted} of ${timeliness.previous.timelinessEligible}`;
+  return `Current on-time completion ${currentFraction}. Previous on-time completion ${previous}. ${changeLabel(timeliness)}.`;
+}
+
 export function TimelinessSummary({
   timeliness,
   label,
@@ -63,7 +73,10 @@ export function TimelinessSummary({
           <dt className="text-sm text-muted-foreground">
             Equivalent-window change
           </dt>
-          <dd className="font-heading text-2xl font-medium">
+          <dd
+            className="font-heading text-2xl font-medium"
+            aria-label={comparisonAriaLabel(timeliness)}
+          >
             {changeLabel(timeliness)}
           </dd>
           <dd className="text-sm text-muted-foreground">

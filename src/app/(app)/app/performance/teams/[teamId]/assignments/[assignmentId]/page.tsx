@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ComplianceDefinitions } from "@/components/compliance-definitions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,8 +40,11 @@ function statusLabel(status: string): string {
 
 function formatDateTime(value: Date, timezone: string): string {
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
     timeZone: timezone,
     timeZoneName: "short",
   }).format(value);
@@ -307,6 +311,10 @@ export default async function TeamAssignmentPerformancePage({
           );
         })
       )}
+
+      <ComplianceDefinitions
+        windowLabel={windowDays === null ? "all-time" : `${windowDays}-day`}
+      />
     </main>
   );
 }

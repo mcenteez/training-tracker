@@ -118,6 +118,14 @@ test.describe("Training Tracker local personas", () => {
         /submission confirms logging, not verified training quality/i,
       ),
     ).toBeVisible();
+    await expect(
+      page.getByText(
+        /first completed submission occurred before the due instant/i,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/all-time has no equivalent previous window/i),
+    ).toBeVisible();
     await page.getByRole("link", { name: "90 days" }).click();
     await expect(page).toHaveURL(/\?window=90$/);
     await expect(

@@ -71,6 +71,11 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByRole("heading", { name: "Metric definitions" }),
     ).toBeVisible();
+    await expect(
+      page.getByText(
+        /first completed submission occurred before the due instant/i,
+      ),
+    ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("team-dashboard-desktop.png"),
       fullPage: true,
@@ -240,6 +245,16 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.getByRole("button", { name: "Save Progress" }).click();
     await expect(page.getByText("Progress saved.")).toBeVisible();
     await expect(page.getByText("Status: Completed")).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath("athlete-occurrence-mobile.png"),
+      fullPage: true,
+    });
 
     await usePersona(context, "manager");
     await page.goto(`/app/performance/teams/${basketballTeamId}`);
@@ -251,6 +266,15 @@ test.describe("Training Tracker assignment and performance access", () => {
       .filter({ has: page.getByRole("link", { name: "Review" }) });
     await expect(athleteResult).toBeVisible();
     await expect(athleteResult).toContainText("Completed");
+    await expect(
+      page
+        .getByRole("region", { name: "Assignment timeliness summary" })
+        .getByText("On-time completion", { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("assignment-timeliness-mobile.png"),
+      fullPage: true,
+    });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

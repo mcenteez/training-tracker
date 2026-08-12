@@ -460,33 +460,33 @@ Add concise comparisons to existing dashboards without replacing actionable Phas
 
 ### In-Product Definitions
 
-- [ ] Define due instant in assignment-local language.
-- [ ] Define on-time completion and boundary equality.
-- [ ] Define late completion and open overdue separately.
-- [ ] Explain the seven-day late-entry window.
-- [ ] Explain that completed means submitted logging, not verified training quality.
-- [ ] Explain equivalent previous windows and percentage-point change.
-- [ ] Explain why all-time has no trend.
-- [ ] Explain `No due work` and `Insufficient history` separately.
+- [x] Define due instant in assignment-local language.
+- [x] Define on-time completion and boundary equality.
+- [x] Define late completion and open overdue separately.
+- [x] Explain the seven-day late-entry window.
+- [x] Explain that completed means submitted logging, not verified training quality.
+- [x] Explain equivalent previous windows and percentage-point change.
+- [x] Explain why all-time has no trend.
+- [x] Explain `No due work` and `Insufficient history` separately.
 
 ### Accessibility and Visual Checks
 
-- [ ] Use semantic `dl` elements for metric label, value, and denominator.
-- [ ] Use scoped table headers for comparison and occurrence tables.
-- [ ] Include direction text or icons in addition to color.
-- [ ] Ensure filters and drill-down links work by keyboard.
-- [ ] Ensure screen readers announce current fraction, previous fraction, and change together.
-- [ ] Ensure due times include timezone context.
-- [ ] Verify long athlete and assignment names at mobile widths.
-- [ ] Verify fractions, lateness durations, and trend labels do not overlap or truncate.
-- [ ] Verify tables use contained horizontal scrolling without document overflow.
-- [ ] Capture desktop and mobile screenshots for team, organization, assignment, and athlete surfaces.
+- [x] Use semantic `dl` elements for metric label, value, and denominator.
+- [x] Use scoped table headers for comparison and occurrence tables.
+- [x] Include direction text or icons in addition to color.
+- [x] Ensure filters and drill-down links work by keyboard.
+- [x] Ensure screen readers announce current fraction, previous fraction, and change together.
+- [x] Ensure due times include timezone context.
+- [x] Verify long athlete and assignment names at mobile widths.
+- [x] Verify fractions, lateness durations, and trend labels do not overlap or truncate.
+- [x] Verify tables use contained horizontal scrolling without document overflow.
+- [x] Capture desktop and mobile screenshots for team, organization, assignment, and athlete surfaces.
 
 ### Acceptance Criteria
 
-- [ ] A new coach can explain every timeliness metric from the interface.
-- [ ] Trend meaning is consistent at assignment, athlete, team, and organization levels.
-- [ ] Keyboard, focus, screen-reader semantics, contrast, and responsive checks pass.
+- [x] A new coach can explain every timeliness metric from the interface.
+- [x] Trend meaning is consistent at assignment, athlete, team, and organization levels.
+- [x] Keyboard, focus, screen-reader semantics, contrast, and responsive checks pass.
 
 ## Milestone 11: Final Verification and Rollout
 

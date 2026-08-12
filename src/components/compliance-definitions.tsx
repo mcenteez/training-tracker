@@ -46,10 +46,41 @@ export function ComplianceDefinitions({
             </dd>
           </div>
         ) : null}
+        <div>
+          <dt className="font-medium">Due instant</dt>
+          <dd className="text-muted-foreground">
+            End of the scheduled local day for fixed work, or end of Sunday for
+            a weekly target, resolved in the assignment timezone.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium">On-time completion</dt>
+          <dd className="text-muted-foreground">
+            The first completed submission occurred before the due instant. A
+            submission exactly at the deadline is late.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium">Late and open overdue</dt>
+          <dd className="text-muted-foreground">
+            Completed late has a submission after the deadline. Open overdue has
+            no completed submission. Late logging remains available for seven
+            assignment-local calendar days.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium">Equivalent-window change</dt>
+          <dd className="text-muted-foreground">
+            The {windowLabel} rate minus the immediately preceding,
+            non-overlapping window, shown in percentage points. All-time has no
+            equivalent previous window.
+          </dd>
+        </div>
       </dl>
       <p className="text-xs text-muted-foreground">
         No due work means the percentage is unavailable for this window, not
-        100%.
+        100%. Insufficient history means one of the compared windows has no
+        policy-eligible due work.
       </p>
     </section>
   );
