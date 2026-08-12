@@ -23,9 +23,10 @@ import {
   assignmentSessions,
   assignmentWorkoutSnapshots,
 } from "@/modules/assignments/db/schema";
+import { organizationMemberships } from "@/modules/organizations/db/schema";
 import { plans } from "@/modules/plans/db/schema";
 import { users } from "@/modules/users/db/schema";
-import { teamMemberships } from "@/modules/teams/db/schema";
+import { teamMemberships, teams } from "@/modules/teams/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
 
 interface TeamComplianceData {
@@ -39,6 +40,17 @@ export interface TeamComplianceDashboard {
   assignments: TeamAssignmentCompliance[];
   summary: ComplianceSummary;
   rosteredAthleteIds: string[];
+}
+
+export interface OrganizationTeamComplianceSummary {
+  teamId: string;
+  teamName: string;
+  summary: ComplianceSummary;
+}
+
+export interface OrganizationComplianceDashboard {
+  summary: ComplianceSummary;
+  teams: OrganizationTeamComplianceSummary[];
 }
 
 function buildAssignments(
@@ -344,6 +356,291 @@ export async function getTeamComplianceDashboard(
       rosteredAthleteIds,
     }),
     rosteredAthleteIds,
+  };
+}
+
+export async function getOrganizationComplianceDashboard(
+  database: Database,
+  input: {
+    organizationId: string;
+    windowDays?: number | null;
+    now?: Date;
+  },
+): Promise<OrganizationComplianceDashboard> {
+  const [assignmentRows, teamRows, scopeRows, rosterRows, teamRosterRows] =
+    await Promise.all([
+      database
+        .select({
+          id: assignments.id,
+          sourcePlanId: assignments.sourcePlanId,
+          timezone: assignments.timezone,
+          status: assignments.status,
+          startDate: assignments.startDate,
+          endDate: assignments.endDate,
+          scheduledDate: assignments.scheduledDate,
+          publishedAt: assignments.publishedAt,
+          canceledAt: assignments.canceledAt,
+          planName: plans.name,
+          workoutName: workouts.name,
+        })
+        .from(assignments)
+        .leftJoin(
+          plans,
+          and(
+            eq(plans.organizationId, assignments.organizationId),
+            eq(plans.id, assignments.sourcePlanId),
+          ),
+        )
+        .leftJoin(
+          workouts,
+          and(
+            eq(workouts.organizationId, assignments.organizationId),
+            eq(workouts.id, assignments.sourceWorkoutId),
+          ),
+        )
+        .where(
+          and(
+            eq(assignments.organizationId, input.organizationId),
+            ne(assignments.status, "draft"),
+          ),
+        )
+        .orderBy(asc(assignments.publishedAt), asc(assignments.id)),
+      database
+        .select({ id: teams.id, name: teams.name })
+        .from(teams)
+        .where(eq(teams.organizationId, input.organizationId))
+        .orderBy(asc(teams.name)),
+      database
+        .select({
+          assignmentId: assignmentRecipientTeamScopes.assignmentId,
+          recipientId: assignmentRecipientTeamScopes.recipientId,
+          teamId: assignmentRecipientTeamScopes.teamId,
+        })
+        .from(assignmentRecipientTeamScopes)
+        .where(
+          eq(
+            assignmentRecipientTeamScopes.organizationId,
+            input.organizationId,
+          ),
+        ),
+      database
+        .select({ athleteUserId: organizationMemberships.userId })
+        .from(organizationMemberships)
+        .where(
+          and(
+            eq(organizationMemberships.organizationId, input.organizationId),
+            eq(organizationMemberships.role, "athlete"),
+          ),
+        ),
+      database
+        .select({
+          teamId: teamMemberships.teamId,
+          athleteUserId: teamMemberships.userId,
+        })
+        .from(teamMemberships)
+        .where(
+          and(
+            eq(teamMemberships.organizationId, input.organizationId),
+            eq(teamMemberships.role, "athlete"),
+          ),
+        ),
+    ]);
+  const complianceAssignments =
+    assignmentRows.map<TeamComplianceAssignmentInput>((assignment) => ({
+      id: assignment.id,
+      sourceName:
+        assignment.planName ?? assignment.workoutName ?? "Archived training",
+      sourceType: assignment.sourcePlanId ? "plan" : "workout",
+      timezone: assignment.timezone,
+      status: assignment.status as "published" | "canceled",
+      startDate: assignment.startDate,
+      endDate: assignment.endDate,
+      scheduledDate: assignment.scheduledDate,
+      publishedAt: assignment.publishedAt,
+      canceledAt: assignment.canceledAt,
+    }));
+  const assignmentIds = complianceAssignments.map(
+    (assignment) => assignment.id,
+  );
+
+  if (assignmentIds.length === 0) {
+    return {
+      summary: buildComplianceSummary({
+        athletes: [],
+        rosteredAthleteIds: rosterRows.map((row) => row.athleteUserId),
+      }),
+      teams: teamRows.map((team) => ({
+        teamId: team.id,
+        teamName: team.name,
+        summary: buildComplianceSummary({
+          athletes: [],
+          rosteredAthleteIds: teamRosterRows
+            .filter((row) => row.teamId === team.id)
+            .map((row) => row.athleteUserId),
+        }),
+      })),
+    };
+  }
+
+  const recipients = await database
+    .select({
+      id: assignmentRecipients.id,
+      assignmentId: assignmentRecipients.assignmentId,
+      athleteUserId: assignmentRecipients.athleteUserId,
+      fullName: users.fullName,
+      email: users.email,
+    })
+    .from(assignmentRecipients)
+    .innerJoin(users, eq(users.id, assignmentRecipients.athleteUserId))
+    .where(
+      and(
+        eq(assignmentRecipients.organizationId, input.organizationId),
+        inArray(assignmentRecipients.assignmentId, assignmentIds),
+      ),
+    )
+    .orderBy(asc(users.email));
+  const recipientIds = recipients.map((recipient) => recipient.id);
+  const [sessions, slots] = await Promise.all([
+    recipientIds.length === 0
+      ? Promise.resolve([])
+      : database
+          .select({
+            id: assignmentSessions.id,
+            assignmentId: assignmentSessions.assignmentId,
+            recipientId: assignmentSessions.recipientId,
+            workoutSnapshotId: assignmentSessions.workoutSnapshotId,
+            workoutName: assignmentWorkoutSnapshots.name,
+            planSlotSnapshotId: assignmentSessions.planSlotSnapshotId,
+            scheduledDate: assignmentSessions.scheduledDate,
+            status: assignmentSessions.status,
+            startedAt: assignmentSessions.startedAt,
+            submittedAt: assignmentSessions.submittedAt,
+            updatedAt: assignmentSessions.updatedAt,
+          })
+          .from(assignmentSessions)
+          .innerJoin(
+            assignmentWorkoutSnapshots,
+            and(
+              eq(
+                assignmentWorkoutSnapshots.organizationId,
+                assignmentSessions.organizationId,
+              ),
+              eq(
+                assignmentWorkoutSnapshots.assignmentId,
+                assignmentSessions.assignmentId,
+              ),
+              eq(
+                assignmentWorkoutSnapshots.id,
+                assignmentSessions.workoutSnapshotId,
+              ),
+            ),
+          )
+          .where(
+            and(
+              eq(assignmentSessions.organizationId, input.organizationId),
+              inArray(assignmentSessions.recipientId, recipientIds),
+            ),
+          ),
+    database
+      .select({
+        id: assignmentPlanSlotSnapshots.id,
+        assignmentId: assignmentPlanSlotSnapshots.assignmentId,
+        workoutSnapshotId: assignmentPlanSlotSnapshots.workoutSnapshotId,
+        workoutName: assignmentWorkoutSnapshots.name,
+        scheduleType: assignmentPlanSlotSnapshots.scheduleType,
+        dayOfWeek: assignmentPlanSlotSnapshots.dayOfWeek,
+        targetSessionsPerWeek:
+          assignmentPlanSlotSnapshots.targetSessionsPerWeek,
+        label: assignmentPlanSlotSnapshots.label,
+      })
+      .from(assignmentPlanSlotSnapshots)
+      .innerJoin(
+        assignmentWorkoutSnapshots,
+        and(
+          eq(
+            assignmentWorkoutSnapshots.organizationId,
+            assignmentPlanSlotSnapshots.organizationId,
+          ),
+          eq(
+            assignmentWorkoutSnapshots.assignmentId,
+            assignmentPlanSlotSnapshots.assignmentId,
+          ),
+          eq(
+            assignmentWorkoutSnapshots.id,
+            assignmentPlanSlotSnapshots.workoutSnapshotId,
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(assignmentPlanSlotSnapshots.organizationId, input.organizationId),
+          inArray(assignmentPlanSlotSnapshots.assignmentId, assignmentIds),
+        ),
+      ),
+  ]);
+  const data = {
+    assignments: complianceAssignments,
+    recipients,
+    sessions,
+    slots,
+  };
+  const now = input.now ?? new Date();
+  const organizationAssignments = buildAssignments(data, {
+    now,
+    windowDays: input.windowDays,
+  });
+  const summarize = (
+    assignmentsToSummarize: TeamAssignmentCompliance[],
+    rosteredAthleteIds: string[],
+  ) =>
+    buildComplianceSummary({
+      athletes: assignmentsToSummarize.flatMap((assignment) =>
+        assignment.recipients.map((recipient) => ({
+          athleteUserId: recipient.athleteUserId,
+          counts: recipient.summary.counts,
+          overdueDates: recipient.occurrences
+            .filter((occurrence) => occurrence.status === "missed")
+            .map((occurrence) => occurrence.scheduledDate),
+        })),
+      ),
+      rosteredAthleteIds,
+    });
+
+  return {
+    summary: summarize(
+      organizationAssignments,
+      rosterRows.map((row) => row.athleteUserId),
+    ),
+    teams: teamRows.map((team) => {
+      const teamRecipientIds = new Set(
+        scopeRows
+          .filter((scope) => scope.teamId === team.id)
+          .map((scope) => scope.recipientId),
+      );
+      const teamAssignments = buildAssignments(
+        {
+          ...data,
+          recipients: recipients.filter((recipient) =>
+            teamRecipientIds.has(recipient.id),
+          ),
+          sessions: sessions.filter((session) =>
+            teamRecipientIds.has(session.recipientId),
+          ),
+        },
+        { now, windowDays: input.windowDays },
+      );
+
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        summary: summarize(
+          teamAssignments,
+          teamRosterRows
+            .filter((row) => row.teamId === team.id)
+            .map((row) => row.athleteUserId),
+        ),
+      };
+    }),
   };
 }
 

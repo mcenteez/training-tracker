@@ -234,35 +234,37 @@ Explain every aggregate through athlete-level and occurrence-level detail.
 
 Provide directors with organization-level rollups and team comparison using the same metric definitions as team views.
 
+Direct-athlete assignments contribute to organization totals and programming coverage, but not to a team comparison row unless the persisted publish-time recipient scope identifies a team.
+
 ### Implementation Checklist
 
-- [ ] Add an organization compliance query scoped by active organization.
-- [ ] Return organization-wide occurrence counts and summary rates.
-- [ ] Return unique athletes needing attention across all teams.
-- [ ] Deduplicate athletes assigned through multiple teams.
-- [ ] Return programming-coverage numerator and organization-athlete denominator.
-- [ ] Return one comparison summary per team.
-- [ ] Include team IDs and names for canonical team-performance links.
-- [ ] Preserve publish-time team provenance.
-- [ ] Exclude inaccessible foreign-organization data.
-- [ ] Avoid summing team rates; calculate organization rate from organization numerator and denominator.
-- [ ] Define how direct-athlete assignments without a team scope appear at organization level.
+- [x] Add an organization compliance query scoped by active organization.
+- [x] Return organization-wide occurrence counts and summary rates.
+- [x] Return unique athletes needing attention across all teams.
+- [x] Deduplicate athletes assigned through multiple teams.
+- [x] Return programming-coverage numerator and organization-athlete denominator.
+- [x] Return one comparison summary per team.
+- [x] Include team IDs and names for canonical team-performance links.
+- [x] Preserve publish-time team provenance.
+- [x] Exclude inaccessible foreign-organization data.
+- [x] Avoid summing team rates; calculate organization rate from organization numerator and denominator.
+- [x] Define how direct-athlete assignments without a team scope appear at organization level.
 
 ### Integration Tests
 
-- [ ] Organization totals use raw occurrence numerators and denominators rather than averaging team percentages.
-- [ ] Multi-team athletes are deduplicated in athlete attention and coverage counts.
-- [ ] Team comparison totals reconcile with organization totals where scopes overlap.
-- [ ] Direct-athlete assignments are handled according to the documented rule.
-- [ ] Foreign-organization assignments and sessions are excluded.
-- [ ] Window filtering matches team behavior.
-- [ ] Zero-due-work organizations return unavailable rates.
+- [x] Organization totals use raw occurrence numerators and denominators rather than averaging team percentages.
+- [x] Multi-team athletes are deduplicated in athlete attention and coverage counts.
+- [x] Team comparison totals reconcile with organization totals where scopes overlap.
+- [x] Direct-athlete assignments are handled according to the documented rule.
+- [x] Foreign-organization assignments and sessions are excluded.
+- [x] Window filtering matches team behavior.
+- [x] Zero-due-work organizations return unavailable rates.
 
 ### Acceptance Criteria
 
-- [ ] Organization metrics are mathematically consistent with team metrics.
-- [ ] Directors can compare teams without size bias.
-- [ ] Tenant isolation is enforced in every organization aggregate.
+- [x] Organization metrics are mathematically consistent with team metrics.
+- [x] Directors can compare teams without size bias.
+- [x] Tenant isolation is enforced in every organization aggregate.
 
 ## Milestone 7: Organization Dashboard
 
