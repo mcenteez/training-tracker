@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const configuredBaseURL = process.env.PLAYWRIGHT_BASE_URL;
-const baseURL = configuredBaseURL ?? "http://localhost:3100";
+const baseURL = configuredBaseURL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests",
@@ -14,9 +14,9 @@ export default defineConfig({
   webServer: configuredBaseURL
     ? undefined
     : {
-        command: "node scripts/run-local-dev.mjs --port 3100",
+        command: "node scripts/run-local-dev.mjs --port 3000",
         url: `${baseURL}/dev/auth`,
-        reuseExistingServer: false,
+        reuseExistingServer: true,
         timeout: 120_000,
       },
   use: {

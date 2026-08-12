@@ -2,7 +2,7 @@ import { expect, test, type BrowserContext } from "@playwright/test";
 
 type LocalPersona = "owner" | "manager" | "athlete" | "viewer";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3100";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
 async function usePersona(
   context: BrowserContext,
@@ -60,6 +60,21 @@ test.describe("Training Tracker local personas", () => {
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
   });
 
+  test("team manager can access team operations and manage their team", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "manager");
+    await page.goto("/app/teams");
+
+    await expect(page).toHaveURL(/\/app\/teams$/);
+    await expect(
+      page.getByRole("main").getByText("Team Management", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Manage team" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "View performance" })).toBeVisible();
+  });
+
   test("athlete sees the athlete dashboard and cannot open Admin", async ({
     context,
     page,
@@ -76,6 +91,17 @@ test.describe("Training Tracker local personas", () => {
 
     await page.goto("/app/admin");
     await expect(page).toHaveURL(/\/app\/athlete$/);
+
+    await page.goto("/app/teams");
+    await expect(page).toHaveURL(/\/app\/athlete$/);
+  });
+
+  test("viewer cannot access team operations", async ({ context, page }) => {
+    await usePersona(context, "viewer");
+    await page.goto("/app/teams");
+
+    await expect(page).toHaveURL(/\/app\/performance\/organization$/);
+    await expect(page.getByText("Team Management", { exact: true })).toHaveCount(0);
   });
 
   test("viewer has read-only organization access", async ({
