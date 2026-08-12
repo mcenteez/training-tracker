@@ -7,30 +7,30 @@ function bundle(suffix: string) {
     formatVersion: 1,
     exercises: [
       {
-        name: `Imported Squat ${suffix}`,
+        name: `Playwright Import Squat ${suffix}`,
         category: "strength",
         instructions: "Brace and drive through midfoot.",
       },
     ],
     workouts: [
       {
-        name: `Imported Lower Body ${suffix}`,
+        name: `Playwright Import Lower Body ${suffix}`,
         blocks: [
           {
             type: "straight",
             rounds: 1,
-            items: [{ exercise: `Imported Squat ${suffix}`, reps: 5 }],
+            items: [{ exercise: `Playwright Import Squat ${suffix}`, reps: 5 }],
           },
         ],
       },
     ],
     plans: [
       {
-        name: `Imported Base ${suffix}`,
+        name: `Playwright Import Base ${suffix}`,
         scheduleSlots: [
           {
             scheduleType: "fixed_day",
-            workout: `Imported Lower Body ${suffix}`,
+            workout: `Playwright Import Lower Body ${suffix}`,
             dayOfWeek: "monday",
           },
         ],
@@ -55,7 +55,9 @@ test.describe("Training Tracker library import", () => {
 
     const results = page.locator('section[aria-label="Import results"]');
     await expect(results).toBeVisible();
-    await expect(results.getByText(`Imported Squat ${suffix}`)).toBeVisible();
+    await expect(
+      results.getByText(`Playwright Import Squat ${suffix}`),
+    ).toBeVisible();
     await expect(results.getByText("Will be created").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Import into my library" }).click();
@@ -65,12 +67,12 @@ test.describe("Training Tracker library import", () => {
     ).toBeVisible();
 
     await page.goto(
-      `/app/library/exercises?search=${encodeURIComponent(`Imported Squat ${suffix}`)}`,
+      `/app/library/exercises?search=${encodeURIComponent(`Playwright Import Squat ${suffix}`)}`,
     );
     await expect(
       page
         .locator('section[aria-label="Exercises"] > div')
-        .filter({ hasText: `Imported Squat ${suffix}` }),
+        .filter({ hasText: `Playwright Import Squat ${suffix}` }),
     ).toBeVisible();
   });
 
@@ -88,13 +90,16 @@ test.describe("Training Tracker library import", () => {
         formatVersion: 1,
         workouts: [
           {
-            name: `Broken Workout ${suffix}`,
+            name: `Playwright Import Broken Workout ${suffix}`,
             blocks: [
               {
                 type: "straight",
                 rounds: 1,
                 items: [
-                  { exercise: `Nonexistent Movement ${suffix}`, reps: 5 },
+                  {
+                    exercise: `Playwright Nonexistent Movement ${suffix}`,
+                    reps: 5,
+                  },
                 ],
               },
             ],
@@ -144,7 +149,9 @@ test.describe("Training Tracker library import", () => {
     await page.getByRole("button", { name: "Check this import" }).click();
 
     const results = page.locator('section[aria-label="Import results"]');
-    await expect(results.getByText(`Imported Squat ${suffix}`)).toBeVisible();
+    await expect(
+      results.getByText(`Playwright Import Squat ${suffix}`),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Import into my library" }),
     ).toBeVisible();
