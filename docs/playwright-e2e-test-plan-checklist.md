@@ -42,16 +42,16 @@ The test strategy should exercise the same server-side authorization and data bo
 - [x] Slice C: Team management and membership — implemented
   - Verified in [tests/team-management.spec.ts](../tests/team-management.spec.ts)
   - Covers managed-team portfolio scoping, settings updates, roster add/role/remove, organization-admin denial, and unmanaged-team denial.
-- [ ] Slice D: Assignment publication and snapshot integrity — not started
-- [ ] Slice E: Athlete result logging and review — not started
-- [ ] Slice F: Team performance and compliance review — not started
+- [x] Slice D: Assignment publication and snapshot integrity — happy path implemented
+- [x] Slice E: Athlete result logging and review — happy path implemented
+- [x] Slice F: Team performance and compliance review — access and review coverage implemented
 - [ ] Slice G: Tenant isolation and regression coverage — not started
 
 ### Missing or Incomplete
 
-- [ ] Assignment publication and assignment-snapshot verification
-- [ ] Athlete result logging and edit flow coverage
-- [ ] Team compliance and staff review flows
+- [x] Assignment publication and assignment-snapshot verification
+- [x] Athlete result logging and in-progress edit flow coverage
+- [x] Team compliance and staff review flows
 - [ ] Cross-organization and cross-team security regression tests
 - [ ] Shared Playwright helpers for persona-driven flows
 - [ ] A reusable test data factory for assignment and result scenarios
@@ -171,12 +171,12 @@ The test strategy should exercise the same server-side authorization and data bo
 ### Implementation Checklist
 
 - [x] Add test for creating a valid exercise with required metadata.
-- [ ] Add test for editing an existing exercise.
-- [ ] Add test for archiving and restoring an exercise.
-- [ ] Add test for creating a workout with multiple blocks.
-- [ ] Add test for saving a workout as a draft.
-- [ ] Add test for rejecting activation of an invalid draft.
-- [ ] Add test for successfully activating a valid workout.
+- [x] Add test for editing an existing exercise.
+- [x] Add test for archiving and restoring an exercise.
+- [x] Add test for creating a workout with multiple blocks.
+- [x] Add test for saving a workout as a draft.
+- [x] Add test for rejecting activation of an invalid draft.
+- [x] Add test for successfully activating a valid workout.
 - [ ] Add test for duplicating a workout into a new draft.
 - [ ] Add test for organization-scoped library separation.
 
@@ -184,8 +184,8 @@ The test strategy should exercise the same server-side authorization and data bo
 
 - [x] Manager and Owner roles can create and manage library items.
 - [x] Viewer roles cannot mutate the library.
-- [ ] Incomplete workouts cannot be activated.
-- [ ] Valid workouts can be activated and reused in assignments.
+- [x] Incomplete workouts cannot be activated.
+- [x] Valid workouts can be activated and reused in assignments.
 - [ ] Library items remain scoped to the active organization.
 
 ## Milestone 4: Assignment Creation and Publication
@@ -198,20 +198,20 @@ The test strategy should exercise the same server-side authorization and data bo
 
 ### Implementation Checklist
 
-- [ ] Add test for creating a simple assignment from an existing template.
-- [ ] Add test for publishing an assignment to a team target.
+- [x] Add test for creating a simple assignment from an existing template.
+- [x] Add test for publishing an assignment to a team target.
 - [ ] Add test for publishing to athlete target(s) only within managed scope.
 - [ ] Add test for rejection when a target is outside allowed team or athlete scope.
-- [ ] Add test for assignment list and detail pages reflecting correct recipients and status.
-- [ ] Add test for snapshot behavior after editing a library workout that was already assigned.
+- [x] Add test for assignment list and detail pages reflecting correct recipients and status.
+- [x] Add test for snapshot behavior after editing a library workout that was already assigned.
 - [ ] Add test for assignment coverage and compliance summary views.
 - [ ] Add test for a Viewer or Athlete not being able to publish or edit assignments.
 
 ### Acceptance Criteria
 
-- [ ] Valid assignments publish successfully.
+- [x] Valid assignments publish successfully.
 - [ ] Invalid targets are rejected before a mutation completes.
-- [ ] Assignment detail reflects the publish-time snapshot rather than live library mutations.
+- [x] Assignment detail reflects the publish-time snapshot rather than live library mutations.
 - [ ] Team roles cannot assign outside their managed scope.
 
 ## Milestone 5: Athlete Result Logging and Review
@@ -225,13 +225,13 @@ The test strategy should exercise the same server-side authorization and data bo
 
 ### Implementation Checklist
 
-- [ ] Add athlete flow test for viewing assigned workout and schedule.
-- [ ] Add athlete test for logging a workout result.
+- [x] Add athlete flow test for viewing assigned workout and schedule.
+- [x] Add athlete test for logging a workout result.
 - [ ] Add athlete test for editing an already-submitted result.
 - [ ] Add athlete negative test for viewing another athlete's result data.
-- [ ] Add staff compliance page test for assigned athletes and session status.
-- [ ] Add manager comment flow for submitted athlete results.
-- [ ] Add viewer read-only flow for submitted results and comments.
+- [x] Add staff compliance page test for assigned athletes and session status.
+- [x] Add manager comment flow for submitted athlete results.
+- [x] Add viewer read-only flow for submitted results and comments.
 - [ ] Add negative test for team viewer trying to add comments.
 
 ### Acceptance Criteria
@@ -251,12 +251,12 @@ The test strategy should exercise the same server-side authorization and data bo
 
 ### Implementation Checklist
 
-- [ ] Add test for team performance dashboard rendering for valid manager role.
+- [x] Add test for team performance dashboard rendering for valid manager role.
 - [ ] Add test for assignment drill-down by athlete and occurrence.
-- [ ] Add test for timeline and status totals across 30-day / 90-day / all-time views.
-- [ ] Add test for viewer-only read access on team performance surfaces.
+- [x] Add test for timeline and status totals across 30-day / 90-day / all-time views.
+- [x] Add test for viewer-only read access on team performance surfaces.
 - [ ] Add negative test for trying to access foreign team results.
-- [ ] Add negative test for athlete access to staff result review routes.
+- [x] Add negative test for athlete access to staff result review routes.
 
 ### Acceptance Criteria
 
@@ -276,7 +276,7 @@ The test strategy should exercise the same server-side authorization and data bo
 - [ ] Add test for a user in Organization A not accessing Organization B data.
 - [ ] Add test for a Team Manager in one team not seeing another team's performance details.
 - [ ] Add test for stale organization selection redirecting to organization selection flow.
-- [ ] Add test for invalid direct route parameters failing safely.
+- [x] Add test for invalid direct route parameters failing safely.
 - [ ] Add test for a removed team manager losing access on the next sensitive request.
 - [ ] Add regression test for attempted tampering with assignment target IDs.
 - [ ] Add regression test for data export or read-only controls not being available to unauthorized users.
@@ -330,8 +330,8 @@ The test strategy should exercise the same server-side authorization and data bo
 
 1. [x] Slice A: Role and route smoke tests
 2. [x] Slice B: Team management and roster tests
-3. [ ] Slice C: Library exercise and workout tests
-4. [ ] Slice D: Assignment publication and history tests
-5. [ ] Slice E: Athlete result and result-review tests
-6. [ ] Slice F: Team performance and compliance tests
+3. [x] Slice C: Library exercise and workout tests
+4. [x] Slice D: Assignment publication and history tests
+5. [x] Slice E: Athlete result and result-review tests
+6. [x] Slice F: Team performance and compliance tests
 7. [ ] Slice G: Cross-tenant security regressions and cleanup

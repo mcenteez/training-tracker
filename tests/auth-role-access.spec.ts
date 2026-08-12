@@ -72,7 +72,9 @@ test.describe("Training Tracker local personas", () => {
       page.getByRole("main").getByText("Team Management", { exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Manage team" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "View performance" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "View performance" }),
+    ).toBeVisible();
   });
 
   test("athlete sees the athlete dashboard and cannot open Admin", async ({
@@ -101,7 +103,9 @@ test.describe("Training Tracker local personas", () => {
     await page.goto("/app/teams");
 
     await expect(page).toHaveURL(/\/app\/performance\/organization$/);
-    await expect(page.getByText("Team Management", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText("Team Management", { exact: true }),
+    ).toHaveCount(0);
   });
 
   test("viewer has read-only organization access", async ({

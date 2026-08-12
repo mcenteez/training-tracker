@@ -348,7 +348,7 @@ export const assignmentWorkoutBlockSnapshots = pgTable(
       columns: [table.sourceBlockId],
       foreignColumns: [workoutBlocks.id],
       name: "assignment_workout_block_snapshots_source_block_fk",
-    }),
+    }).onDelete("set null"),
     check(
       "assignment_workout_block_snapshots_rounds_positive",
       sql`${table.rounds} > 0`,
@@ -411,7 +411,7 @@ export const assignmentWorkoutItemSnapshots = pgTable(
       columns: [table.sourceItemId],
       foreignColumns: [workoutItems.id],
       name: "assignment_workout_item_snapshots_source_item_fk",
-    }),
+    }).onDelete("set null"),
     foreignKey({
       columns: [table.organizationId, table.sourceExerciseId],
       foreignColumns: [exercises.organizationId, exercises.id],
