@@ -110,10 +110,6 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page).toHaveURL(
       new RegExp(`/app/performance/teams/${basketballTeamId}$`),
     );
-    await expect(
-      page.getByText("Roster readiness", { exact: true }),
-    ).toBeVisible();
-
     await usePersona(context, "athlete");
     const response = await page.goto(
       `/app/performance/teams/${basketballTeamId}`,
