@@ -396,6 +396,37 @@ describe("team compliance queries", () => {
     ).resolves.toBeNull();
   });
 
+  it("returns reconciled assignment, athlete, and occurrence timeliness detail", async () => {
+    await client.exec(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-08-01T00:00:00Z'
+      WHERE id = '${ids.assignment}';
+
+      UPDATE assignment_sessions
+      SET status = 'submitted', submitted_at = '2026-08-12T13:00:00Z'
+      WHERE id = '${ids.session}';
+    `);
+
+    const detail = await findTeamAssignmentCompliance(database, {
+      organizationId: ids.organization,
+      teamId: ids.team,
+      assignmentId: ids.assignment,
+      windowDays: 30,
+      now: new Date("2026-08-14T00:00:00.000Z"),
+    });
+
+    expect(detail?.timeliness.current).toMatchObject({
+      timelinessEligible: 1,
+      onTimeCompletionRate: 1,
+    });
+    expect(detail?.timeliness.athletes[0]?.current.timelinessEligible).toBe(1);
+    expect(detail?.timeliness.athletes[0]?.occurrences[0]).toMatchObject({
+      state: "onTimeCompleted",
+      dueAt: new Date("2026-08-13T00:00:00.000Z"),
+      firstSubmittedAt: new Date("2026-08-12T13:00:00.000Z"),
+    });
+  });
+
   it("returns raw organization totals with deduplicated athletes and publish-time team comparisons", async () => {
     await client.exec(`
       UPDATE assignments

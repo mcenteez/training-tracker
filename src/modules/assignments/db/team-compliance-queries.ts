@@ -17,6 +17,8 @@ import {
 } from "@/modules/assignments/application/compliance-summary";
 import {
   buildTimelinessSummary,
+  classifyOccurrenceTimeliness,
+  type OccurrenceTimeliness,
   type TimelinessOccurrenceInput,
   type TimelinessSummary,
 } from "@/modules/assignments/application/timeliness-summary";
@@ -59,6 +61,12 @@ export interface TeamAthleteTimelinessSummary {
   current: TimelinessSummary;
   previous: TimelinessSummary | null;
   trend: ComplianceTrendSummary | null;
+  occurrences: Array<
+    OccurrenceTimeliness & {
+      occurrenceKey: string;
+      scheduledDate: string;
+    }
+  >;
 }
 
 export interface TeamAssignmentTimelinessSummary {
@@ -543,6 +551,29 @@ export function buildTeamTimelinessDashboard(input: {
               occurrenceInput(occurrence, recipient.athleteUserId),
             ),
           ),
+          occurrences: recipient.occurrences.flatMap((occurrence) => {
+            const classified = classifyOccurrenceTimeliness({
+              occurrence: occurrenceInput(occurrence, recipient.athleteUserId),
+              asOf: input.asOf,
+            });
+            if (
+              classified &&
+              ((currentWindow.startAt &&
+                classified.dueAt < currentWindow.startAt) ||
+                classified.dueAt > currentWindow.endAt)
+            ) {
+              return [];
+            }
+            return classified
+              ? [
+                  {
+                    ...classified,
+                    occurrenceKey: occurrence.key,
+                    scheduledDate: occurrence.scheduledDate,
+                  },
+                ]
+              : [];
+          }),
         })),
       };
     }),
@@ -889,12 +920,17 @@ export async function findTeamAssignmentCompliance(
     windowDays?: number | null;
     now?: Date;
   },
-): Promise<TeamAssignmentCompliance | null> {
+): Promise<
+  | (TeamAssignmentCompliance & {
+      timeliness: TeamAssignmentTimelinessSummary;
+    })
+  | null
+> {
   const data = await loadTeamComplianceData(database, input);
   const assignment = data.assignments[0];
   if (!assignment) return null;
 
-  return buildTeamAssignmentCompliance({
+  const assignmentCompliance = buildTeamAssignmentCompliance({
     assignment,
     recipients: data.recipients,
     slots: data.slots,
@@ -902,4 +938,39 @@ export async function findTeamAssignmentCompliance(
     now: input.now ?? new Date(),
     windowDays: input.windowDays,
   });
+  const timeliness = buildTeamTimelinessDashboard({
+    assignments: [
+      buildTeamAssignmentCompliance({
+        assignment,
+        recipients: data.recipients,
+        slots: data.slots,
+        sessions: data.sessions,
+        now: input.now ?? new Date(),
+        windowDays: null,
+      }),
+    ],
+    asOf: input.now ?? new Date(),
+    windowDays: input.windowDays,
+  }).assignments[0];
+
+  return timeliness
+    ? {
+        ...assignmentCompliance,
+        recipients: assignmentCompliance.recipients.toSorted((left, right) => {
+          const priority = (recipientId: string) => {
+            const summary = timeliness.athletes.find(
+              (athlete) => athlete.recipientId === recipientId,
+            )?.current.counts;
+            if (!summary) return 4;
+            if (summary.openOverdue > 0) return 0;
+            if (summary.lateCompleted > 0) return 1;
+            if (summary.notYetDue > 0) return 2;
+            if (summary.onTimeCompleted > 0) return 3;
+            return 4;
+          };
+          return priority(left.id) - priority(right.id);
+        }),
+        timeliness,
+      }
+    : null;
 }

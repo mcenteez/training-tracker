@@ -16,6 +16,7 @@ export interface OccurrenceTimeliness {
   firstSubmittedAt: Date | null;
   state: OccurrenceTimelinessState;
   latenessMilliseconds: number | null;
+  overdueMilliseconds: number | null;
 }
 
 export interface TimelinessCounts {
@@ -70,6 +71,7 @@ export function classifyOccurrenceTimeliness(input: {
       latenessMilliseconds: onTime
         ? null
         : occurrence.firstSubmittedAt.getTime() - occurrence.dueAt.getTime(),
+      overdueMilliseconds: null,
     };
   }
 
@@ -79,6 +81,10 @@ export function classifyOccurrenceTimeliness(input: {
     firstSubmittedAt: null,
     state: occurrence.dueAt <= asOf ? "openOverdue" : "notYetDue",
     latenessMilliseconds: null,
+    overdueMilliseconds:
+      occurrence.dueAt <= asOf
+        ? asOf.getTime() - occurrence.dueAt.getTime()
+        : null,
   };
 }
 

@@ -396,24 +396,24 @@ Explain aggregate timeliness through the existing assignment, athlete, occurrenc
 
 ### Implementation Checklist
 
-- [ ] Show assignment on-time fraction and average completed lateness.
-- [ ] Show athlete on-time fraction, late completions, and open-overdue work.
-- [ ] Show each occurrence due date/time in the assignment timezone.
-- [ ] Label completed occurrences as `On time` or `Completed late`.
-- [ ] Show lateness duration for late completions.
-- [ ] Show overdue age for unsubmitted overdue occurrences.
-- [ ] Keep upcoming/not-yet-due occurrences visually secondary.
-- [ ] Sort open overdue first, then late completed, due soon, on-time completed, and not yet due.
-- [ ] Preserve result-review links and selected-window context.
-- [ ] Keep Team Viewer access read-only.
-- [ ] Keep athlete access limited to athlete-owned routes.
-- [ ] Keep athlete-facing language factual and non-punitive.
+- [x] Show assignment on-time fraction and average completed lateness.
+- [x] Show athlete on-time fraction, late completions, and open-overdue work.
+- [x] Show each occurrence due date/time in the assignment timezone.
+- [x] Label completed occurrences as `On time` or `Completed late`.
+- [x] Show lateness duration for late completions.
+- [x] Show overdue age for unsubmitted overdue occurrences.
+- [x] Keep upcoming/not-yet-due occurrences visually secondary.
+- [x] Sort open overdue first, then late completed, due soon, on-time completed, and not yet due.
+- [x] Preserve result-review links and selected-window context.
+- [x] Keep Team Viewer access read-only.
+- [x] Keep athlete access limited to athlete-owned routes.
+- [x] Keep athlete-facing language factual and non-punitive.
 
 ### Acceptance Criteria
 
-- [ ] Staff can identify every occurrence contributing to a timeliness numerator or denominator.
-- [ ] Parent assignment totals reconcile with athlete and occurrence rows.
-- [ ] No staff-only peer comparison is exposed to athletes.
+- [x] Staff can identify every occurrence contributing to a timeliness numerator or denominator.
+- [x] Parent assignment totals reconcile with athlete and occurrence rows.
+- [x] No staff-only peer comparison is exposed to athletes.
 
 ## Milestone 9: Team and Organization Trend Presentation
 
