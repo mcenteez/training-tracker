@@ -79,12 +79,12 @@ Reference foundation and rationale:
 
 ### Occurrence Timeliness States
 
-- [ ] `notYetDue`: `dueAt > asOf`, regardless of whether the occurrence is available.
-- [ ] `onTimeCompleted`: first `submittedAt` exists and `submittedAt < dueAt`.
-- [ ] `lateCompleted`: first `submittedAt` exists and `submittedAt >= dueAt`.
-- [ ] `openOverdue`: `dueAt <= asOf` and no first submission exists.
-- [ ] Keep `Started`, `Due today`, `Completed`, `Overdue`, and `Upcoming` as lifecycle/compliance labels.
-- [ ] Display timeliness labels separately so `Completed late` does not conflict with `Completed`.
+- [x] `notYetDue`: `dueAt > asOf`, regardless of whether the occurrence is available.
+- [x] `onTimeCompleted`: first `submittedAt` exists and `submittedAt < dueAt`.
+- [x] `lateCompleted`: first `submittedAt` exists and `submittedAt >= dueAt`.
+- [x] `openOverdue`: `dueAt <= asOf` and no first submission exists.
+- [x] Keep `Started`, `Due today`, `Completed`, `Overdue`, and `Upcoming` as lifecycle/compliance labels.
+- [x] Display timeliness labels separately so `Completed late` does not conflict with `Completed`.
 
 ### Timeliness Formulas
 
@@ -95,15 +95,15 @@ lateCompletionRate = lateCompleted / timelinessEligible
 averageCompletedLateness = average(firstSubmittedAt - dueAt for lateCompleted)
 ```
 
-- [ ] Select timeliness occurrences by `dueAt`, not `scheduledDate`, `startedAt`, or `submittedAt`.
-- [ ] Include only occurrences whose `dueAt <= asOf`.
-- [ ] Exclude `notYetDue` and pre-policy occurrences from all timeliness denominators.
-- [ ] Return `null` for rates when `timelinessEligible = 0`.
-- [ ] Return `null` for average lateness when no late completion exists.
-- [ ] Keep raw counts and exact denominators alongside every rate.
-- [ ] Report open-overdue age separately from completed lateness.
+- [x] Select timeliness occurrences by `dueAt`, not `scheduledDate`, `startedAt`, or `submittedAt`.
+- [x] Include only occurrences whose `dueAt <= asOf`.
+- [x] Exclude `notYetDue` and pre-policy occurrences from all timeliness denominators.
+- [x] Return `null` for rates when `timelinessEligible = 0`.
+- [x] Return `null` for average lateness when no late completion exists.
+- [x] Keep raw counts and exact denominators alongside every rate.
+- [x] Report open-overdue age separately from completed lateness.
 - [ ] Aggregate organization rates from raw counts rather than averaging team percentages.
-- [ ] Deduplicate athlete attention counts across assignments and teams.
+- [x] Deduplicate athlete attention counts across assignments and teams.
 
 ### Trend Formulas
 
@@ -252,37 +252,37 @@ Build timeliness as a shared application-layer model beside, not inside pages or
 
 ### Implementation Checklist
 
-- [ ] Add `OccurrenceTimeliness` with due instant, first submission instant, state, and lateness duration.
-- [ ] Add `TimelinessCounts` with on-time completed, late completed, open overdue, and not-yet-due counts.
-- [ ] Add `TimelinessSummary` with counts, eligible denominator, rates, average completed lateness, and oldest open-overdue instant.
-- [ ] Add a pure occurrence classifier.
-- [ ] Add a pure `buildTimelinessSummary` function.
-- [ ] Keep Phase 1 `ComplianceSummary` backward compatible.
-- [ ] Keep compliance status and timeliness state independently testable.
-- [ ] Deduplicate athletes needing timeliness attention by athlete ID.
-- [ ] Use one merge path for assignment, team, and organization summaries.
+- [x] Add `OccurrenceTimeliness` with due instant, first submission instant, state, and lateness duration.
+- [x] Add `TimelinessCounts` with on-time completed, late completed, open overdue, and not-yet-due counts.
+- [x] Add `TimelinessSummary` with counts, eligible denominator, rates, average completed lateness, and oldest open-overdue instant.
+- [x] Add a pure occurrence classifier.
+- [x] Add a pure `buildTimelinessSummary` function.
+- [x] Keep Phase 1 `ComplianceSummary` backward compatible.
+- [x] Keep compliance status and timeliness state independently testable.
+- [x] Deduplicate athletes needing timeliness attention by athlete ID.
+- [x] Use one merge path for assignment, team, and organization summaries.
 - [ ] Return structured unavailable reasons such as `no_due_work` and `insufficient_history`.
 
 ### Unit Tests
 
-- [ ] Submission immediately before `dueAt` is on time.
-- [ ] Submission exactly at `dueAt` is late.
-- [ ] Submission after `dueAt` is late.
-- [ ] Unsubmitted occurrence before `dueAt` is not yet due.
-- [ ] Unsubmitted occurrence at or after `dueAt` is open overdue.
-- [ ] Pre-policy occurrence is excluded.
-- [ ] On-time rate uses the exact raw-count denominator.
-- [ ] Average lateness includes only late completions.
-- [ ] No late completions returns unavailable average lateness.
-- [ ] Athlete attention is deduplicated across assignments.
-- [ ] Organization athlete attention is deduplicated across teams.
-- [ ] Empty input returns unavailable rates rather than 100%.
+- [x] Submission immediately before `dueAt` is on time.
+- [x] Submission exactly at `dueAt` is late.
+- [x] Submission after `dueAt` is late.
+- [x] Unsubmitted occurrence before `dueAt` is not yet due.
+- [x] Unsubmitted occurrence at or after `dueAt` is open overdue.
+- [x] Pre-policy occurrence is excluded.
+- [x] On-time rate uses the exact raw-count denominator.
+- [x] Average lateness includes only late completions.
+- [x] No late completions returns unavailable average lateness.
+- [x] Athlete attention is deduplicated across assignments.
+- [x] Organization athlete attention is deduplicated across teams.
+- [x] Empty input returns unavailable rates rather than 100%.
 
 ### Acceptance Criteria
 
-- [ ] No page or query layer independently computes timeliness percentages.
-- [ ] Every rate exposes its numerator and denominator.
-- [ ] Phase 1 counts remain unchanged for identical occurrence fixtures.
+- [x] No page or query layer independently computes timeliness percentages.
+- [x] Every rate exposes its numerator and denominator.
+- [x] Phase 1 counts remain unchanged for identical occurrence fixtures.
 
 ## Milestone 5: Equivalent-Window Trend Domain
 
