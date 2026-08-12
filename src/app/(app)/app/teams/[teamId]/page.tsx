@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import {
@@ -199,7 +200,7 @@ export default async function TeamOperationsDetailPage({
               <label htmlFor="new-member-role" className="text-sm font-medium">
                 Team role
               </label>
-              <select
+              <NativeSelect
                 id="new-member-role"
                 name="role"
                 defaultValue="athlete"
@@ -208,7 +209,7 @@ export default async function TeamOperationsDetailPage({
                 <option value="athlete">Athlete</option>
                 <option value="viewer">Viewer</option>
                 <option value="manager">Manager</option>
-              </select>
+              </NativeSelect>
             </div>
             <Button type="submit">Add member</Button>
           </form>
@@ -313,7 +314,7 @@ export default async function TeamOperationsDetailPage({
               <label htmlFor="invited-role" className="text-sm font-medium">
                 Team role
               </label>
-              <select
+              <NativeSelect
                 id="invited-role"
                 name="role"
                 defaultValue="athlete"
@@ -322,7 +323,7 @@ export default async function TeamOperationsDetailPage({
                 <option value="athlete">Athlete</option>
                 <option value="viewer">Viewer</option>
                 <option value="manager">Manager</option>
-              </select>
+              </NativeSelect>
             </div>
             <PendingSubmitButton
               label="Create invitation"

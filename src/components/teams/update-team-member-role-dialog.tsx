@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { updateTeamMemberAction } from "@/app/(app)/app/teams/[teamId]/actions";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
   DialogClose,
@@ -36,17 +37,17 @@ export function UpdateTeamMemberRoleDialog({
       <label className="sr-only" htmlFor={`role-${userId}`}>
         Team role for {displayName}
       </label>
-      <select
+      <NativeSelect
         id={`role-${userId}`}
         value={role}
         onChange={(event) => setRole(event.target.value as TeamRole)}
         disabled={disabled}
-        className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+        className="h-8 min-w-28 rounded-md border border-input bg-background px-2 text-sm"
       >
         <option value="athlete">Athlete</option>
         <option value="viewer">Viewer</option>
         <option value="manager">Manager</option>
-      </select>
+      </NativeSelect>
       <Dialog>
         <DialogTrigger asChild>
           <Button
