@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { LibraryImportState } from "./actions";
+import type { LibraryImportState } from "./import-state";
 import { ImportResults } from "./import-results";
 
 afterEach(cleanup);

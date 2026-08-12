@@ -15,7 +15,7 @@ export default async function LibraryImportPage() {
   const context = await loadLibraryAppContext();
 
   if (context.libraryAccess !== "manage") {
-    redirect("/app/library?error=forbidden_import");
+    redirect("/app/library/workouts?error=forbidden_import");
   }
 
   const requestHeaders = await headers();

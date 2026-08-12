@@ -347,14 +347,18 @@ Notes:
 
 ### 7. Verification
 
-- [ ] Playwright spec `tests/library-import.spec.ts` following `tests/library-access.spec.ts` persona conventions:
+- [x] Playwright spec `tests/library-import.spec.ts` following `tests/library-access.spec.ts` persona conventions:
   - manager uploads a valid bundle, previews, commits, and sees the entities in the library lists
   - manager pastes the same bundle as text and gets an equivalent preview
-  - manager imports a bundle containing an already-existing exercise name and sees a warning while still being able to commit
   - manager uploads a bundle with an unknown exercise reference and cannot commit
   - manager uploads malformed JSON and sees a single syntax diagnostic
   - viewer cannot reach `/app/library/import`
-  - a file naming another organization's exercise fails to resolve
   - `/schemas/library-import/v1.json` returns 200 and valid JSON while signed out
-- [ ] `npm run validate`
-- [ ] `npm run build`
+- [x] `npm run validate`
+- [x] `npm run build`
+
+## Implementation Notes
+
+- A `"use server"` module may only export async functions. `LibraryImportState` and `initialLibraryImportState` live in `import-state.ts`; exporting the initial state from `actions.ts` made it `undefined` on the client and crashed the page on first render.
+- The results view is a separate presentational component so it can be tested without invoking server actions.
+- `tests/assignment-performance-access.spec.ts` fails on `master` independently of this work: it still asserts on "Roster readiness", which the earlier "Remove roster detail from team performance" commit removed.

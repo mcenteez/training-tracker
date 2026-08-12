@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 
 import {
   commitLibraryImportAction,
-  initialLibraryImportState,
   previewLibraryImportAction,
 } from "./actions";
 import { ImportResults } from "./import-results";
+import { initialLibraryImportState } from "./import-state";
 
 export function LibraryImportForm() {
   const [previewState, previewAction, previewPending] = useActionState(
