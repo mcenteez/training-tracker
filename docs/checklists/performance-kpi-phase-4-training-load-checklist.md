@@ -207,15 +207,15 @@ Allow authorized coaches to adapt a shared assignment for an individual athlete 
 ### Implementation Checklist
 
 - [ ] Add a server-side override command with Zod validation for each permitted prescription field.
-- [ ] Authorize every override write against the active organization, managed team scope, assignment, recipient, athlete, item snapshot, and plan slot.
-- [ ] Reject overrides for canceled assignments and unknown or mismatched recipient/item/slot identities.
+- [x] Authorize every override write against the active organization, managed team scope, assignment, recipient, athlete, item snapshot, and plan slot.
+- [x] Reject overrides for canceled assignments and unknown or mismatched recipient/item/slot identities.
 - [ ] Reject edits to occurrences with an in-progress or submitted session; guide staff to create a future-occurrence override instead.
-- [ ] Resolve the effective prescription in one module-owned application function with explicit field precedence: override value, then shared item snapshot value.
+- [x] Resolve the effective prescription in one module-owned application function with explicit field precedence: override value, then shared item snapshot value.
 - [ ] Normalize structured override loads on the server and keep free-text overrides unmeasurable.
-- [ ] Create or replace an override atomically with its audit metadata and optimistic-concurrency version.
-- [ ] Support clearing an override so future unstarted occurrences return to the shared snapshot.
-- [ ] Create per-session effective prescription snapshots atomically with session start before any athlete result can be saved.
-- [ ] Keep effective snapshots unchanged during autosave, submit, reset, and completed-session result edits.
+- [x] Create or replace an override atomically with its audit metadata and optimistic-concurrency version.
+- [x] Support clearing an override so future unstarted occurrences return to the shared snapshot.
+- [x] Create per-session effective prescription snapshots atomically with session start before any athlete result can be saved.
+- [x] Keep effective snapshots unchanged during autosave, submit, reset, and completed-session result edits.
 - [ ] Revalidate affected coach and athlete routes after an override changes.
 
 ### Coach Workflow
@@ -230,10 +230,10 @@ Allow authorized coaches to adapt a shared assignment for an individual athlete 
 
 ### Tests
 
-- [ ] An authorized coach can set a 135 lb, 10-rep base item to 20 reps or a different load for one athlete only.
-- [ ] A second athlete assigned the same workout retains the shared base prescription.
+- [x] An authorized coach can set a 135 lb, 10-rep base item to 20 reps or a different load for one athlete only.
+- [x] A second athlete assigned the same workout retains the shared base prescription.
 - [ ] The athlete sees only the resulting effective prescription.
-- [ ] Starting a session snapshots the effective prescription before athlete results are saved.
+- [x] Starting a session snapshots the effective prescription before athlete results are saved.
 - [ ] Replacing or clearing an override changes only later unstarted occurrences.
 - [ ] Started and submitted sessions retain their original effective prescription after a later override change.
 - [ ] Athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team attempts to change an override fail safely.

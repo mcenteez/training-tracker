@@ -1,0 +1,2 @@
+ALTER TABLE "assignment_athlete_item_overrides" ADD COLUMN "overridden_fields" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "assignment_athlete_item_overrides" ADD CONSTRAINT "assignment_athlete_item_overrides_fields_supported" CHECK ("overridden_fields" <@ ARRAY['reps', 'load', 'durationSeconds', 'distanceMeters', 'restSeconds', 'tempo', 'notes']::text[]);

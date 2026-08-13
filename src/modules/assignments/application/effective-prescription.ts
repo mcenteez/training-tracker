@@ -13,6 +13,28 @@ export interface PrescriptionFields {
 
 export interface PrescriptionOverride extends PrescriptionFields {
   id: string;
+  overriddenFields: readonly PrescriptionOverrideField[];
+}
+
+export const prescriptionOverrideFields = [
+  "reps",
+  "load",
+  "durationSeconds",
+  "distanceMeters",
+  "restSeconds",
+  "tempo",
+  "notes",
+] as const;
+
+export type PrescriptionOverrideField =
+  (typeof prescriptionOverrideFields)[number];
+
+export function isPrescriptionOverrideField(
+  value: string,
+): value is PrescriptionOverrideField {
+  return prescriptionOverrideFields.includes(
+    value as PrescriptionOverrideField,
+  );
 }
 
 export interface EffectivePrescription extends PrescriptionFields {
@@ -27,17 +49,27 @@ export function resolveEffectivePrescription(
     return { ...base, sourceOverrideId: null };
   }
 
+  const overrides = new Set(override.overriddenFields);
+
   return {
-    reps: override.reps ?? base.reps,
-    load: override.load ?? base.load,
-    loadValue: override.loadValue ?? base.loadValue,
-    loadUnit: override.loadUnit ?? base.loadUnit,
-    normalizedLoadKg: override.normalizedLoadKg ?? base.normalizedLoadKg,
-    durationSeconds: override.durationSeconds ?? base.durationSeconds,
-    distanceMeters: override.distanceMeters ?? base.distanceMeters,
-    restSeconds: override.restSeconds ?? base.restSeconds,
-    tempo: override.tempo ?? base.tempo,
-    notes: override.notes ?? base.notes,
+    reps: overrides.has("reps") ? override.reps : base.reps,
+    load: overrides.has("load") ? override.load : base.load,
+    loadValue: overrides.has("load") ? override.loadValue : base.loadValue,
+    loadUnit: overrides.has("load") ? override.loadUnit : base.loadUnit,
+    normalizedLoadKg: overrides.has("load")
+      ? override.normalizedLoadKg
+      : base.normalizedLoadKg,
+    durationSeconds: overrides.has("durationSeconds")
+      ? override.durationSeconds
+      : base.durationSeconds,
+    distanceMeters: overrides.has("distanceMeters")
+      ? override.distanceMeters
+      : base.distanceMeters,
+    restSeconds: overrides.has("restSeconds")
+      ? override.restSeconds
+      : base.restSeconds,
+    tempo: overrides.has("tempo") ? override.tempo : base.tempo,
+    notes: overrides.has("notes") ? override.notes : base.notes,
     sourceOverrideId: override.id,
   };
 }

@@ -27,6 +27,7 @@ describe("resolveEffectivePrescription", () => {
     expect(
       resolveEffectivePrescription(base, {
         id: "override-1",
+        overriddenFields: ["reps", "notes"],
         reps: 20,
         load: null,
         loadValue: null,
@@ -43,6 +44,32 @@ describe("resolveEffectivePrescription", () => {
       reps: 20,
       notes: "Extra volume",
       sourceOverrideId: "override-1",
+    });
+  });
+
+  it("allows an override to intentionally clear one prescribed field", () => {
+    expect(
+      resolveEffectivePrescription(base, {
+        id: "override-2",
+        overriddenFields: ["load"],
+        reps: null,
+        load: null,
+        loadValue: null,
+        loadUnit: null,
+        normalizedLoadKg: null,
+        durationSeconds: null,
+        distanceMeters: null,
+        restSeconds: null,
+        tempo: null,
+        notes: null,
+      }),
+    ).toMatchObject({
+      reps: 10,
+      load: null,
+      loadValue: null,
+      loadUnit: null,
+      normalizedLoadKg: null,
+      sourceOverrideId: "override-2",
     });
   });
 });

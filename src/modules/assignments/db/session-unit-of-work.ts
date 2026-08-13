@@ -3,7 +3,10 @@ import "server-only";
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
-import { resolveEffectivePrescription } from "@/modules/assignments/application/effective-prescription";
+import {
+  isPrescriptionOverrideField,
+  resolveEffectivePrescription,
+} from "@/modules/assignments/application/effective-prescription";
 import type { AssignmentSessionItemResult } from "@/modules/assignments/db/schema";
 import {
   assignments,
@@ -271,14 +274,15 @@ export function createAssignmentSessionUnitOfWork(
                 itemSnapshotId: assignmentAthleteItemOverrides.itemSnapshotId,
                 planSlotSnapshotId:
                   assignmentAthleteItemOverrides.planSlotSnapshotId,
+                overriddenFields:
+                  assignmentAthleteItemOverrides.overriddenFields,
                 reps: assignmentAthleteItemOverrides.reps,
                 load: assignmentAthleteItemOverrides.load,
                 loadValue: assignmentAthleteItemOverrides.loadValue,
                 loadUnit: assignmentAthleteItemOverrides.loadUnit,
                 normalizedLoadKg:
                   assignmentAthleteItemOverrides.normalizedLoadKg,
-                durationSeconds:
-                  assignmentAthleteItemOverrides.durationSeconds,
+                durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
                 distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
                 restSeconds: assignmentAthleteItemOverrides.restSeconds,
                 tempo: assignmentAthleteItemOverrides.tempo,
@@ -313,12 +317,13 @@ export function createAssignmentSessionUnitOfWork(
                           assignmentAthleteItemOverrides.planSlotSnapshotId,
                         ),
                       )
-                    : isNull(
-                        assignmentAthleteItemOverrides.planSlotSnapshotId,
-                      ),
+                    : isNull(assignmentAthleteItemOverrides.planSlotSnapshotId),
                 ),
               );
-            const overrideByItem = new Map<string, (typeof overrides)[number]>();
+            const overrideByItem = new Map<
+              string,
+              (typeof overrides)[number]
+            >();
 
             for (const override of overrides) {
               const existing = overrideByItem.get(override.itemSnapshotId);
@@ -337,7 +342,16 @@ export function createAssignmentSessionUnitOfWork(
                 itemSnapshots.map((item) => {
                   const effective = resolveEffectivePrescription(
                     item,
-                    overrideByItem.get(item.id) ?? null,
+                    overrideByItem.has(item.id)
+                      ? {
+                          ...overrideByItem.get(item.id)!,
+                          overriddenFields: overrideByItem
+                            .get(item.id)!
+                            .overriddenFields.filter(
+                              isPrescriptionOverrideField,
+                            ),
+                        }
+                      : null,
                   );
 
                   return {

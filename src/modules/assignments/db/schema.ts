@@ -787,6 +787,7 @@ export const assignmentAthleteItemOverrides = pgTable(
     restSeconds: integer("rest_seconds"),
     tempo: text(),
     notes: text(),
+    overriddenFields: text("overridden_fields").array().default([]).notNull(),
     reason: text(),
     version: integer().default(1).notNull(),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
@@ -865,6 +866,10 @@ export const assignmentAthleteItemOverrides = pgTable(
     check(
       "assignment_athlete_item_overrides_version_positive",
       sql`${table.version} > 0`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_fields_supported",
+      sql`${table.overriddenFields} <@ ARRAY['reps', 'load', 'durationSeconds', 'distanceMeters', 'restSeconds', 'tempo', 'notes']::text[]`,
     ),
     uniqueIndex(
       "assignment_athlete_item_overrides_recipient_item_slot_unique",

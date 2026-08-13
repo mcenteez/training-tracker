@@ -16,6 +16,8 @@ import {
   startAssignmentSession,
   autosaveAssignmentSessionResults,
 } from "@/modules/assignments/application/assignment-session-service";
+import { saveAthletePrescriptionOverride } from "@/modules/assignments/application/athlete-prescription-service";
+import { createAthletePrescriptionUnitOfWork } from "@/modules/assignments/db/athlete-prescription-unit-of-work";
 import {
   findPublishedAssignmentForAthlete,
   listAssignmentsForOrganization,
@@ -679,5 +681,109 @@ describe("assignment unit of work", () => {
       },
     ]);
     expect(resultRows.rows).toEqual([{ count: 0 }]);
+  });
+
+  it("applies an athlete prescription override without changing the shared snapshot", async () => {
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+
+    const recipientRows = await client.query<{ id: string }>(`
+      SELECT id
+      FROM assignment_recipients
+      WHERE assignment_id = '${draft.id}';
+    `);
+    const itemRows = await client.query<{ id: string }>(`
+      SELECT assignment_workout_item_snapshots.id
+      FROM assignment_workout_item_snapshots
+      INNER JOIN assignment_workout_block_snapshots
+        ON assignment_workout_block_snapshots.id = assignment_workout_item_snapshots.block_snapshot_id
+      WHERE assignment_workout_item_snapshots.assignment_id = '${draft.id}'
+      ORDER BY assignment_workout_item_snapshots.position
+      LIMIT 1;
+    `);
+    const recipientId = recipientRows.rows[0]?.id;
+    const itemSnapshotId = itemRows.rows[0]?.id;
+    expect(recipientId).toBeDefined();
+    expect(itemSnapshotId).toBeDefined();
+
+    await saveAthletePrescriptionOverride(
+      createAthletePrescriptionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        actorUserId: "00000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        recipientId: recipientId!,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        itemSnapshotId: itemSnapshotId!,
+        planSlotSnapshotId: null,
+        expectedVersion: null,
+        overriddenFields: ["reps"],
+        reps: 20,
+        load: null,
+        loadValue: null,
+        loadUnit: null,
+        normalizedLoadKg: null,
+        durationSeconds: null,
+        distanceMeters: null,
+        restSeconds: null,
+        tempo: null,
+        notes: null,
+        reason: "Individual progression",
+      },
+    );
+
+    const started = await startAssignmentSession(
+      createAssignmentSessionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        now: new Date("2026-08-12T12:00:00.000Z"),
+      },
+    );
+    const prescriptions = await client.query<{
+      reps: number | null;
+      source_override_id: string | null;
+    }>(`
+      SELECT reps, source_override_id
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id = '${started.id}';
+    `);
+    const sharedItems = await client.query<{ reps: number | null }>(`
+      SELECT reps
+      FROM assignment_workout_item_snapshots
+      WHERE id = '${itemSnapshotId}';
+    `);
+
+    expect(prescriptions.rows).toEqual([
+      expect.objectContaining({
+        reps: 20,
+        source_override_id: expect.any(String),
+      }),
+    ]);
+    expect(sharedItems.rows).toEqual([{ reps: 5 }]);
   });
 });
