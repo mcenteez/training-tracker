@@ -219,7 +219,8 @@ export default async function WorkoutOccurrencePage({
   const canStart =
     session === null &&
     assignment.status === "published" &&
-    occurrenceStatus !== "upcoming";
+    occurrenceStatus !== "upcoming" &&
+    weeklySummary?.targetMet !== true;
   const canEdit = session !== null && (!isSubmitted || editSubmitted);
   const canSubmit = canEdit && !isSubmitted;
 

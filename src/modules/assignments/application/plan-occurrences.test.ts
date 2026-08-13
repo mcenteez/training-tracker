@@ -140,6 +140,37 @@ describe("buildPlanOccurrenceOverview", () => {
     expect(slot.inProgressDate).toBe("2026-08-11");
   });
 
+  it("marks a flexible slot fulfilled after its weekly target is completed", () => {
+    const overview = buildPlanOccurrenceOverview({
+      ...baseInput,
+      slots: [flexibleSlot],
+      sessions: [
+        session({
+          id: "flex-1",
+          workoutSnapshotId: "workout-2",
+          planSlotSnapshotId: "slot-flex",
+          scheduledDate: "2026-08-10",
+          status: "submitted",
+        }),
+        session({
+          id: "flex-2",
+          workoutSnapshotId: "workout-2",
+          planSlotSnapshotId: "slot-flex",
+          scheduledDate: "2026-08-11",
+          status: "submitted",
+        }),
+      ],
+    });
+
+    const slot = overview.flexibleSlots[0]!;
+    expect(slot).toMatchObject({
+      completedThisWeek: 2,
+      targetMet: true,
+      inProgressDate: null,
+    });
+    expect(overview.nextActionable).toBeNull();
+  });
+
   it("prefers an actionable fixed occurrence for next action", () => {
     const overview = buildPlanOccurrenceOverview({
       ...baseInput,

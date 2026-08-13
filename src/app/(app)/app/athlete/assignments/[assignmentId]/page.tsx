@@ -141,6 +141,10 @@ export default async function AthleteAssignmentDetailPage({
     overview?.fixedOccurrences.filter(
       (occurrence) => occurrence.scheduledDate > overview.weekEnd,
     ) ?? [];
+  const currentWeekFlexible =
+    overview?.flexibleSlots.filter(
+      (slot) => !slot.targetMet || slot.inProgressDate !== null,
+    ) ?? [];
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6">
@@ -185,9 +189,9 @@ export default async function AthleteAssignmentDetailPage({
           </CardHeader>
           <CardContent className="space-y-2">
             {currentWeekFixed.length === 0 &&
-            overview.flexibleSlots.length === 0 ? (
+            currentWeekFlexible.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No workouts are scheduled this week.
+                No remaining workouts for this week.
               </p>
             ) : null}
 
@@ -227,7 +231,7 @@ export default async function AthleteAssignmentDetailPage({
               );
             })}
 
-            {overview.flexibleSlots.map((slot) => {
+            {currentWeekFlexible.map((slot) => {
               const isNext =
                 overview.nextActionable?.planSlotSnapshotId ===
                 slot.planSlotSnapshotId;

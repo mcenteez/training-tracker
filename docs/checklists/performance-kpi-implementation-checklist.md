@@ -450,6 +450,8 @@ Do not start until privacy, role visibility, and intervention protocols are appr
 
 Do not start until session duration, RPE, and normalized load units are modeled.
 
+Implementation checklist: [performance-kpi-phase-4-training-load-checklist.md](performance-kpi-phase-4-training-load-checklist.md).
+
 - [ ] Add session duration.
 - [ ] Add session RPE.
 - [ ] Calculate internal load as duration in minutes multiplied by session RPE.
