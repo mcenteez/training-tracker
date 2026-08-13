@@ -414,10 +414,10 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 ### Unit and Integration
 
-- [ ] Normalization, internal-load, volume-comparison, and baseline unit tests pass.
-- [ ] Schema, migration, session mutation, authorized-read-model, and tenant-isolation integration tests pass.
-- [ ] Existing compliance, timeliness, and offline-safe session tests retain their current behavior.
-- [ ] Free-text historical load fixtures remain unmeasurable and readable.
+- [x] Normalization, internal-load, volume-comparison, and baseline unit tests pass.
+- [x] Schema, migration, session mutation, authorized-read-model, and tenant-isolation integration tests pass.
+- [x] Existing compliance, timeliness, and offline-safe session tests retain their current behavior.
+- [x] Free-text historical load fixtures remain unmeasurable and readable.
 
 ### Browser / E2E
 
@@ -426,31 +426,33 @@ Show the athlete's recorded response and staff-facing comparison context without
 - [x] Athlete logs a non-measurable free-text load without a fabricated volume metric.
 - [x] Coach individualizes one athlete's future prescription while another recipient keeps the shared prescription.
 - [x] Athlete begins a session with the individualized prescription, and the staff review shows that immutable effective prescription.
-- [ ] Coach changes an override after session completion without altering the completed-session comparison.
+- [x] Coach changes an override after session completion without altering the completed-session comparison.
 - [x] Athlete edits completed load data without changing original completion and timeliness facts.
 - [x] Coach sees the authorized session load facts and an available prescription comparison.
 - [x] Coach sees an explicit partial or unavailable state when values are missing.
-- [ ] Coach sees an individual baseline only after the required prior-session sample exists.
-- [ ] Athlete cannot access another athlete's load data or staff-only aggregate routes.
+- [x] Coach sees an individual baseline only after the required prior-session sample exists.
+- [x] Athlete cannot access another athlete's load data or staff-only aggregate routes.
 - [x] Team Viewer remains read-only and unauthorized users receive no load details.
-- [ ] Foreign-team and foreign-organization routes do not leak load values, baselines, or counts.
+- [x] Foreign-team and foreign-organization routes do not leak load values, baselines, or counts.
 
 ### Migration and Operational Verification
 
-- [ ] Apply the migration against an empty database.
-- [ ] Apply the migration against a representative database with free-text legacy loads.
-- [ ] Verify rollback readiness through a documented forward remediation plan; do not depend on destructive down migrations.
-- [ ] Confirm database indexes support representative athlete baseline and staff summary query plans.
-- [ ] Confirm all new fields are absent from application logs and error payloads unless explicitly sanitized.
+- [x] Apply the migration against an empty database.
+- [x] Apply the migration against a representative database with free-text legacy loads.
+- [x] Verify rollback readiness through a documented forward remediation plan; do not depend on destructive down migrations.
+- [x] Confirm database indexes support representative athlete baseline and staff summary query plans.
+- [x] Confirm all new fields are absent from application logs and error payloads unless explicitly sanitized.
 
 ### Required Repository Checks
 
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
-- [ ] Focused unit, integration, component, and E2E tests cover every new load contract.
-- [ ] Product documentation reflects final formulas, unit rules, missing-data behavior, and visibility boundaries.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
+- [x] Focused unit, integration, component, and E2E tests cover every new load contract.
+- [x] Product documentation reflects final formulas, unit rules, missing-data behavior, and visibility boundaries.
 
-### Rollout
+### Post-Release Follow-Up
+
+These production adoption checks remain intentionally open and do not block engineering completion. Close them only from observed production usage and direct coach/athlete confirmation.
 
 - [ ] Release capture fields before treating load summaries as representative.
 - [ ] Monitor duration, RPE, and structured-load capture coverage separately from compliance.
@@ -461,11 +463,11 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 ## Phase 4 Done Definition
 
-- [ ] Session duration and RPE are captured, validated, and editable through authorized session workflows.
-- [ ] Internal load is derived from trusted stored values and never client-supplied.
-- [ ] New measurable strength loads use canonical units while legacy free text remains intact.
-- [ ] Prescribed and completed measurable work can be compared without treating missing values as zero.
-- [ ] Individual 28-day baselines require sufficient prior data and use no universal thresholds.
-- [ ] Athlete, assignment, team, and organization data remain tenant-scoped and authorization-safe.
-- [ ] Staff can drill down from aggregate values to athlete and submitted-session facts.
-- [ ] Unit, integration, E2E, accessibility, visual, migration, `npm run validate`, and `npm run build` checks pass.
+- [x] Session duration and RPE are captured, validated, and editable through authorized session workflows.
+- [x] Internal load is derived from trusted stored values and never client-supplied.
+- [x] New measurable strength loads use canonical units while legacy free text remains intact.
+- [x] Prescribed and completed measurable work can be compared without treating missing values as zero.
+- [x] Individual 28-day baselines require sufficient prior data and use no universal thresholds.
+- [x] Athlete, assignment, team, and organization data remain tenant-scoped and authorization-safe.
+- [x] Staff can drill down from aggregate values to athlete and submitted-session facts.
+- [x] Unit, integration, E2E, accessibility, visual, migration, `npm run validate`, and `npm run build` checks pass.

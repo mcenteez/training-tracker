@@ -395,6 +395,19 @@ describe("assignment unit of work", () => {
       scheduledDate: "2026-08-10",
       now: new Date("2026-08-10T12:00:00.000Z"),
     });
+    const firstAgain = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      planSlotSnapshotId: slotId,
+      scheduledDate: "2026-08-10",
+      now: new Date("2026-08-10T12:30:00.000Z"),
+    });
+    await client.exec(`
+      UPDATE assignment_sessions
+      SET status = 'submitted', submitted_at = '2026-08-10T13:00:00.000Z'
+      WHERE id = '${first.id}';
+    `);
     await saveAthletePrescriptionOverride(overrideUnitOfWork, {
       organizationId: "10000000-0000-4000-8000-000000000001",
       actorUserId: "00000000-0000-4000-8000-000000000001",
@@ -425,15 +438,6 @@ describe("assignment unit of work", () => {
       scheduledDate: "2026-08-12",
       now: new Date("2026-08-12T12:00:00.000Z"),
     });
-    const firstAgain = await startAssignmentSession(sessionUnitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      athleteUserId: "00000000-0000-4000-8000-000000000002",
-      planSlotSnapshotId: slotId,
-      scheduledDate: "2026-08-10",
-      now: new Date("2026-08-10T14:00:00.000Z"),
-    });
-
     expect(first.id).not.toBe(second.id);
     expect(firstAgain.id).toBe(first.id);
     expect(first.planSlotSnapshotId).toBe(slotId);

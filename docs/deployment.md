@@ -112,3 +112,25 @@ Keep human approval required for:
 2. Organization and team workflows load successfully.
 3. Library pages (exercises, workouts, plans) load and mutate as expected.
 4. Error monitoring shows no spike in failures.
+
+## Phase 4 Training-Load Rollout
+
+Release training-load capture before using aggregate totals operationally:
+
+1. Apply the additive load migrations and deploy capture fields with summaries treated as descriptive preview data.
+2. Verify legacy free-text loads remain readable and excluded from measurable volume.
+3. Monitor duration capture, session RPE capture, structured-load adoption, partial external work, and unavailable external work as separate rates from compliance.
+4. Review missing-data and unit-adoption patterns with coaches before broadening external-work metrics.
+5. Treat individual 28-day baseline differences as descriptive history only. Do not configure alerts, intervention thresholds, readiness labels, or injury-risk classifications without a separately reviewed policy.
+
+Coach rollout guidance must explain that internal load is duration multiplied by session RPE, and that baseline differences compare an athlete only with their own eligible preceding sessions. Athlete guidance must explain whole-minute duration, the CR10 session RPE scale, optional capture, and the difference between numeric `kg`/`lb` loads and free-text loads such as bodyweight or bands.
+
+If a load migration or query needs correction after release, ship a forward remediation migration. Do not roll back by dropping nullable columns or rewriting applied migrations. Keep old application instances compatible with nullable fields during the correction window, pause interpretation of affected summaries, verify tenant-scoped counts against raw session facts, and resume only after `npm run validate`, `npm run build`, and production smoke checks pass.
+
+Post-release smoke checks for training load:
+
+1. Athlete saves, reloads, submits, and edits optional duration/RPE and numeric load values.
+2. Legacy free-text load remains readable without a fabricated volume.
+3. Team Viewer can read authorized detail but cannot mutate it.
+4. Team summaries exclude direct-athlete assignments without persisted team scope; organization summaries include them.
+5. No logs or error payloads contain raw duration, RPE, entered load, normalized load, or athlete result payloads.

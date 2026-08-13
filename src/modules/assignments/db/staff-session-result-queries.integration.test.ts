@@ -407,6 +407,10 @@ describe("staff session result queries", () => {
         state: "externalWorkUnavailable",
         completedVolumeKg: null,
       },
+      baseline: {
+        state: "insufficient_history",
+        sampleCount: 0,
+      },
     });
 
     await client.exec(`

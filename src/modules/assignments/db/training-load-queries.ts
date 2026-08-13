@@ -260,17 +260,21 @@ async function buildSessionDetails(
         currentDurationMinutes: session.durationMinutes,
         currentSessionRpe: session.sessionRpe,
         timeZone: session.timezone,
-        sessions: sessions.map((candidate) => ({
-          sessionId: candidate.id,
-          status: "submitted",
-          scheduledAt: resolveLocalDateTimeAtMinute(
-            candidate.scheduledDate,
-            720,
-            candidate.timezone,
-          ),
-          durationMinutes: candidate.durationMinutes,
-          sessionRpe: candidate.sessionRpe,
-        })),
+        sessions: sessions
+          .filter(
+            (candidate) => candidate.athleteUserId === session.athleteUserId,
+          )
+          .map((candidate) => ({
+            sessionId: candidate.id,
+            status: "submitted",
+            scheduledAt: resolveLocalDateTimeAtMinute(
+              candidate.scheduledDate,
+              720,
+              candidate.timezone,
+            ),
+            durationMinutes: candidate.durationMinutes,
+            sessionRpe: candidate.sessionRpe,
+          })),
       }),
     };
   });

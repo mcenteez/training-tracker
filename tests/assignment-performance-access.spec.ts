@@ -10,6 +10,7 @@ import {
   publishWorkoutAssignment,
   readAssignmentSessionCapture,
   readPublishedPlanPolicy,
+  seedAssignmentBaselineSessions,
   setAssignmentPrescriptionMeasurableLoad,
   setAssignmentPrescriptionLegacyLoad,
 } from "./helpers/test-data";
@@ -325,6 +326,7 @@ test.describe("Training Tracker assignment and performance access", () => {
       loadUnit: "kg",
       normalizedLoadKg: "100",
     });
+    await seedAssignmentBaselineSessions(assignmentId, scheduledDate);
 
     await usePersona(context, "manager");
     const performancePath = `/app/performance/teams/${basketballTeamId}/assignments/${assignmentId}`;
@@ -337,9 +339,11 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByText(/306.2 kg prescribed denominator/),
     ).toBeVisible();
+    await expect(page.getByText("28-day individual baseline")).toBeVisible();
     await expect(
-      page.getByText(/0 of 3 required preceding sessions/),
+      page.getByText(/Current 450; median 300; difference 150/),
     ).toBeVisible();
+    await expect(page.getByText(/3 preceding sessions/)).toBeVisible();
     const reviewPath = new URL(page.url()).pathname;
 
     await usePersona(context, "viewer");

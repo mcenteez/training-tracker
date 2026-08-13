@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { neon } from "@neondatabase/serverless";
+import { randomUUID } from "node:crypto";
 
 function testDatabase() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -128,6 +129,79 @@ export async function readAssignmentSessionCapture(assignmentId: string) {
         normalizedLoadKg: String(row.normalized_load_kg),
       }
     : null;
+}
+
+export async function seedAssignmentBaselineSessions(
+  assignmentId: string,
+  currentScheduledDate: string,
+): Promise<void> {
+  const sql = testDatabase();
+  const contexts = await sql`
+    SELECT
+      sessions.recipient_id,
+      sessions.athlete_user_id,
+      workout_snapshots.id AS workout_snapshot_id,
+      item_snapshots.id AS item_snapshot_id,
+      item_snapshots.reps,
+      item_snapshots.load,
+      item_snapshots.load_value,
+      item_snapshots.load_unit,
+      item_snapshots.normalized_load_kg
+    FROM assignment_sessions sessions
+    INNER JOIN assignment_workout_snapshots workout_snapshots
+      ON workout_snapshots.id = sessions.workout_snapshot_id
+    INNER JOIN assignment_workout_block_snapshots block_snapshots
+      ON block_snapshots.workout_snapshot_id = workout_snapshots.id
+    INNER JOIN assignment_workout_item_snapshots item_snapshots
+      ON item_snapshots.block_snapshot_id = block_snapshots.id
+    WHERE sessions.assignment_id = ${assignmentId}
+      AND sessions.status = 'submitted'
+      AND sessions.scheduled_date = ${currentScheduledDate}
+    LIMIT 1
+  `;
+  const context = contexts[0];
+  if (!context) throw new Error("Assignment baseline context not found");
+
+  for (const [index, durationMinutes] of [20, 30, 40].entries()) {
+    const sessionId = randomUUID();
+    const date = new Date(`${currentScheduledDate}T12:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() - (index + 1));
+    const scheduledDate = date.toISOString().slice(0, 10);
+    await sql`
+      INSERT INTO assignment_sessions (
+        id, organization_id, assignment_id, recipient_id, athlete_user_id,
+        workout_snapshot_id, scheduled_date, available_from, available_until,
+        status, started_at, submitted_at, duration_minutes, session_rpe
+      ) VALUES (
+        ${sessionId}, '10000000-0000-4000-8000-000000000001', ${assignmentId},
+        ${context.recipient_id}, ${context.athlete_user_id},
+        ${context.workout_snapshot_id}, ${scheduledDate},
+        ${`${scheduledDate}T00:00:00.000Z`}, ${`${scheduledDate}T23:59:59.000Z`},
+        'submitted', ${`${scheduledDate}T12:00:00.000Z`},
+        ${`${scheduledDate}T13:00:00.000Z`}, ${durationMinutes}, 10
+      )
+    `;
+    await sql`
+      INSERT INTO assignment_session_effective_item_prescriptions (
+        organization_id, assignment_id, session_id, item_snapshot_id,
+        reps, load, load_value, load_unit, normalized_load_kg
+      ) VALUES (
+        '10000000-0000-4000-8000-000000000001', ${assignmentId}, ${sessionId},
+        ${context.item_snapshot_id}, ${context.reps}, ${context.load},
+        ${context.load_value}, ${context.load_unit}, ${context.normalized_load_kg}
+      )
+    `;
+    await sql`
+      INSERT INTO assignment_session_item_results (
+        organization_id, assignment_id, session_id, item_snapshot_id,
+        round_number, reps, load, load_value, load_unit, normalized_load_kg
+      ) VALUES (
+        '10000000-0000-4000-8000-000000000001', ${assignmentId}, ${sessionId},
+        ${context.item_snapshot_id}, 1, ${context.reps}, ${context.load},
+        ${context.load_value}, ${context.load_unit}, ${context.normalized_load_kg}
+      )
+    `;
+  }
 }
 
 export async function createExercise(
