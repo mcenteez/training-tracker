@@ -570,6 +570,12 @@ describe("assignment unit of work", () => {
       expectedVersion: draft.version,
     });
 
+    await client.query(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-08-11T00:00:00.000Z'
+      WHERE id = '${draft.id}';
+    `);
+
     const started = await startAssignmentSession(
       createAssignmentSessionUnitOfWork(database),
       {
@@ -585,6 +591,20 @@ describe("assignment unit of work", () => {
     expect(started.availableUntil.toISOString()).toBe(
       "2026-08-20T00:00:00.000Z",
     );
+
+    const effectivePrescriptionRows = await client.query<{
+      reps: number | null;
+      load: string | null;
+      source_override_id: string | null;
+    }>(`
+      SELECT reps, load, source_override_id
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id = '${started.id}';
+    `);
+
+    expect(effectivePrescriptionRows.rows).toEqual([
+      { reps: 5, load: "75%", source_override_id: null },
+    ]);
 
     const itemSnapshots = await client.query<{
       id: string;

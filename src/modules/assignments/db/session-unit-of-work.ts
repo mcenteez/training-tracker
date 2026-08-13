@@ -1,15 +1,18 @@
 import "server-only";
 
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
+import { resolveEffectivePrescription } from "@/modules/assignments/application/effective-prescription";
 import type { AssignmentSessionItemResult } from "@/modules/assignments/db/schema";
 import {
   assignments,
+  assignmentAthleteItemOverrides,
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
   assignmentSessionItemResults,
   assignmentSessions,
+  assignmentSessionEffectiveItemPrescriptions,
   assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
   assignmentWorkoutSnapshots,
@@ -202,6 +205,160 @@ export function createAssignmentSessionUnitOfWork(
             }
 
             return session;
+          },
+          async snapshotEffectiveItemPrescriptions(input) {
+            const itemSnapshots = await databaseTransaction
+              .select({
+                id: assignmentWorkoutItemSnapshots.id,
+                reps: assignmentWorkoutItemSnapshots.reps,
+                load: assignmentWorkoutItemSnapshots.load,
+                loadValue: assignmentWorkoutItemSnapshots.loadValue,
+                loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
+                normalizedLoadKg:
+                  assignmentWorkoutItemSnapshots.normalizedLoadKg,
+                durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
+                distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
+                restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
+                tempo: assignmentWorkoutItemSnapshots.tempo,
+                notes: assignmentWorkoutItemSnapshots.notes,
+              })
+              .from(assignmentWorkoutItemSnapshots)
+              .innerJoin(
+                assignmentWorkoutBlockSnapshots,
+                and(
+                  eq(
+                    assignmentWorkoutBlockSnapshots.organizationId,
+                    assignmentWorkoutItemSnapshots.organizationId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.assignmentId,
+                    assignmentWorkoutItemSnapshots.assignmentId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.id,
+                    assignmentWorkoutItemSnapshots.blockSnapshotId,
+                  ),
+                ),
+              )
+              .where(
+                and(
+                  eq(
+                    assignmentWorkoutItemSnapshots.organizationId,
+                    input.organizationId,
+                  ),
+                  eq(
+                    assignmentWorkoutItemSnapshots.assignmentId,
+                    input.assignmentId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+                    input.workoutSnapshotId,
+                  ),
+                ),
+              )
+              .orderBy(
+                asc(assignmentWorkoutBlockSnapshots.position),
+                asc(assignmentWorkoutItemSnapshots.position),
+              );
+
+            if (itemSnapshots.length === 0) {
+              throw new Error("Workout snapshot has no item snapshots");
+            }
+
+            const overrides = await databaseTransaction
+              .select({
+                id: assignmentAthleteItemOverrides.id,
+                itemSnapshotId: assignmentAthleteItemOverrides.itemSnapshotId,
+                planSlotSnapshotId:
+                  assignmentAthleteItemOverrides.planSlotSnapshotId,
+                reps: assignmentAthleteItemOverrides.reps,
+                load: assignmentAthleteItemOverrides.load,
+                loadValue: assignmentAthleteItemOverrides.loadValue,
+                loadUnit: assignmentAthleteItemOverrides.loadUnit,
+                normalizedLoadKg:
+                  assignmentAthleteItemOverrides.normalizedLoadKg,
+                durationSeconds:
+                  assignmentAthleteItemOverrides.durationSeconds,
+                distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
+                restSeconds: assignmentAthleteItemOverrides.restSeconds,
+                tempo: assignmentAthleteItemOverrides.tempo,
+                notes: assignmentAthleteItemOverrides.notes,
+              })
+              .from(assignmentAthleteItemOverrides)
+              .where(
+                and(
+                  eq(
+                    assignmentAthleteItemOverrides.organizationId,
+                    input.organizationId,
+                  ),
+                  eq(
+                    assignmentAthleteItemOverrides.assignmentId,
+                    input.assignmentId,
+                  ),
+                  eq(
+                    assignmentAthleteItemOverrides.recipientId,
+                    input.recipientId,
+                  ),
+                  eq(
+                    assignmentAthleteItemOverrides.athleteUserId,
+                    input.athleteUserId,
+                  ),
+                  input.planSlotSnapshotId
+                    ? or(
+                        eq(
+                          assignmentAthleteItemOverrides.planSlotSnapshotId,
+                          input.planSlotSnapshotId,
+                        ),
+                        isNull(
+                          assignmentAthleteItemOverrides.planSlotSnapshotId,
+                        ),
+                      )
+                    : isNull(
+                        assignmentAthleteItemOverrides.planSlotSnapshotId,
+                      ),
+                ),
+              );
+            const overrideByItem = new Map<string, (typeof overrides)[number]>();
+
+            for (const override of overrides) {
+              const existing = overrideByItem.get(override.itemSnapshotId);
+              if (
+                !existing ||
+                (override.planSlotSnapshotId !== null &&
+                  existing.planSlotSnapshotId === null)
+              ) {
+                overrideByItem.set(override.itemSnapshotId, override);
+              }
+            }
+
+            await databaseTransaction
+              .insert(assignmentSessionEffectiveItemPrescriptions)
+              .values(
+                itemSnapshots.map((item) => {
+                  const effective = resolveEffectivePrescription(
+                    item,
+                    overrideByItem.get(item.id) ?? null,
+                  );
+
+                  return {
+                    organizationId: input.organizationId,
+                    assignmentId: input.assignmentId,
+                    sessionId: input.sessionId,
+                    itemSnapshotId: item.id,
+                    sourceOverrideId: effective.sourceOverrideId,
+                    reps: effective.reps,
+                    load: effective.load,
+                    loadValue: effective.loadValue,
+                    loadUnit: effective.loadUnit,
+                    normalizedLoadKg: effective.normalizedLoadKg,
+                    durationSeconds: effective.durationSeconds,
+                    distanceMeters: effective.distanceMeters,
+                    restSeconds: effective.restSeconds,
+                    tempo: effective.tempo,
+                    notes: effective.notes,
+                  };
+                }),
+              );
           },
           async findSessionByIdForAthlete(
             organizationId,

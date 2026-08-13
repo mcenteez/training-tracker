@@ -107,6 +107,7 @@ function setup(overrides: Partial<AssignmentSessionTransaction> = {}) {
     listAthleteSessions: vi.fn(async () => []),
     findSessionForAthlete: vi.fn(async () => null),
     createSession: vi.fn(async () => makeSession()),
+    snapshotEffectiveItemPrescriptions: vi.fn(async () => undefined),
     findSessionByIdForAthlete: vi.fn(async () => makeSession()),
     listItemSnapshotIdsForWorkoutSnapshot: vi.fn(async () => [
       ids.itemSnapshotId,

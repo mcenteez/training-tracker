@@ -130,6 +130,15 @@ export interface AssignmentSessionTransaction {
     availableUntil: Date;
     dueAt: Date | null;
   }): Promise<AssignmentSession>;
+  snapshotEffectiveItemPrescriptions(input: {
+    organizationId: string;
+    assignmentId: string;
+    recipientId: string;
+    athleteUserId: string;
+    sessionId: string;
+    workoutSnapshotId: string;
+    planSlotSnapshotId: string | null;
+  }): Promise<void>;
   findSessionByIdForAthlete(
     organizationId: string,
     assignmentId: string,
@@ -348,7 +357,7 @@ export async function startAssignmentSession(
       );
     }
 
-    return transaction.createSession({
+    return createSessionWithEffectivePrescriptions(transaction, {
       organizationId: input.organizationId,
       assignmentId: input.assignmentId,
       recipientId: assignment.recipientId,
@@ -527,7 +536,7 @@ async function startPlanOccurrenceSession(
     );
   }
 
-  return transaction.createSession({
+  return createSessionWithEffectivePrescriptions(transaction, {
     organizationId: input.organizationId,
     assignmentId: input.assignmentId,
     recipientId: assignment.recipientId,
@@ -539,6 +548,36 @@ async function startPlanOccurrenceSession(
     availableUntil: availability.availableUntil,
     dueAt: availability.dueAt,
   });
+}
+
+async function createSessionWithEffectivePrescriptions(
+  transaction: AssignmentSessionTransaction,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    recipientId: string;
+    athleteUserId: string;
+    workoutSnapshotId: string;
+    planSlotSnapshotId: string | null;
+    scheduledDate: string;
+    availableFrom: Date;
+    availableUntil: Date;
+    dueAt: Date | null;
+  },
+): Promise<AssignmentSession> {
+  const session = await transaction.createSession(input);
+
+  await transaction.snapshotEffectiveItemPrescriptions({
+    organizationId: input.organizationId,
+    assignmentId: input.assignmentId,
+    recipientId: input.recipientId,
+    athleteUserId: input.athleteUserId,
+    sessionId: session.id,
+    workoutSnapshotId: input.workoutSnapshotId,
+    planSlotSnapshotId: input.planSlotSnapshotId,
+  });
+
+  return session;
 }
 
 export async function autosaveAssignmentSessionResults(
