@@ -16,7 +16,10 @@ import {
   startAssignmentSession,
   autosaveAssignmentSessionResults,
 } from "@/modules/assignments/application/assignment-session-service";
-import { saveAthletePrescriptionOverride } from "@/modules/assignments/application/athlete-prescription-service";
+import {
+  clearAthletePrescriptionOverride,
+  saveAthletePrescriptionOverride,
+} from "@/modules/assignments/application/athlete-prescription-service";
 import { createAthletePrescriptionUnitOfWork } from "@/modules/assignments/db/athlete-prescription-unit-of-work";
 import {
   findPublishedAssignmentForAthlete,
@@ -454,6 +457,37 @@ describe("assignment unit of work", () => {
       { session_id: second.id, reps: 25 },
     ]);
 
+    await clearAthletePrescriptionOverride(overrideUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      recipientId: overrideTarget.recipient_id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      itemSnapshotId: overrideTarget.item_snapshot_id,
+      planSlotSnapshotId: slotId,
+      expectedVersion: 2,
+    });
+    const afterClearPrescriptions = await client.query<{
+      session_id: string;
+      reps: number;
+    }>(`
+      SELECT session_id, reps
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id IN ('${first.id}', '${second.id}');
+    `);
+    expect(
+      afterClearPrescriptions.rows.toSorted((left, right) =>
+        left.session_id === first.id
+          ? -1
+          : right.session_id === first.id
+            ? 1
+            : 0,
+      ),
+    ).toEqual([
+      { session_id: first.id, reps: 20 },
+      { session_id: second.id, reps: 25 },
+    ]);
+
     await expect(
       startAssignmentSession(sessionUnitOfWork, {
         organizationId: "10000000-0000-4000-8000-000000000001",
@@ -467,6 +501,14 @@ describe("assignment unit of work", () => {
   });
 
   it("publishes a session-ready immutable workout snapshot", async () => {
+    await client.exec(`
+      UPDATE workout_items
+      SET load = '135 lb',
+          load_value = 135,
+          load_unit = 'lb',
+          normalized_load_kg = 61.23496995
+      WHERE id = '50000000-0000-4000-8000-000000000001';
+    `);
     const unitOfWork = createAssignmentUnitOfWork(database);
     const draft = await createAssignment(unitOfWork, {
       organizationId: "10000000-0000-4000-8000-000000000001",
@@ -494,6 +536,15 @@ describe("assignment unit of work", () => {
       expectedVersion: draft.version,
     });
 
+    await client.exec(`
+      UPDATE workout_items
+      SET load = '100 kg',
+          load_value = 100,
+          load_unit = 'kg',
+          normalized_load_kg = 100
+      WHERE id = '50000000-0000-4000-8000-000000000001';
+    `);
+
     const workoutSnapshots = await client.query<{
       source_workout_version: number;
       name: string;
@@ -514,9 +565,19 @@ describe("assignment unit of work", () => {
       exercise_name: string;
       reps: number;
       load: string;
+      load_value: string;
+      load_unit: string;
+      normalized_load_kg: string;
       exercise_instructions: string;
     }>(`
-      SELECT exercise_name, reps, load, exercise_instructions
+      SELECT
+        exercise_name,
+        reps,
+        load,
+        load_value,
+        load_unit,
+        normalized_load_kg,
+        exercise_instructions
       FROM assignment_workout_item_snapshots
       WHERE assignment_id = '${draft.id}';
     `);
@@ -529,10 +590,215 @@ describe("assignment unit of work", () => {
       {
         exercise_name: "Back Squat",
         reps: 5,
-        load: "75%",
+        load: "135 lb",
+        load_value: "135",
+        load_unit: "lb",
+        normalized_load_kg: "61.23496995",
         exercise_instructions: "Brace before descending",
       },
     ]);
+  });
+
+  it("preserves legacy text loads and enforces nullable structured load and session constraints", async () => {
+    const legacyLoad = await client.query<{
+      load: string;
+      load_value: string | null;
+      load_unit: string | null;
+      normalized_load_kg: string | null;
+    }>(`
+      SELECT load, load_value, load_unit, normalized_load_kg
+      FROM workout_items
+      WHERE id = '50000000-0000-4000-8000-000000000001';
+    `);
+    expect(legacyLoad.rows).toEqual([
+      {
+        load: "75%",
+        load_value: null,
+        load_unit: null,
+        normalized_load_kg: null,
+      },
+    ]);
+
+    await expect(
+      client.exec(`
+        UPDATE workout_items
+        SET load_value = 135
+        WHERE id = '50000000-0000-4000-8000-000000000001';
+      `),
+    ).rejects.toThrow(/structured_load_complete/);
+    await client.exec(`
+      UPDATE workout_items
+      SET load = '135 lb',
+          load_value = 135,
+          load_unit = 'lb',
+          normalized_load_kg = 61.23496995
+      WHERE id = '50000000-0000-4000-8000-000000000001';
+    `);
+
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    const session = await startAssignmentSession(
+      createAssignmentSessionUnitOfWork(database),
+      {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        now: new Date("2026-08-12T12:00:00.000Z"),
+      },
+    );
+
+    await expect(
+      client.exec(`
+        UPDATE assignment_sessions
+        SET duration_minutes = -1
+        WHERE id = '${session.id}';
+      `),
+    ).rejects.toThrow(/duration_nonnegative/);
+    await expect(
+      client.exec(`
+        UPDATE assignment_sessions
+        SET session_rpe = 11
+        WHERE id = '${session.id}';
+      `),
+    ).rejects.toThrow(/rpe_bounds/);
+    await client.exec(`
+      UPDATE assignment_sessions
+      SET duration_minutes = 45, session_rpe = 8
+      WHERE id = '${session.id}';
+    `);
+    const validSessionLoad = await client.query<{
+      duration_minutes: number;
+      session_rpe: number;
+    }>(`
+      SELECT duration_minutes, session_rpe
+      FROM assignment_sessions
+      WHERE id = '${session.id}';
+    `);
+    expect(validSessionLoad.rows).toEqual([
+      { duration_minutes: 45, session_rpe: 8 },
+    ]);
+  });
+
+  it("stores distinct recipient overrides without changing the shared snapshot", async () => {
+    await client.exec(`
+      INSERT INTO users (id, clerk_user_id, email)
+      VALUES ('00000000-0000-4000-8000-000000000003', 'athlete-two', 'athlete-two@example.com');
+
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000003', 'athlete');
+    `);
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000003",
+        },
+      ],
+    });
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    const recipients = await client.query<{
+      id: string;
+      athlete_user_id: string;
+    }>(`
+      SELECT id, athlete_user_id
+      FROM assignment_recipients
+      WHERE assignment_id = '${draft.id}';
+    `);
+    const itemRows = await client.query<{ id: string }>(`
+      SELECT id
+      FROM assignment_workout_item_snapshots
+      WHERE assignment_id = '${draft.id}';
+    `);
+    const itemSnapshotId = itemRows.rows[0]!.id;
+    const overrideUnitOfWork = createAthletePrescriptionUnitOfWork(database);
+
+    for (const [index, recipient] of recipients.rows.entries()) {
+      await saveAthletePrescriptionOverride(overrideUnitOfWork, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        actorUserId: "00000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        recipientId: recipient.id,
+        athleteUserId: recipient.athlete_user_id,
+        itemSnapshotId,
+        planSlotSnapshotId: null,
+        expectedVersion: null,
+        overriddenFields: ["reps"],
+        reps: index === 0 ? 10 : 20,
+        load: null,
+        loadValue: null,
+        loadUnit: null,
+        normalizedLoadKg: null,
+        durationSeconds: null,
+        distanceMeters: null,
+        restSeconds: null,
+        tempo: null,
+        notes: null,
+        reason: null,
+      });
+    }
+
+    const overrideRows = await client.query<{
+      athlete_user_id: string;
+      reps: number;
+    }>(`
+      SELECT athlete_user_id, reps
+      FROM assignment_athlete_item_overrides
+      WHERE assignment_id = '${draft.id}'
+      ORDER BY reps;
+    `);
+    const sharedRows = await client.query<{ reps: number }>(`
+      SELECT reps
+      FROM assignment_workout_item_snapshots
+      WHERE id = '${itemSnapshotId}';
+    `);
+    expect(overrideRows.rows.map((row) => row.reps)).toEqual([10, 20]);
+    expect(
+      new Set(overrideRows.rows.map((row) => row.athlete_user_id)).size,
+    ).toBe(2);
+    expect(sharedRows.rows).toEqual([{ reps: 5 }]);
   });
 
   it("limits team-manager assignment reads to wholly managed targets", async () => {

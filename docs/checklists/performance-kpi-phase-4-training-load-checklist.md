@@ -172,7 +172,7 @@ Persist the entered values and immutable assignment prescription facts required 
 - [x] Store overridden prescription fields, normalized load fields, change actor, timestamps, optional reason, and a version for optimistic concurrency.
 - [x] Add an immutable per-session effective-item-prescription snapshot created when a session starts.
 - [x] Keep effective-session prescription snapshots separate from athlete-entered result rows.
-- [ ] Preserve existing text load columns for legacy display and non-measurable entries.
+- [x] Preserve existing text load columns for legacy display and non-measurable entries.
 - [x] Add database checks for nonnegative duration, RPE range 1 through 10, positive numeric loads, and supported units.
 - [x] Add database checks requiring entered numeric load, unit, and normalized kilograms to be present together.
 - [x] Add indexes for organization-scoped submitted-session date reads and athlete-scoped baseline reads.
@@ -186,17 +186,17 @@ Persist the entered values and immutable assignment prescription facts required 
 - [x] Apply new columns as nullable with no destructive rewrite of historical result values.
 - [x] Leave historical free-text loads unnormalized and unavailable for volume aggregation.
 - [x] Backfill no inferred duration, RPE, or numeric load data.
-- [ ] Verify existing assignment publication can create snapshots without measurable load values.
-- [ ] Verify a shared assignment item can have distinct valid overrides for separate recipients without changing the shared snapshot.
-- [ ] Verify existing completed sessions remain editable according to current authorization rules.
-- [ ] Add schema integration coverage for constraints, null legacy rows, and valid normalized rows.
+- [x] Verify existing assignment publication can create snapshots without measurable load values.
+- [x] Verify a shared assignment item can have distinct valid overrides for separate recipients without changing the shared snapshot.
+- [x] Verify existing completed sessions remain editable according to current authorization rules.
+- [x] Add schema integration coverage for constraints, null legacy rows, and valid normalized rows.
 
 ### Acceptance Criteria
 
-- [ ] Historical data remains readable without fabricated load metrics.
-- [ ] A persisted assignment snapshot reproduces its measurable prescription after its source workout changes.
-- [ ] A session's effective prescription remains reproducible after its athlete-specific override changes or is cleared.
-- [ ] No new load field can cross organization, assignment, or session ownership boundaries.
+- [x] Historical data remains readable without fabricated load metrics.
+- [x] A persisted assignment snapshot reproduces its measurable prescription after its source workout changes.
+- [x] A session's effective prescription remains reproducible after its athlete-specific override changes or is cleared.
+- [x] No new load field can cross organization, assignment, or session ownership boundaries.
 
 ## Milestone 2: Individual Prescription Overrides
 
