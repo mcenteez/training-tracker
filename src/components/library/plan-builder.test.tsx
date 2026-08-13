@@ -107,4 +107,70 @@ describe("PlanBuilder", () => {
     expect(graph.scheduleSlots[0]?.targetSessionsPerWeek).toBe(3);
     expect(graph.scheduleSlots[0]?.dayOfWeek).toBeUndefined();
   });
+
+  it("offers to activate each referenced draft workout once", () => {
+    const draftWorkoutId = "10000000-0000-4000-8000-000000000002";
+    render(
+      <PlanBuilder
+        action={vi.fn(async () => ({}))}
+        workouts={[
+          {
+            id: draftWorkoutId,
+            name: "Draft Push",
+            status: "draft",
+          },
+          {
+            id: "10000000-0000-4000-8000-000000000003",
+            name: "Active Pull",
+            status: "active",
+          },
+        ]}
+        plan={{
+          id: "plan-1",
+          name: "Draft Plan",
+          description: null,
+          version: 1,
+          scheduleSlots: [
+            {
+              scheduleType: "fixed_day",
+              workoutId: draftWorkoutId,
+              dayOfWeek: "monday",
+              label: null,
+            },
+            {
+              scheduleType: "fixed_day",
+              workoutId: draftWorkoutId,
+              dayOfWeek: "wednesday",
+              label: null,
+            },
+          ],
+        }}
+      />,
+    );
+
+    const option = screen.getByLabelText(
+      /Activate 1 referenced draft workout with this plan/,
+    );
+    expect(option).toBeInTheDocument();
+    expect(screen.getByText(/^Draft Push\./)).toBeInTheDocument();
+  });
+
+  it("does not show the activation option when every reference is active", () => {
+    render(
+      <PlanBuilder
+        action={vi.fn(async () => ({}))}
+        workouts={[
+          {
+            id: "10000000-0000-4000-8000-000000000001",
+            name: "Active Push",
+            status: "active",
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/referenced draft workout/),
+    ).not.toBeInTheDocument();
+  });
 });

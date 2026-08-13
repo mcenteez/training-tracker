@@ -394,6 +394,8 @@ export async function createPlanAction(
 ): Promise<PlanActionState> {
   const parsed = planInputSchema.safeParse(parsePlanGraph(formData));
   const status = formData.get("intent") === "activate" ? "active" : "draft";
+  const activateReferencedDraftWorkouts =
+    formData.get("activateReferencedDraftWorkouts") === "1";
   if (!parsed.success) {
     return {
       message:
@@ -411,6 +413,7 @@ export async function createPlanAction(
         actorUserId: context.user.id,
         plan: parsed.data,
         status,
+        activateReferencedDraftWorkouts,
       }),
     );
     planId = plan.id;
@@ -421,6 +424,7 @@ export async function createPlanAction(
   }
 
   revalidatePath("/app/library/plans");
+  revalidatePath("/app/library/workouts");
   redirect(`/app/library/plans/${planId}?saved=1`);
 }
 
@@ -435,6 +439,8 @@ export async function updatePlanAction(
     version: Number(formData.get("version")),
   });
   const status = formData.get("intent") === "activate" ? "active" : "draft";
+  const activateReferencedDraftWorkouts =
+    formData.get("activateReferencedDraftWorkouts") === "1";
   if (!parsed.success) {
     return {
       message:
@@ -453,6 +459,7 @@ export async function updatePlanAction(
         expectedVersion: parsed.data.version,
         plan: parsed.data,
         status,
+        activateReferencedDraftWorkouts,
       }),
     );
   } catch (error) {
@@ -462,6 +469,7 @@ export async function updatePlanAction(
   }
 
   revalidatePath("/app/library/plans");
+  revalidatePath("/app/library/workouts");
   redirect(`/app/library/plans/${parsed.data.planId}?saved=1`);
 }
 

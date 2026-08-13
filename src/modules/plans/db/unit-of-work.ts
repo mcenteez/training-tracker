@@ -10,7 +10,12 @@ import type {
 } from "@/modules/plans/application/plan-service";
 import { plans, planScheduleSlots } from "@/modules/plans/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
-import { workouts } from "@/modules/workouts/db/schema";
+import { exercises } from "@/modules/exercises/db/schema";
+import {
+  workoutBlocks,
+  workoutItems,
+  workouts,
+} from "@/modules/workouts/db/schema";
 
 export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
   return {
@@ -130,6 +135,94 @@ export function createPlanUnitOfWork(database: Database): PlanUnitOfWork {
               new Set(found.map((workout) => workout.id)).size ===
               new Set(workoutIds).size
             );
+          },
+          async listWorkoutActivationReadiness(organizationId, workoutIds) {
+            if (!workoutIds.length) return [];
+            const [workoutRows, blockRows, itemRows] = await Promise.all([
+              databaseTransaction
+                .select({
+                  id: workouts.id,
+                  name: workouts.name,
+                  status: workouts.status,
+                })
+                .from(workouts)
+                .where(
+                  and(
+                    eq(workouts.organizationId, organizationId),
+                    inArray(workouts.id, [...workoutIds]),
+                  ),
+                ),
+              databaseTransaction
+                .select({
+                  id: workoutBlocks.id,
+                  workoutId: workoutBlocks.workoutId,
+                })
+                .from(workoutBlocks)
+                .where(
+                  and(
+                    eq(workoutBlocks.organizationId, organizationId),
+                    inArray(workoutBlocks.workoutId, [...workoutIds]),
+                  ),
+                ),
+              databaseTransaction
+                .select({
+                  blockId: workoutItems.blockId,
+                  workoutId: workoutItems.workoutId,
+                  exerciseStatus: exercises.status,
+                })
+                .from(workoutItems)
+                .innerJoin(
+                  exercises,
+                  and(
+                    eq(exercises.organizationId, workoutItems.organizationId),
+                    eq(exercises.id, workoutItems.exerciseId),
+                  ),
+                )
+                .where(
+                  and(
+                    eq(workoutItems.organizationId, organizationId),
+                    inArray(workoutItems.workoutId, [...workoutIds]),
+                  ),
+                ),
+            ]);
+
+            return workoutRows.map((workout) => {
+              const blocks = blockRows.filter(
+                (block) => block.workoutId === workout.id,
+              );
+              const items = itemRows.filter(
+                (item) => item.workoutId === workout.id,
+              );
+              return {
+                ...workout,
+                activatable:
+                  blocks.length > 0 &&
+                  blocks.every((block) =>
+                    items.some((item) => item.blockId === block.id),
+                  ) &&
+                  items.every((item) => item.exerciseStatus === "active"),
+              };
+            });
+          },
+          async activateDraftWorkouts(input) {
+            if (!input.workoutIds.length) return [];
+            const activated = await databaseTransaction
+              .update(workouts)
+              .set({
+                status: "active",
+                updatedByUserId: input.actorUserId,
+                updatedAt: new Date(),
+                version: sql`${workouts.version} + 1`,
+              })
+              .where(
+                and(
+                  eq(workouts.organizationId, input.organizationId),
+                  eq(workouts.status, "draft"),
+                  inArray(workouts.id, [...input.workoutIds]),
+                ),
+              )
+              .returning({ id: workouts.id });
+            return activated.map((workout) => workout.id);
           },
           async createPlan(input) {
             const [createdPlan] = await databaseTransaction

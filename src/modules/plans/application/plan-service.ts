@@ -34,6 +34,22 @@ export interface PlanTransaction {
     organizationId: string,
     workoutIds: readonly string[],
   ): Promise<boolean>;
+  listWorkoutActivationReadiness(
+    organizationId: string,
+    workoutIds: readonly string[],
+  ): Promise<
+    readonly {
+      id: string;
+      name: string;
+      status: "draft" | "active" | "archived";
+      activatable: boolean;
+    }[]
+  >;
+  activateDraftWorkouts(input: {
+    organizationId: string;
+    actorUserId: string;
+    workoutIds: readonly string[];
+  }): Promise<readonly string[]>;
   createPlan(input: {
     organizationId: string;
     actorUserId: string;
@@ -151,6 +167,48 @@ async function requireActiveWorkouts(
   }
 }
 
+async function activateReferencedDraftWorkouts(
+  transaction: PlanTransaction,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    scheduleSlots: readonly PlanScheduleSlotInput[];
+  },
+): Promise<void> {
+  const workoutIds = [
+    ...new Set(input.scheduleSlots.map((slot) => slot.workoutId)),
+  ];
+  const readiness = await transaction.listWorkoutActivationReadiness(
+    input.organizationId,
+    workoutIds,
+  );
+  const draftWorkouts = readiness.filter(
+    (workout) => workout.status === "draft",
+  );
+  const incompleteNames = draftWorkouts
+    .filter((workout) => !workout.activatable)
+    .map((workout) => workout.name);
+
+  if (incompleteNames.length > 0) {
+    throw new DomainInvariantError(
+      `Complete these workouts before activating the plan: ${incompleteNames.join(", ")}.`,
+    );
+  }
+
+  const draftIds = draftWorkouts.map((workout) => workout.id);
+  if (draftIds.length === 0) return;
+  const activatedIds = await transaction.activateDraftWorkouts({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    workoutIds: draftIds,
+  });
+  if (new Set(activatedIds).size !== new Set(draftIds).size) {
+    throw new DomainInvariantError(
+      "A referenced workout changed before activation. Reload and try again.",
+    );
+  }
+}
+
 export async function createPlan(
   unitOfWork: PlanUnitOfWork,
   input: {
@@ -158,6 +216,7 @@ export async function createPlan(
     actorUserId: string;
     plan: PlanInput;
     status: "draft" | "active";
+    activateReferencedDraftWorkouts?: boolean;
   },
 ): Promise<Plan> {
   return unitOfWork.transaction(async (transaction) => {
@@ -173,6 +232,13 @@ export async function createPlan(
       input.plan.scheduleSlots,
     );
     if (input.status === "active") {
+      if (input.activateReferencedDraftWorkouts) {
+        await activateReferencedDraftWorkouts(transaction, {
+          organizationId: input.organizationId,
+          actorUserId: input.actorUserId,
+          scheduleSlots: input.plan.scheduleSlots,
+        });
+      }
       await requireActiveWorkouts(
         transaction,
         input.organizationId,
@@ -200,6 +266,7 @@ export async function savePlan(
     expectedVersion: number;
     plan: PlanInput;
     status: "draft" | "active";
+    activateReferencedDraftWorkouts?: boolean;
   },
 ): Promise<Plan> {
   return unitOfWork.transaction(async (transaction) => {
@@ -229,6 +296,13 @@ export async function savePlan(
       input.plan.scheduleSlots,
     );
     if (input.status === "active") {
+      if (input.activateReferencedDraftWorkouts) {
+        await activateReferencedDraftWorkouts(transaction, {
+          organizationId: input.organizationId,
+          actorUserId: input.actorUserId,
+          scheduleSlots: input.plan.scheduleSlots,
+        });
+      }
       await requireActiveWorkouts(
         transaction,
         input.organizationId,

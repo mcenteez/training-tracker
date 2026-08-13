@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 import { usePersona } from "./helpers/persona";
-import { createExercise, createWorkout } from "./helpers/test-data";
+import {
+  createExercise,
+  createWorkout,
+  createWorkoutDraft,
+} from "./helpers/test-data";
 
 test.describe("Training Tracker library access", () => {
   test("manager can create an exercise from the library flow", async ({
@@ -168,6 +172,59 @@ test.describe("Training Tracker library access", () => {
     await expect(
       page.getByText(`${workoutName} Copy Final`, { exact: true }),
     ).toBeVisible();
+  });
+
+  test("manager can activate a plan and its referenced draft workouts atomically", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Plan Activation Exercise ${suffix}`;
+    const firstWorkoutName = `Playwright Draft Push ${suffix}`;
+    const secondWorkoutName = `Playwright Draft Pull ${suffix}`;
+    const planName = `Playwright Atomic Plan ${suffix}`;
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkoutDraft(page, firstWorkoutName, exerciseName);
+    await createWorkoutDraft(page, secondWorkoutName, exerciseName);
+
+    await page.goto("/app/library/plans/new");
+    await page.getByLabel("Plan name").fill(planName);
+    await page.getByRole("button", { name: "Add session" }).click();
+    await page
+      .getByRole("region", { name: "Scheduled session 1" })
+      .getByLabel("Workout template")
+      .selectOption({ label: `${firstWorkoutName} (draft)` });
+    await page.getByRole("button", { name: "Add session" }).click();
+    await page
+      .getByRole("region", { name: "Scheduled session 2" })
+      .getByLabel("Workout template")
+      .selectOption({ label: `${secondWorkoutName} (draft)` });
+
+    const activationOption = page.getByLabel(
+      "Activate 2 referenced draft workouts with this plan",
+    );
+    await expect(activationOption).toBeVisible();
+    const activationLabel = activationOption.locator("..");
+    await expect(activationLabel).toContainText(firstWorkoutName);
+    await expect(activationLabel).toContainText(secondWorkoutName);
+    await activationOption.check();
+    await page.getByRole("button", { name: "Activate plan" }).click();
+
+    await expect(page).toHaveURL(/\/app\/library\/plans\/[^/]+\?saved=1$/);
+    await expect(page.getByText(planName, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("active", { exact: true }).first(),
+    ).toBeVisible();
+
+    for (const workoutName of [firstWorkoutName, secondWorkoutName]) {
+      await page.goto(
+        `/app/library/workouts?search=${encodeURIComponent(workoutName)}`,
+      );
+      await expect(page.getByText(workoutName, { exact: true })).toBeVisible();
+    }
   });
 
   test("viewer can browse the library but cannot create exercises", async ({

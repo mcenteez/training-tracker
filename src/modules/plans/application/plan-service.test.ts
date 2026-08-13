@@ -58,6 +58,8 @@ function setup(overrides: Partial<PlanTransaction> = {}) {
     unarchivedNameExists: vi.fn(async () => false),
     workoutIdsExist: vi.fn(async () => true),
     activeWorkoutIdsExist: vi.fn(async () => true),
+    listWorkoutActivationReadiness: vi.fn(async () => []),
+    activateDraftWorkouts: vi.fn(async () => []),
     createPlan: vi.fn(async () => plan()),
     updatePlan: vi.fn(async () => plan({ version: 2 })),
     replaceScheduleSlots: vi.fn(async () => undefined),
@@ -155,6 +157,97 @@ describe("plan service", () => {
         status: "active",
       }),
     ).rejects.toThrow(DomainInvariantError);
+  });
+
+  it("activates referenced complete draft workouts before activating the plan", async () => {
+    const workoutId = planInput.scheduleSlots[0]!.workoutId;
+    const { transaction, unitOfWork } = setup({
+      listWorkoutActivationReadiness: vi.fn(async () => [
+        {
+          id: workoutId,
+          name: "Push",
+          status: "draft" as const,
+          activatable: true,
+        },
+      ]),
+      activateDraftWorkouts: vi.fn(async () => [workoutId]),
+    });
+
+    await savePlan(unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      planId: "plan-1",
+      expectedVersion: 1,
+      plan: planInput,
+      status: "active",
+      activateReferencedDraftWorkouts: true,
+    });
+
+    expect(transaction.activateDraftWorkouts).toHaveBeenCalledWith({
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      workoutIds: [workoutId],
+    });
+    expect(transaction.activeWorkoutIdsExist).toHaveBeenCalled();
+    expect(transaction.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active" }),
+    );
+  });
+
+  it("rejects opt-in activation when a referenced draft workout is incomplete", async () => {
+    const workoutId = planInput.scheduleSlots[0]!.workoutId;
+    const { transaction, unitOfWork } = setup({
+      listWorkoutActivationReadiness: vi.fn(async () => [
+        {
+          id: workoutId,
+          name: "Incomplete Push",
+          status: "draft" as const,
+          activatable: false,
+        },
+      ]),
+    });
+
+    await expect(
+      savePlan(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        planId: "plan-1",
+        expectedVersion: 1,
+        plan: planInput,
+        status: "active",
+        activateReferencedDraftWorkouts: true,
+      }),
+    ).rejects.toThrow("Complete these workouts before activating the plan");
+    expect(transaction.activateDraftWorkouts).not.toHaveBeenCalled();
+    expect(transaction.updatePlan).not.toHaveBeenCalled();
+  });
+
+  it("rejects the whole operation when not every selected draft activates", async () => {
+    const workoutId = planInput.scheduleSlots[0]!.workoutId;
+    const { transaction, unitOfWork } = setup({
+      listWorkoutActivationReadiness: vi.fn(async () => [
+        {
+          id: workoutId,
+          name: "Push",
+          status: "draft" as const,
+          activatable: true,
+        },
+      ]),
+      activateDraftWorkouts: vi.fn(async () => []),
+    });
+
+    await expect(
+      savePlan(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        planId: "plan-1",
+        expectedVersion: 1,
+        plan: planInput,
+        status: "active",
+        activateReferencedDraftWorkouts: true,
+      }),
+    ).rejects.toThrow("changed before activation");
+    expect(transaction.updatePlan).not.toHaveBeenCalled();
   });
 
   it("rejects stale saves before replacing schedule slots", async () => {

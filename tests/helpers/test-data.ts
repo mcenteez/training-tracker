@@ -234,6 +234,24 @@ export async function createWorkout(
   return new URL(page.url()).pathname;
 }
 
+export async function createWorkoutDraft(
+  page: Page,
+  name: string,
+  exerciseName: string,
+  reps = "5",
+): Promise<string> {
+  await page.goto("/app/library/workouts/new");
+  await page.getByLabel("Workout name").fill(name);
+  await page.getByRole("button", { name: "Add block" }).click();
+  const block = page.getByRole("region", { name: "Block 1" });
+  await block.getByRole("button", { name: "Add exercise" }).click();
+  await block.getByLabel("Exercise").selectOption({ label: exerciseName });
+  await block.getByLabel("Reps").fill(reps);
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page).toHaveURL(/\/app\/library\/workouts\/[^/]+\?saved=1$/);
+  return new URL(page.url()).pathname;
+}
+
 export async function publishWorkoutAssignment(
   page: Page,
   workoutName: string,

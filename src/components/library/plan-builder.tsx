@@ -95,6 +95,17 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
           },
     ),
   };
+  const referencedDraftWorkouts = [
+    ...new Map(
+      scheduleSlots.flatMap((slot) => {
+        const workout = workouts.find(
+          (candidate) =>
+            candidate.id === slot.workoutId && candidate.status === "draft",
+        );
+        return workout ? [[workout.id, workout] as const] : [];
+      }),
+    ).values(),
+  ];
 
   function updateScheduleSlot(
     index: number,
@@ -323,6 +334,30 @@ export function PlanBuilder({ action, workouts, plan }: PlanBuilderProps) {
           </div>
         )}
       </div>
+
+      {referencedDraftWorkouts.length > 0 ? (
+        <label className="flex gap-3 border border-primary/25 bg-primary/5 p-4 text-sm">
+          <input
+            type="checkbox"
+            name="activateReferencedDraftWorkouts"
+            value="1"
+            className="mt-0.5"
+          />
+          <span>
+            <span className="block font-medium">
+              Activate {referencedDraftWorkouts.length} referenced draft workout
+              {referencedDraftWorkouts.length === 1 ? "" : "s"} with this plan
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {referencedDraftWorkouts
+                .map((workout) => workout.name)
+                .join(", ")}
+              . All selected workouts and this plan will activate together, or
+              none will change.
+            </span>
+          </span>
+        </label>
+      ) : null}
 
       <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
         <Button
