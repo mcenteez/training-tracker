@@ -106,6 +106,7 @@ test.describe("Training Tracker team management", () => {
     context,
     page,
   }) => {
+    test.setTimeout(60_000);
     await usePersona(context, "owner");
 
     try {

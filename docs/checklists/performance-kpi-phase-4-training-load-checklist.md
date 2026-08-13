@@ -135,7 +135,7 @@ strengthVolumeCompletion = completedStrengthVolumeKg / prescribedStrengthVolumeK
 - [x] Preserve raw duration, RPE, kilograms, reps, and sample counts beside every derived metric.
 - [x] Return `null`, not `0`, for unavailable or unmeasurable metrics.
 - [x] Keep partial external work visibly distinct from fully comparable external work.
-- [ ] Aggregate organization and team totals from raw duration, internal-load, and volume facts.
+- [x] Aggregate organization and team totals from raw duration, internal-load, and volume facts.
 
 ### Baseline Formulas
 
@@ -332,36 +332,36 @@ Expose load facts and comparisons through module-owned, tenant-aware reads witho
 
 ### Implementation Checklist
 
-- [ ] Extend athlete session detail reads with duration, RPE, internal load, external-work comparison, and baseline context.
+- [x] Extend athlete session detail reads with duration, RPE, internal load, external-work comparison, and baseline context.
 - [x] Resolve future athlete workout reads from the effective prescription and started/submitted session reads from their immutable effective snapshot.
-- [ ] Extend staff session-result detail reads with structured load values and comparable-volume fields.
+- [x] Extend staff session-result detail reads with structured load values and comparable-volume fields.
 - [x] Extend authorized coach assignment and athlete reads with base prescription, effective prescription, and override state for future occurrences.
-- [ ] Add an athlete assignment load summary scoped to submitted sessions in the selected window.
-- [ ] Add team and organization load summaries from raw authorized session facts.
-- [ ] Preserve publish-time recipient-to-team scope for team reporting.
-- [ ] Include direct-athlete assignments in organization totals but not team rows without a persisted team scope.
-- [ ] Deduplicate athlete-level baseline subjects in organization counts without summing athlete percentages.
-- [ ] Use one request-level `asOf` instant and assignment timezone boundaries for rolling calculations.
-- [ ] Keep missing capture, partial work, and insufficient history counts visible beside aggregate values.
-- [ ] Avoid loading foreign organization or unauthorized team records before application-level aggregation.
-- [ ] Validate query plans and add indexes only for demonstrated access patterns.
+- [x] Add an athlete assignment load summary scoped to submitted sessions in the selected window.
+- [x] Add team and organization load summaries from raw authorized session facts.
+- [x] Preserve publish-time recipient-to-team scope for team reporting.
+- [x] Include direct-athlete assignments in organization totals but not team rows without a persisted team scope.
+- [x] Deduplicate athlete-level baseline subjects in organization counts without summing athlete percentages.
+- [x] Use one request-level `asOf` instant and assignment timezone boundaries for rolling calculations.
+- [x] Keep missing capture, partial work, and insufficient history counts visible beside aggregate values.
+- [x] Avoid loading foreign organization or unauthorized team records before application-level aggregation.
+- [x] Validate query plans and add indexes only for demonstrated access patterns.
 
 ### Integration Tests
 
-- [ ] Athlete, assignment, team, and organization totals reconcile from the same raw session facts.
-- [ ] Team volume and internal load aggregate raw normalized values rather than child percentages.
-- [ ] Historical free-text loads do not enter measurable totals.
-- [ ] Partial and unavailable sessions remain distinguishable in summaries.
-- [ ] Removed team members remain represented only through permitted publish-time history.
-- [ ] Direct-athlete assignment behavior follows the documented organization-only rule.
-- [ ] Foreign organizations and foreign teams cannot influence load summaries or baselines.
-- [ ] Team Viewer can read allowed staff load detail but cannot mutate sessions.
+- [x] Athlete, assignment, team, and organization totals reconcile from the same raw session facts.
+- [x] Team volume and internal load aggregate raw normalized values rather than child percentages.
+- [x] Historical free-text loads do not enter measurable totals.
+- [x] Partial and unavailable sessions remain distinguishable in summaries.
+- [x] Removed team members remain represented only through permitted publish-time history.
+- [x] Direct-athlete assignment behavior follows the documented organization-only rule.
+- [x] Foreign organizations and foreign teams cannot influence load summaries or baselines.
+- [x] Team Viewer can read allowed staff load detail but cannot mutate sessions.
 
 ### Acceptance Criteria
 
-- [ ] All load reporting uses authorized, tenant-scoped module queries.
-- [ ] Team and organization summaries are mathematically explainable through athlete and session facts.
-- [ ] No aggregate implies that unmeasurable historical text loads are zero.
+- [x] All load reporting uses authorized, tenant-scoped module queries.
+- [x] Team and organization summaries are mathematically explainable through athlete and session facts.
+- [x] No aggregate implies that unmeasurable historical text loads are zero.
 
 ## Milestone 6: Athlete and Staff Presentation
 

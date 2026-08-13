@@ -1,0 +1,1 @@
+CREATE INDEX "assignment_sessions_organization_submitted_idx" ON "assignment_sessions" ("organization_id","submitted_at");

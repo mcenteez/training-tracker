@@ -15,6 +15,10 @@ import {
   assignmentWorkoutSnapshots,
 } from "@/modules/assignments/db/schema";
 import { users } from "@/modules/users/db/schema";
+import {
+  findStaffSessionTrainingLoad,
+  type SessionTrainingLoadDetail,
+} from "./training-load-queries";
 
 export interface StaffSessionResultRow {
   itemSnapshotId: string;
@@ -26,6 +30,9 @@ export interface StaffSessionResultRow {
   completedAt: Date;
   reps: number | null;
   load: string | null;
+  loadValue: string | null;
+  loadUnit: "kg" | "lb" | null;
+  normalizedLoadKg: string | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
@@ -49,12 +56,17 @@ export interface StaffSessionResultDetail {
   status: "in_progress" | "submitted";
   startedAt: Date | null;
   submittedAt: Date | null;
+  durationMinutes: number | null;
+  sessionRpe: number | null;
   prescriptions: Array<{
     itemSnapshotId: string;
     exerciseName: string;
     blockLabel: string | null;
     reps: number | null;
     load: string | null;
+    loadValue: string | null;
+    loadUnit: "kg" | "lb" | null;
+    normalizedLoadKg: string | null;
     durationSeconds: number | null;
     distanceMeters: number | null;
     restSeconds: number | null;
@@ -62,6 +74,7 @@ export interface StaffSessionResultDetail {
     notes: string | null;
   }>;
   results: StaffSessionResultRow[];
+  trainingLoad: SessionTrainingLoadDetail | null;
   comments: StaffSessionCommentRow[];
 }
 
@@ -72,6 +85,7 @@ export async function findStaffSessionResultDetail(
     teamId: string;
     assignmentId: string;
     sessionId: string;
+    asOf?: Date;
   },
 ): Promise<StaffSessionResultDetail | null> {
   const [session] = await database
@@ -86,6 +100,8 @@ export async function findStaffSessionResultDetail(
       status: assignmentSessions.status,
       startedAt: assignmentSessions.startedAt,
       submittedAt: assignmentSessions.submittedAt,
+      durationMinutes: assignmentSessions.durationMinutes,
+      sessionRpe: assignmentSessions.sessionRpe,
     })
     .from(assignmentSessions)
     .innerJoin(
@@ -144,7 +160,8 @@ export async function findStaffSessionResultDetail(
 
   if (!session) return null;
 
-  const [prescriptions, results, comments] = await Promise.all([
+  const asOf = input.asOf ?? new Date();
+  const [prescriptions, results, comments, trainingLoad] = await Promise.all([
     database
       .select({
         itemSnapshotId:
@@ -155,6 +172,10 @@ export async function findStaffSessionResultDetail(
         itemPosition: assignmentWorkoutItemSnapshots.position,
         reps: assignmentSessionEffectiveItemPrescriptions.reps,
         load: assignmentSessionEffectiveItemPrescriptions.load,
+        loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
+        loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
+        normalizedLoadKg:
+          assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
         durationSeconds:
           assignmentSessionEffectiveItemPrescriptions.durationSeconds,
         distanceMeters:
@@ -229,6 +250,9 @@ export async function findStaffSessionResultDetail(
         completedAt: assignmentSessionItemResults.completedAt,
         reps: assignmentSessionItemResults.reps,
         load: assignmentSessionItemResults.load,
+        loadValue: assignmentSessionItemResults.loadValue,
+        loadUnit: assignmentSessionItemResults.loadUnit,
+        normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
         durationSeconds: assignmentSessionItemResults.durationSeconds,
         distanceMeters: assignmentSessionItemResults.distanceMeters,
         notes: assignmentSessionItemResults.notes,
@@ -301,6 +325,15 @@ export async function findStaffSessionResultDetail(
         asc(assignmentSessionComments.createdAt),
         asc(assignmentSessionComments.id),
       ),
+    session.status === "submitted"
+      ? findStaffSessionTrainingLoad(database, {
+          organizationId: input.organizationId,
+          teamId: input.teamId,
+          assignmentId: input.assignmentId,
+          sessionId: input.sessionId,
+          asOf,
+        })
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -314,8 +347,11 @@ export async function findStaffSessionResultDetail(
     status: session.status as "in_progress" | "submitted",
     startedAt: session.startedAt,
     submittedAt: session.submittedAt,
+    durationMinutes: session.durationMinutes,
+    sessionRpe: session.sessionRpe,
     prescriptions,
     results,
+    trainingLoad,
     comments: comments.map((comment) => ({
       id: comment.id,
       body: comment.body,

@@ -674,6 +674,10 @@ export const assignmentSessions = pgTable(
       table.athleteUserId,
       table.submittedAt,
     ),
+    index("assignment_sessions_organization_submitted_idx").on(
+      table.organizationId,
+      table.submittedAt,
+    ),
     index("assignment_sessions_organization_due_at_idx").on(
       table.organizationId,
       table.dueAt,
