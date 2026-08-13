@@ -206,44 +206,44 @@ Allow authorized coaches to adapt a shared assignment for an individual athlete 
 
 ### Implementation Checklist
 
-- [ ] Add a server-side override command with Zod validation for each permitted prescription field.
+- [x] Add a server-side override command with Zod validation for each permitted prescription field.
 - [x] Authorize every override write against the active organization, managed team scope, assignment, recipient, athlete, item snapshot, and plan slot.
 - [x] Reject overrides for canceled assignments and unknown or mismatched recipient/item/slot identities.
-- [ ] Reject edits to occurrences with an in-progress or submitted session; guide staff to create a future-occurrence override instead.
+- [x] Reject edits to occurrences with an in-progress or submitted session; guide staff to create a future-occurrence override instead.
 - [x] Resolve the effective prescription in one module-owned application function with explicit field precedence: override value, then shared item snapshot value.
-- [ ] Normalize structured override loads on the server and keep free-text overrides unmeasurable.
+- [x] Normalize structured override loads on the server and keep free-text overrides unmeasurable.
 - [x] Create or replace an override atomically with its audit metadata and optimistic-concurrency version.
 - [x] Support clearing an override so future unstarted occurrences return to the shared snapshot.
 - [x] Create per-session effective prescription snapshots atomically with session start before any athlete result can be saved.
 - [x] Keep effective snapshots unchanged during autosave, submit, reset, and completed-session result edits.
-- [ ] Revalidate affected coach and athlete routes after an override changes.
+- [x] Revalidate affected coach and athlete routes after an override changes.
 
 ### Coach Workflow
 
-- [ ] Add an athlete-specific prescription action from an authorized assignment or athlete drill-down, not from the shared workout library editor.
-- [ ] Show the shared base prescription and the athlete's effective prescription together only to authorized staff.
-- [ ] Use appropriate controls for reps, numeric load and unit, duration, distance, rest, tempo, and notes.
-- [ ] Clearly identify which fields are individualized and which continue to inherit the shared assignment snapshot.
-- [ ] Let a coach clear one field or the complete override with a confirmation appropriate to the affected future occurrences.
-- [ ] Show an explicit locked state for started and completed occurrences, including the effective prescription used.
-- [ ] Preserve keyboard access, useful field labels, error messages, visible focus, and mobile layout behavior.
+- [x] Add an athlete-specific prescription action from an authorized assignment or athlete drill-down, not from the shared workout library editor.
+- [x] Show the shared base prescription and the athlete's effective prescription together only to authorized staff.
+- [x] Use appropriate controls for reps, numeric load and unit, duration, distance, rest, tempo, and notes.
+- [x] Clearly identify which fields are individualized and which continue to inherit the shared assignment snapshot.
+- [x] Let a coach clear one field or the complete override with a confirmation appropriate to the affected future occurrences.
+- [x] Show an explicit locked state for started and completed occurrences, including the effective prescription used.
+- [x] Preserve keyboard access, useful field labels, error messages, visible focus, and mobile layout behavior.
 
 ### Tests
 
 - [x] An authorized coach can set a 135 lb, 10-rep base item to 20 reps or a different load for one athlete only.
 - [x] A second athlete assigned the same workout retains the shared base prescription.
-- [ ] The athlete sees only the resulting effective prescription.
+- [x] The athlete sees only the resulting effective prescription.
 - [x] Starting a session snapshots the effective prescription before athlete results are saved.
-- [ ] Replacing or clearing an override changes only later unstarted occurrences.
-- [ ] Started and submitted sessions retain their original effective prescription after a later override change.
-- [ ] Athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team attempts to change an override fail safely.
-- [ ] Concurrent coach edits enforce optimistic concurrency and return an actionable conflict.
+- [x] Replacing or clearing an override changes only later unstarted occurrences.
+- [x] Started and submitted sessions retain their original effective prescription after a later override change.
+- [x] Athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team attempts to change an override fail safely.
+- [x] Concurrent coach edits enforce optimistic concurrency and return an actionable conflict.
 
 ### Acceptance Criteria
 
-- [ ] Coaches can individualize an athlete's prescription without cloning a workout or affecting any other athlete.
-- [ ] Each prescribed-versus-completed comparison uses the immutable prescription actually presented for that session.
-- [ ] The override path preserves tenant isolation, publish-time scope, and existing session lifecycle invariants.
+- [x] Coaches can individualize an athlete's prescription without cloning a workout or affecting any other athlete.
+- [x] Each prescribed-versus-completed comparison uses the immutable prescription actually presented for that session.
+- [x] The override path preserves tenant isolation, publish-time scope, and existing session lifecycle invariants.
 
 ## Milestone 3: Input Validation and Session Capture
 
@@ -256,6 +256,8 @@ Capture athlete-entered session response and measurable external work through th
 - [ ] Extend server-side Zod input schemas for duration, session RPE, numeric load, and unit.
 - [ ] Reject non-finite values, unsupported units, out-of-range RPE, and incompatible value/unit combinations.
 - [ ] Normalize numeric strength loads to kilograms on the server; never trust client-provided normalized values.
+- [x] Use shared typed load values and the exact pounds-to-kilograms normalization at the server boundary.
+- [x] Use the shared internal-load calculator from persisted duration and session RPE; never accept an internal-load value from the client.
 - [ ] Extend session FormData parsing while preserving absent values as `null`.
 - [ ] Extend autosave and submit mutations without weakening version checks or idempotency behavior.
 - [ ] Keep athletes limited to their own organization-scoped assignment sessions and result rows.
@@ -278,7 +280,7 @@ Capture athlete-entered session response and measurable external work through th
 - [ ] Valid duration and RPE persist through autosave and submission.
 - [ ] Omitted duration or RPE leaves internal load unavailable rather than zero.
 - [ ] Invalid RPE, duration, load value, or unit is rejected at the server boundary.
-- [ ] A numeric pound result normalizes to the expected kilograms value.
+- [x] A numeric pound value normalizes to the expected kilograms value in the shared domain.
 - [ ] A submitted-session edit preserves first submission time and timeliness state.
 - [ ] A retry with the same mutation ID remains idempotent for load values.
 - [ ] An athlete cannot mutate another athlete's session load values.
@@ -297,10 +299,7 @@ Build pure, reusable load calculations outside pages, components, and database q
 
 ### Implementation Checklist
 
-- [x] Add typed value objects for duration, session RPE, load unit, entered load, and normalized kilograms.
-- [x] Add a pure pounds-to-kilograms converter using the approved exact conversion.
 - [x] Add a pure effective-prescription resolver that applies athlete overrides without mutating shared snapshots.
-- [x] Add a pure internal-load calculator.
 - [x] Add pure prescribed and completed strength-volume calculators.
 - [x] Add a pure comparison builder that distinguishes unavailable, partial, and comparable external work.
 - [x] Add a pure individual rolling-baseline builder using ordered eligible sessions.
@@ -310,10 +309,7 @@ Build pure, reusable load calculations outside pages, components, and database q
 
 ### Unit Tests
 
-- [x] Kilogram loads remain unchanged during normalization.
-- [x] Pound loads normalize with the approved conversion.
 - [x] Missing or invalid load parts produce unavailable external volume.
-- [x] Internal load multiplies only valid duration and RPE values.
 - [x] A result with reps and normalized kilograms contributes expected strength volume.
 - [x] Free-text, bodyweight, and percentage entries do not contribute fabricated strength volume.
 - [x] Partial measurable results remain distinct from fully comparable prescription/result sets.
@@ -337,9 +333,9 @@ Expose load facts and comparisons through module-owned, tenant-aware reads witho
 ### Implementation Checklist
 
 - [ ] Extend athlete session detail reads with duration, RPE, internal load, external-work comparison, and baseline context.
-- [ ] Resolve future athlete workout reads from the effective prescription and started/submitted session reads from their immutable effective snapshot.
+- [x] Resolve future athlete workout reads from the effective prescription and started/submitted session reads from their immutable effective snapshot.
 - [ ] Extend staff session-result detail reads with structured load values and comparable-volume fields.
-- [ ] Extend authorized coach assignment and athlete reads with base prescription, effective prescription, and override state for future occurrences.
+- [x] Extend authorized coach assignment and athlete reads with base prescription, effective prescription, and override state for future occurrences.
 - [ ] Add an athlete assignment load summary scoped to submitted sessions in the selected window.
 - [ ] Add team and organization load summaries from raw authorized session facts.
 - [ ] Preserve publish-time recipient-to-team scope for team reporting.
@@ -384,7 +380,7 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 ### Staff Drill-Down
 
-- [ ] Let authorized staff navigate from an athlete's assignment detail to their future prescription overrides.
+- [x] Let authorized staff navigate from an athlete's assignment detail to their future prescription overrides.
 - [ ] Add duration, RPE, internal load, and measurable-volume comparison to the submitted session review.
 - [ ] Show raw values, normalized units, comparison denominator, and missing-data context.
 - [ ] Add the athlete's individual 28-day baseline only when the minimum sample exists.
@@ -428,8 +424,8 @@ Show the athlete's recorded response and staff-facing comparison context without
 - [ ] Athlete logs duration and RPE, saves, reloads, and submits a session.
 - [ ] Athlete logs a measurable pound and kilogram strength result and sees the entered units retained.
 - [ ] Athlete logs a non-measurable free-text load without a fabricated volume metric.
-- [ ] Coach individualizes one athlete's future prescription while another recipient keeps the shared prescription.
-- [ ] Athlete begins a session with the individualized prescription, and the staff review shows that immutable effective prescription.
+- [x] Coach individualizes one athlete's future prescription while another recipient keeps the shared prescription.
+- [x] Athlete begins a session with the individualized prescription, and the staff review shows that immutable effective prescription.
 - [ ] Coach changes an override after session completion without altering the completed-session comparison.
 - [ ] Athlete edits completed load data without changing original completion and timeliness facts.
 - [ ] Coach sees the authorized session load facts and an available prescription comparison.

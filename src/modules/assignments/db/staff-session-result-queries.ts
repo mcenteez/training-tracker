@@ -1,11 +1,12 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
   assignmentRecipients,
   assignmentRecipientTeamScopes,
+  assignmentSessionEffectiveItemPrescriptions,
   assignmentSessionComments,
   assignmentSessionItemResults,
   assignmentSessions,
@@ -45,8 +46,21 @@ export interface StaffSessionResultDetail {
   athleteEmail: string;
   workoutName: string;
   scheduledDate: string;
+  status: "in_progress" | "submitted";
   startedAt: Date | null;
-  submittedAt: Date;
+  submittedAt: Date | null;
+  prescriptions: Array<{
+    itemSnapshotId: string;
+    exerciseName: string;
+    blockLabel: string | null;
+    reps: number | null;
+    load: string | null;
+    durationSeconds: number | null;
+    distanceMeters: number | null;
+    restSeconds: number | null;
+    tempo: string | null;
+    notes: string | null;
+  }>;
   results: StaffSessionResultRow[];
   comments: StaffSessionCommentRow[];
 }
@@ -69,6 +83,7 @@ export async function findStaffSessionResultDetail(
       athleteFullName: users.fullName,
       workoutName: assignmentWorkoutSnapshots.name,
       scheduledDate: assignmentSessions.scheduledDate,
+      status: assignmentSessions.status,
       startedAt: assignmentSessions.startedAt,
       submittedAt: assignmentSessions.submittedAt,
     })
@@ -121,15 +136,88 @@ export async function findStaffSessionResultDetail(
         eq(assignmentSessions.organizationId, input.organizationId),
         eq(assignmentSessions.assignmentId, input.assignmentId),
         eq(assignmentSessions.id, input.sessionId),
-        eq(assignmentSessions.status, "submitted"),
+        sql`${assignmentSessions.status} in ('in_progress', 'submitted')`,
         eq(assignmentRecipientTeamScopes.teamId, input.teamId),
       ),
     )
     .limit(1);
 
-  if (!session?.submittedAt) return null;
+  if (!session) return null;
 
-  const [results, comments] = await Promise.all([
+  const [prescriptions, results, comments] = await Promise.all([
+    database
+      .select({
+        itemSnapshotId:
+          assignmentSessionEffectiveItemPrescriptions.itemSnapshotId,
+        exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
+        blockLabel: assignmentWorkoutBlockSnapshots.label,
+        blockPosition: assignmentWorkoutBlockSnapshots.position,
+        itemPosition: assignmentWorkoutItemSnapshots.position,
+        reps: assignmentSessionEffectiveItemPrescriptions.reps,
+        load: assignmentSessionEffectiveItemPrescriptions.load,
+        durationSeconds:
+          assignmentSessionEffectiveItemPrescriptions.durationSeconds,
+        distanceMeters:
+          assignmentSessionEffectiveItemPrescriptions.distanceMeters,
+        restSeconds: assignmentSessionEffectiveItemPrescriptions.restSeconds,
+        tempo: assignmentSessionEffectiveItemPrescriptions.tempo,
+        notes: assignmentSessionEffectiveItemPrescriptions.notes,
+      })
+      .from(assignmentSessionEffectiveItemPrescriptions)
+      .innerJoin(
+        assignmentWorkoutItemSnapshots,
+        and(
+          eq(
+            assignmentWorkoutItemSnapshots.organizationId,
+            assignmentSessionEffectiveItemPrescriptions.organizationId,
+          ),
+          eq(
+            assignmentWorkoutItemSnapshots.assignmentId,
+            assignmentSessionEffectiveItemPrescriptions.assignmentId,
+          ),
+          eq(
+            assignmentWorkoutItemSnapshots.id,
+            assignmentSessionEffectiveItemPrescriptions.itemSnapshotId,
+          ),
+        ),
+      )
+      .innerJoin(
+        assignmentWorkoutBlockSnapshots,
+        and(
+          eq(
+            assignmentWorkoutBlockSnapshots.organizationId,
+            assignmentWorkoutItemSnapshots.organizationId,
+          ),
+          eq(
+            assignmentWorkoutBlockSnapshots.assignmentId,
+            assignmentWorkoutItemSnapshots.assignmentId,
+          ),
+          eq(
+            assignmentWorkoutBlockSnapshots.id,
+            assignmentWorkoutItemSnapshots.blockSnapshotId,
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.organizationId,
+            input.organizationId,
+          ),
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.assignmentId,
+            input.assignmentId,
+          ),
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.sessionId,
+            input.sessionId,
+          ),
+        ),
+      )
+      .orderBy(
+        asc(assignmentWorkoutBlockSnapshots.position),
+        asc(assignmentWorkoutItemSnapshots.position),
+      ),
     database
       .select({
         itemSnapshotId: assignmentSessionItemResults.itemSnapshotId,
@@ -223,8 +311,10 @@ export async function findStaffSessionResultDetail(
     athleteEmail: session.athleteEmail,
     workoutName: session.workoutName,
     scheduledDate: session.scheduledDate,
+    status: session.status as "in_progress" | "submitted",
     startedAt: session.startedAt,
     submittedAt: session.submittedAt,
+    prescriptions,
     results,
     comments: comments.map((comment) => ({
       id: comment.id,

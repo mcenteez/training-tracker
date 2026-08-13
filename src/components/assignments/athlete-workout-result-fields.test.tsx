@@ -19,6 +19,8 @@ const item: AthleteWorkoutItemSnapshot = {
   load: null,
   durationSeconds: null,
   distanceMeters: null,
+  restSeconds: null,
+  tempo: null,
   notes: null,
 };
 

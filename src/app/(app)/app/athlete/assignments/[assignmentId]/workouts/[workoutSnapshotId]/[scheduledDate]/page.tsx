@@ -13,10 +13,10 @@ import {
 import { compareDates } from "@/modules/assignments/application/schedule-dates";
 import {
   findPublishedAssignmentForAthlete,
+  listEffectiveWorkoutItemsForAthleteOccurrence,
   listPlanSlotSnapshotsForAthleteAssignment,
   listSessionResultsForAthleteAssignment,
   listSessionsForAthleteAssignment,
-  listWorkoutItemsForSnapshot,
   listWorkoutsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
 
@@ -85,45 +85,37 @@ export default async function WorkoutOccurrencePage({
     notFound();
   }
 
-  const [assignment, slots, sessions, workoutItems, workouts] =
-    await Promise.all([
-      withDatabase((database) =>
-        findPublishedAssignmentForAthlete(database, {
-          organizationId: context.membership.organizationId,
-          athleteUserId: context.user.id,
-          assignmentId,
-        }),
-      ),
-      withDatabase((database) =>
-        listPlanSlotSnapshotsForAthleteAssignment(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-          athleteUserId: context.user.id,
-        }),
-      ),
-      withDatabase((database) =>
-        listSessionsForAthleteAssignment(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-          athleteUserId: context.user.id,
-        }),
-      ),
-      withDatabase((database) =>
-        listWorkoutItemsForSnapshot(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-          workoutSnapshotId,
-        }),
-      ),
-      withDatabase((database) =>
-        listWorkoutsForAthleteAssignment(database, {
-          organizationId: context.membership.organizationId,
-          assignmentId,
-        }),
-      ),
-    ]);
+  const [assignment, slots, sessions, workouts] = await Promise.all([
+    withDatabase((database) =>
+      findPublishedAssignmentForAthlete(database, {
+        organizationId: context.membership.organizationId,
+        athleteUserId: context.user.id,
+        assignmentId,
+      }),
+    ),
+    withDatabase((database) =>
+      listPlanSlotSnapshotsForAthleteAssignment(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+      }),
+    ),
+    withDatabase((database) =>
+      listSessionsForAthleteAssignment(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+        athleteUserId: context.user.id,
+      }),
+    ),
+    withDatabase((database) =>
+      listWorkoutsForAthleteAssignment(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+      }),
+    ),
+  ]);
 
-  if (!assignment || workoutItems.length === 0) {
+  if (!assignment) {
     notFound();
   }
 
@@ -147,6 +139,21 @@ export default async function WorkoutOccurrencePage({
         candidate.scheduledDate === scheduledDate &&
         (slot === null || candidate.planSlotSnapshotId === slot.id),
     ) ?? null;
+
+  const workoutItems = await withDatabase((database) =>
+    listEffectiveWorkoutItemsForAthleteOccurrence(database, {
+      organizationId: context.membership.organizationId,
+      assignmentId,
+      athleteUserId: context.user.id,
+      workoutSnapshotId,
+      planSlotSnapshotId: slot?.id ?? null,
+      sessionId: session?.id ?? null,
+    }),
+  );
+
+  if (workoutItems.length === 0) {
+    notFound();
+  }
 
   let occurrenceStatus: PlanOccurrenceStatus | null = null;
   let weeklySummary: {

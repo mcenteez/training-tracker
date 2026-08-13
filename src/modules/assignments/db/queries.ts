@@ -1,11 +1,13 @@
 import "server-only";
 
-import { and, asc, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
   assignments,
+  assignmentAthleteItemOverrides,
   assignmentRecipients,
+  assignmentSessionEffectiveItemPrescriptions,
   assignmentSessionItemResults,
   assignmentSessions,
   assignmentTargets,
@@ -106,6 +108,8 @@ export interface AthleteWorkoutItemSnapshot {
   load: string | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
+  restSeconds: number | null;
+  tempo: string | null;
   notes: string | null;
 }
 
@@ -633,6 +637,8 @@ export async function listWorkoutItemsForSnapshot(
       load: assignmentWorkoutItemSnapshots.load,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
+      restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
+      tempo: assignmentWorkoutItemSnapshots.tempo,
       notes: assignmentWorkoutItemSnapshots.notes,
     })
     .from(assignmentWorkoutItemSnapshots)
@@ -669,6 +675,157 @@ export async function listWorkoutItemsForSnapshot(
     );
 }
 
+export async function listEffectiveWorkoutItemsForAthleteOccurrence(
+  database: Database,
+  input: {
+    organizationId: string;
+    assignmentId: string;
+    athleteUserId: string;
+    workoutSnapshotId: string;
+    planSlotSnapshotId: string | null;
+    sessionId: string | null;
+  },
+): Promise<AthleteWorkoutItemSnapshot[]> {
+  const [recipient] = await database
+    .select({ id: assignmentRecipients.id })
+    .from(assignmentRecipients)
+    .where(
+      and(
+        eq(assignmentRecipients.organizationId, input.organizationId),
+        eq(assignmentRecipients.assignmentId, input.assignmentId),
+        eq(assignmentRecipients.athleteUserId, input.athleteUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!recipient) return [];
+
+  const baseItems = await listWorkoutItemsForSnapshot(database, input);
+  if (baseItems.length === 0) return [];
+
+  if (input.sessionId) {
+    const effectiveRows = await database
+      .select({
+        itemSnapshotId:
+          assignmentSessionEffectiveItemPrescriptions.itemSnapshotId,
+        reps: assignmentSessionEffectiveItemPrescriptions.reps,
+        load: assignmentSessionEffectiveItemPrescriptions.load,
+        durationSeconds:
+          assignmentSessionEffectiveItemPrescriptions.durationSeconds,
+        distanceMeters:
+          assignmentSessionEffectiveItemPrescriptions.distanceMeters,
+        restSeconds: assignmentSessionEffectiveItemPrescriptions.restSeconds,
+        tempo: assignmentSessionEffectiveItemPrescriptions.tempo,
+        notes: assignmentSessionEffectiveItemPrescriptions.notes,
+      })
+      .from(assignmentSessionEffectiveItemPrescriptions)
+      .innerJoin(
+        assignmentSessions,
+        and(
+          eq(
+            assignmentSessions.organizationId,
+            assignmentSessionEffectiveItemPrescriptions.organizationId,
+          ),
+          eq(
+            assignmentSessions.assignmentId,
+            assignmentSessionEffectiveItemPrescriptions.assignmentId,
+          ),
+          eq(
+            assignmentSessions.id,
+            assignmentSessionEffectiveItemPrescriptions.sessionId,
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.organizationId,
+            input.organizationId,
+          ),
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.assignmentId,
+            input.assignmentId,
+          ),
+          eq(
+            assignmentSessionEffectiveItemPrescriptions.sessionId,
+            input.sessionId,
+          ),
+          eq(assignmentSessions.athleteUserId, input.athleteUserId),
+        ),
+      );
+    const effectiveByItem = new Map(
+      effectiveRows.map((row) => [row.itemSnapshotId, row]),
+    );
+
+    return baseItems.map((item) => ({
+      ...item,
+      ...effectiveByItem.get(item.id),
+      id: item.id,
+    }));
+  }
+
+  const overrideRows = await database
+    .select({
+      itemSnapshotId: assignmentAthleteItemOverrides.itemSnapshotId,
+      planSlotSnapshotId: assignmentAthleteItemOverrides.planSlotSnapshotId,
+      overriddenFields: assignmentAthleteItemOverrides.overriddenFields,
+      reps: assignmentAthleteItemOverrides.reps,
+      load: assignmentAthleteItemOverrides.load,
+      durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
+      distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
+      restSeconds: assignmentAthleteItemOverrides.restSeconds,
+      tempo: assignmentAthleteItemOverrides.tempo,
+      notes: assignmentAthleteItemOverrides.notes,
+    })
+    .from(assignmentAthleteItemOverrides)
+    .where(
+      and(
+        eq(assignmentAthleteItemOverrides.organizationId, input.organizationId),
+        eq(assignmentAthleteItemOverrides.assignmentId, input.assignmentId),
+        eq(assignmentAthleteItemOverrides.recipientId, recipient.id),
+        input.planSlotSnapshotId
+          ? or(
+              eq(
+                assignmentAthleteItemOverrides.planSlotSnapshotId,
+                input.planSlotSnapshotId,
+              ),
+              isNull(assignmentAthleteItemOverrides.planSlotSnapshotId),
+            )
+          : isNull(assignmentAthleteItemOverrides.planSlotSnapshotId),
+      ),
+    );
+  const overrideByItem = new Map<string, (typeof overrideRows)[number]>();
+  for (const override of overrideRows) {
+    const current = overrideByItem.get(override.itemSnapshotId);
+    if (!current || override.planSlotSnapshotId !== null) {
+      overrideByItem.set(override.itemSnapshotId, override);
+    }
+  }
+
+  return baseItems.map((item) => {
+    const override = overrideByItem.get(item.id);
+    if (!override) return item;
+
+    const overriddenFields = new Set(override.overriddenFields);
+    return {
+      ...item,
+      reps: overriddenFields.has("reps") ? override.reps : item.reps,
+      load: overriddenFields.has("load") ? override.load : item.load,
+      durationSeconds: overriddenFields.has("durationSeconds")
+        ? override.durationSeconds
+        : item.durationSeconds,
+      distanceMeters: overriddenFields.has("distanceMeters")
+        ? override.distanceMeters
+        : item.distanceMeters,
+      restSeconds: overriddenFields.has("restSeconds")
+        ? override.restSeconds
+        : item.restSeconds,
+      tempo: overriddenFields.has("tempo") ? override.tempo : item.tempo,
+      notes: overriddenFields.has("notes") ? override.notes : item.notes,
+    };
+  });
+}
+
 export async function listPrimaryWorkoutItemsForAssignment(
   database: Database,
   input: {
@@ -703,6 +860,8 @@ export async function listPrimaryWorkoutItemsForAssignment(
       load: assignmentWorkoutItemSnapshots.load,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
+      restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
+      tempo: assignmentWorkoutItemSnapshots.tempo,
       notes: assignmentWorkoutItemSnapshots.notes,
     })
     .from(assignmentWorkoutItemSnapshots)

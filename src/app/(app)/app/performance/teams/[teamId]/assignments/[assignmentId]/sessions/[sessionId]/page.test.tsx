@@ -57,8 +57,23 @@ describe("staff session result page", () => {
       athleteEmail: "athlete@example.com",
       workoutName: "Lower Strength",
       scheduledDate: "2026-08-12",
+      status: "submitted",
       startedAt: new Date("2026-08-12T12:00:00Z"),
       submittedAt: new Date("2026-08-12T13:00:00Z"),
+      prescriptions: [
+        {
+          itemSnapshotId: "item-1",
+          exerciseName: "Back Squat",
+          blockLabel: "Main work",
+          reps: 5,
+          load: "95 kg",
+          durationSeconds: null,
+          distanceMeters: null,
+          restSeconds: 120,
+          tempo: null,
+          notes: "Controlled descent",
+        },
+      ],
       results: [
         {
           itemSnapshotId: "item-1",
@@ -88,7 +103,10 @@ describe("staff session result page", () => {
     );
     expect(screen.getByRole("heading", { name: "Athlete One" })).toBeVisible();
     expect(screen.getByText("Completed results")).toBeVisible();
-    expect(screen.getByText("Back Squat")).toBeVisible();
+    expect(screen.getByText("Effective prescription used")).toBeVisible();
+    expect(screen.getByText("5 reps - 95 kg - 120s rest")).toBeVisible();
+    expect(screen.getByText(/Locked when this session started/)).toBeVisible();
+    expect(screen.getAllByText("Back Squat")).toHaveLength(2);
     expect(screen.getByText("5 reps - 95 kg")).toBeVisible();
     expect(screen.getByText("Comment form")).toBeVisible();
   });
@@ -101,7 +119,7 @@ describe("staff session result page", () => {
 
     render(await StaffSessionResultPage({ params }));
 
-    expect(screen.getByText("Back Squat")).toBeVisible();
+    expect(screen.getAllByText("Back Squat")).toHaveLength(2);
     expect(screen.queryByText("Comment form")).toBeNull();
   });
 

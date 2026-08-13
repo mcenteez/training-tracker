@@ -41,6 +41,34 @@ function formatMetric(result: {
   return metrics.join(" - ") || "No numeric result";
 }
 
+function formatPrescription(prescription: {
+  reps: number | null;
+  load: string | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+  restSeconds: number | null;
+  tempo: string | null;
+}): string {
+  return (
+    [
+      prescription.reps === null ? null : `${prescription.reps} reps`,
+      prescription.load,
+      prescription.durationSeconds === null
+        ? null
+        : `${prescription.durationSeconds}s duration`,
+      prescription.distanceMeters === null
+        ? null
+        : `${prescription.distanceMeters}m`,
+      prescription.restSeconds === null
+        ? null
+        : `${prescription.restSeconds}s rest`,
+      prescription.tempo === null ? null : `tempo ${prescription.tempo}`,
+    ]
+      .filter(Boolean)
+      .join(" - ") || "No numeric prescription"
+  );
+}
+
 export default async function StaffSessionResultPage({
   params,
 }: StaffSessionResultPageProps) {
@@ -70,9 +98,45 @@ export default async function StaffSessionResultPage({
         </Link>
         <h1 className="text-3xl font-semibold">{session.athleteName}</h1>
         <p className="text-sm text-muted-foreground">
-          {session.workoutName} - scheduled {session.scheduledDate} - completed{" "}
-          {formatDateTime(session.submittedAt)}
+          {session.workoutName} - scheduled {session.scheduledDate} -{" "}
+          {session.submittedAt
+            ? `completed ${formatDateTime(session.submittedAt)}`
+            : session.startedAt
+              ? `started ${formatDateTime(session.startedAt)}`
+              : "started"}
         </p>
+      </section>
+
+      <section
+        aria-labelledby="effective-prescription-heading"
+        className="space-y-4"
+      >
+        <div>
+          <h2
+            id="effective-prescription-heading"
+            className="text-xl font-semibold"
+          >
+            Effective prescription used
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Locked when this session started. Later individual changes do not
+            alter it.
+          </p>
+        </div>
+        <div className="divide-y rounded-md border bg-card">
+          {session.prescriptions.map((prescription) => (
+            <div
+              key={prescription.itemSnapshotId}
+              className="space-y-1 px-4 py-3 text-sm"
+            >
+              <p className="font-medium">{prescription.exerciseName}</p>
+              <p>{formatPrescription(prescription)}</p>
+              {prescription.notes ? (
+                <p className="text-muted-foreground">{prescription.notes}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section
@@ -81,7 +145,9 @@ export default async function StaffSessionResultPage({
       >
         <div>
           <h2 id="submitted-results-heading" className="text-xl font-semibold">
-            Completed results
+            {session.status === "submitted"
+              ? "Completed results"
+              : "Saved progress"}
           </h2>
           <p className="text-sm text-muted-foreground">
             Recorded exercise metrics in workout order.

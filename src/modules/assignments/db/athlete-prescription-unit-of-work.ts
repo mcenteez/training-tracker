@@ -13,6 +13,8 @@ import {
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
   assignmentRecipientTeamScopes,
+  assignmentSessions,
+  assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
 } from "@/modules/assignments/db/schema";
 import { organizationMemberships } from "@/modules/organizations/db/schema";
@@ -186,6 +188,66 @@ export function createAthletePrescriptionUnitOfWork(
               )
               .limit(1);
             return override ?? null;
+          },
+          async hasLockedSession(input) {
+            const [session] = await databaseTransaction
+              .select({ id: assignmentSessions.id })
+              .from(assignmentSessions)
+              .innerJoin(
+                assignmentWorkoutItemSnapshots,
+                and(
+                  eq(
+                    assignmentWorkoutItemSnapshots.organizationId,
+                    assignmentSessions.organizationId,
+                  ),
+                  eq(
+                    assignmentWorkoutItemSnapshots.assignmentId,
+                    assignmentSessions.assignmentId,
+                  ),
+                  eq(assignmentWorkoutItemSnapshots.id, input.itemSnapshotId),
+                ),
+              )
+              .innerJoin(
+                assignmentWorkoutBlockSnapshots,
+                and(
+                  eq(
+                    assignmentWorkoutBlockSnapshots.organizationId,
+                    assignmentWorkoutItemSnapshots.organizationId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.assignmentId,
+                    assignmentWorkoutItemSnapshots.assignmentId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.id,
+                    assignmentWorkoutItemSnapshots.blockSnapshotId,
+                  ),
+                  eq(
+                    assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+                    assignmentSessions.workoutSnapshotId,
+                  ),
+                ),
+              )
+              .where(
+                and(
+                  eq(assignmentSessions.organizationId, input.organizationId),
+                  eq(assignmentSessions.assignmentId, input.assignmentId),
+                  eq(assignmentSessions.recipientId, input.recipientId),
+                  eq(assignmentSessions.athleteUserId, input.athleteUserId),
+                  input.planSlotSnapshotId
+                    ? eq(
+                        assignmentSessions.planSlotSnapshotId,
+                        input.planSlotSnapshotId,
+                      )
+                    : isNull(assignmentSessions.planSlotSnapshotId),
+                  or(
+                    eq(assignmentSessions.status, "in_progress"),
+                    eq(assignmentSessions.status, "submitted"),
+                  ),
+                ),
+              )
+              .limit(1);
+            return session !== undefined;
           },
           async createOverride(input) {
             const [override] = await databaseTransaction

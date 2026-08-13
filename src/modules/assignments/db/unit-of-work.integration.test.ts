@@ -21,6 +21,7 @@ import { createAthletePrescriptionUnitOfWork } from "@/modules/assignments/db/at
 import {
   findPublishedAssignmentForAthlete,
   listAssignmentsForOrganization,
+  listEffectiveWorkoutItemsForAthleteOccurrence,
   listPlanSlotSnapshotsForAthleteAssignment,
   listPublishedAssignmentsForAthlete,
 } from "@/modules/assignments/db/queries";
@@ -341,6 +342,43 @@ describe("assignment unit of work", () => {
       WHERE assignment_id = '${draft.id}';
     `);
     const slotId = slotRows.rows[0]!.id;
+    const overrideTargetRows = await client.query<{
+      recipient_id: string;
+      item_snapshot_id: string;
+    }>(`
+      SELECT
+        assignment_recipients.id AS recipient_id,
+        assignment_workout_item_snapshots.id AS item_snapshot_id
+      FROM assignment_recipients
+      INNER JOIN assignment_workout_item_snapshots
+        ON assignment_workout_item_snapshots.assignment_id = assignment_recipients.assignment_id
+      WHERE assignment_recipients.assignment_id = '${draft.id}'
+      LIMIT 1;
+    `);
+    const overrideTarget = overrideTargetRows.rows[0]!;
+    const overrideUnitOfWork = createAthletePrescriptionUnitOfWork(database);
+    await saveAthletePrescriptionOverride(overrideUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      recipientId: overrideTarget.recipient_id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      itemSnapshotId: overrideTarget.item_snapshot_id,
+      planSlotSnapshotId: slotId,
+      expectedVersion: null,
+      overriddenFields: ["reps"],
+      reps: 20,
+      load: null,
+      loadValue: null,
+      loadUnit: null,
+      normalizedLoadKg: null,
+      durationSeconds: null,
+      distanceMeters: null,
+      restSeconds: null,
+      tempo: null,
+      notes: null,
+      reason: "First progression",
+    });
     const sessionUnitOfWork = createAssignmentSessionUnitOfWork(database);
 
     const first = await startAssignmentSession(sessionUnitOfWork, {
@@ -350,6 +388,28 @@ describe("assignment unit of work", () => {
       planSlotSnapshotId: slotId,
       scheduledDate: "2026-08-10",
       now: new Date("2026-08-10T12:00:00.000Z"),
+    });
+    await saveAthletePrescriptionOverride(overrideUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      recipientId: overrideTarget.recipient_id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      itemSnapshotId: overrideTarget.item_snapshot_id,
+      planSlotSnapshotId: slotId,
+      expectedVersion: 1,
+      overriddenFields: ["reps"],
+      reps: 25,
+      load: null,
+      loadValue: null,
+      loadUnit: null,
+      normalizedLoadKg: null,
+      durationSeconds: null,
+      distanceMeters: null,
+      restSeconds: null,
+      tempo: null,
+      notes: null,
+      reason: "Later progression",
     });
     const second = await startAssignmentSession(sessionUnitOfWork, {
       organizationId: "10000000-0000-4000-8000-000000000001",
@@ -371,6 +431,28 @@ describe("assignment unit of work", () => {
     expect(first.id).not.toBe(second.id);
     expect(firstAgain.id).toBe(first.id);
     expect(first.planSlotSnapshotId).toBe(slotId);
+
+    const immutablePlanPrescriptions = await client.query<{
+      session_id: string;
+      reps: number;
+    }>(`
+      SELECT session_id, reps
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id IN ('${first.id}', '${second.id}')
+      ORDER BY session_id;
+    `);
+    expect(
+      immutablePlanPrescriptions.rows.toSorted((left, right) =>
+        left.session_id === first.id
+          ? -1
+          : right.session_id === first.id
+            ? 1
+            : 0,
+      ),
+    ).toEqual([
+      { session_id: first.id, reps: 20 },
+      { session_id: second.id, reps: 25 },
+    ]);
 
     await expect(
       startAssignmentSession(sessionUnitOfWork, {
@@ -715,8 +797,13 @@ describe("assignment unit of work", () => {
       FROM assignment_recipients
       WHERE assignment_id = '${draft.id}';
     `);
-    const itemRows = await client.query<{ id: string }>(`
-      SELECT assignment_workout_item_snapshots.id
+    const itemRows = await client.query<{
+      id: string;
+      workout_snapshot_id: string;
+    }>(`
+      SELECT
+        assignment_workout_item_snapshots.id,
+        assignment_workout_block_snapshots.workout_snapshot_id
       FROM assignment_workout_item_snapshots
       INNER JOIN assignment_workout_block_snapshots
         ON assignment_workout_block_snapshots.id = assignment_workout_item_snapshots.block_snapshot_id
@@ -726,8 +813,10 @@ describe("assignment unit of work", () => {
     `);
     const recipientId = recipientRows.rows[0]?.id;
     const itemSnapshotId = itemRows.rows[0]?.id;
+    const workoutSnapshotId = itemRows.rows[0]?.workout_snapshot_id;
     expect(recipientId).toBeDefined();
     expect(itemSnapshotId).toBeDefined();
+    expect(workoutSnapshotId).toBeDefined();
 
     await saveAthletePrescriptionOverride(
       createAthletePrescriptionUnitOfWork(database),
@@ -754,6 +843,19 @@ describe("assignment unit of work", () => {
         reason: "Individual progression",
       },
     );
+
+    const futureEffectiveItems =
+      await listEffectiveWorkoutItemsForAthleteOccurrence(database, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        workoutSnapshotId: workoutSnapshotId!,
+        planSlotSnapshotId: null,
+        sessionId: null,
+      });
+    expect(futureEffectiveItems).toEqual([
+      expect.objectContaining({ id: itemSnapshotId, reps: 20 }),
+    ]);
 
     const started = await startAssignmentSession(
       createAssignmentSessionUnitOfWork(database),
@@ -785,5 +887,55 @@ describe("assignment unit of work", () => {
       }),
     ]);
     expect(sharedItems.rows).toEqual([{ reps: 5 }]);
+
+    const startedEffectiveItems =
+      await listEffectiveWorkoutItemsForAthleteOccurrence(database, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        workoutSnapshotId: workoutSnapshotId!,
+        planSlotSnapshotId: null,
+        sessionId: started.id,
+      });
+    expect(startedEffectiveItems).toEqual([
+      expect.objectContaining({ id: itemSnapshotId, reps: 20 }),
+    ]);
+
+    await expect(
+      saveAthletePrescriptionOverride(
+        createAthletePrescriptionUnitOfWork(database),
+        {
+          organizationId: "10000000-0000-4000-8000-000000000001",
+          actorUserId: "00000000-0000-4000-8000-000000000001",
+          assignmentId: draft.id,
+          recipientId: recipientId!,
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+          itemSnapshotId: itemSnapshotId!,
+          planSlotSnapshotId: null,
+          expectedVersion: 1,
+          overriddenFields: ["reps"],
+          reps: 25,
+          load: null,
+          loadValue: null,
+          loadUnit: null,
+          normalizedLoadKg: null,
+          durationSeconds: null,
+          distanceMeters: null,
+          restSeconds: null,
+          tempo: null,
+          notes: null,
+          reason: "Later progression",
+        },
+      ),
+    ).rejects.toThrow("Started or completed sessions");
+
+    const immutablePrescriptionRows = await client.query<{
+      reps: number | null;
+    }>(`
+      SELECT reps
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id = '${started.id}';
+    `);
+    expect(immutablePrescriptionRows.rows).toEqual([{ reps: 20 }]);
   });
 });

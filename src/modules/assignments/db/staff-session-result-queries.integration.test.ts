@@ -228,7 +228,7 @@ describe("staff session result queries", () => {
     );
   });
 
-  it("returns no staff detail for a non-submitted session", async () => {
+  it("returns authorized staff detail for an in-progress session", async () => {
     await client.exec(`
       UPDATE assignment_sessions
       SET status = 'in_progress', submitted_at = NULL
@@ -241,6 +241,12 @@ describe("staff session result queries", () => {
         assignmentId: ids.assignment,
         sessionId: ids.session,
       }),
-    ).resolves.toBeNull();
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: ids.session,
+        status: "in_progress",
+        submittedAt: null,
+      }),
+    );
   });
 });

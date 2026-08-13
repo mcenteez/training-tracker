@@ -161,6 +161,90 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page.getByText("This page could not be found.")).toBeVisible();
   });
 
+  test("individual prescription is effective for the athlete and locked at session start", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Override Exercise ${suffix}`;
+    const workoutName = `Playwright Override Workout ${suffix}`;
+    const scheduledDate = new Date().toISOString().slice(0, 10);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName, "5");
+    const assignmentPath = await publishWorkoutAssignment(
+      page,
+      workoutName,
+      scheduledDate,
+    );
+    const assignmentId = assignmentPath.split("/").pop()!;
+    const performancePath = `/app/performance/teams/${basketballTeamId}/assignments/${assignmentId}`;
+
+    await page.goto(performancePath);
+    const athleteCard = page
+      .locator('[data-slot="card"]')
+      .filter({ hasText: "Local Athlete" });
+    await athleteCard.getByText("Individual prescription").click();
+    const prescriptionForm = athleteCard
+      .locator("form")
+      .filter({ hasText: exerciseName });
+    await prescriptionForm
+      .locator('input[name="overriddenFields"][value="reps"]')
+      .check();
+    await prescriptionForm.locator('input[name="reps"]').fill("20");
+    await prescriptionForm
+      .getByRole("button", { name: "Save prescription" })
+      .click();
+    await expect(page).toHaveURL(/\?prescription=saved$/);
+    await expect(
+      page.getByText(
+        "Individual prescription saved for future unstarted sessions.",
+      ),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.setViewportSize({ width: 1280, height: 720 });
+
+    await usePersona(context, "viewer");
+    await page.goto(performancePath);
+    const viewerCard = page
+      .locator('[data-slot="card"]')
+      .filter({ hasText: "Local Athlete" });
+    await viewerCard.getByText("Individual prescription").click();
+    await expect(
+      viewerCard.getByText("Read-only shared base and effective prescription."),
+    ).toBeVisible();
+    await expect(
+      viewerCard.getByRole("button", { name: "Save prescription" }).first(),
+    ).toBeDisabled();
+
+    await usePersona(context, "athlete");
+    await page.goto("/app/athlete");
+    const assignment = page.locator("li").filter({ hasText: workoutName });
+    await assignment.getByRole("link", { name: "Open" }).click();
+    await expect(page.getByText("Reps 20", { exact: true })).toBeVisible();
+    await expect(page.getByText("Reps 5", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Start Workout" }).click();
+    await expect(page.getByText("Workout started.")).toBeVisible();
+
+    await usePersona(context, "manager");
+    await page.goto(performancePath);
+    await page.getByRole("link", { name: "Review" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Effective prescription used" }),
+    ).toBeVisible();
+    await expect(page.getByText("20 reps", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(/Locked when this session started/),
+    ).toBeVisible();
+  });
+
   test("late completion is visible and closed late-entry is rejected", async ({
     context,
     page,

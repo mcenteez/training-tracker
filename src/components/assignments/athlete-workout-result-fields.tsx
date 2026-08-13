@@ -27,7 +27,10 @@ export function AthleteWorkoutResultFields({
     item.reps !== null ||
     item.load !== null ||
     item.durationSeconds !== null ||
-    item.distanceMeters !== null;
+    item.distanceMeters !== null ||
+    item.restSeconds !== null ||
+    item.tempo !== null ||
+    item.notes !== null;
   const hasStoredActuals =
     (result !== undefined && item.reps !== null && result.reps !== null) ||
     (result !== undefined && item.load !== null && result.load !== null) ||
@@ -54,6 +57,13 @@ export function AthleteWorkoutResultFields({
             ) : null}
             {item.distanceMeters !== null ? (
               <span>Distance {item.distanceMeters}m</span>
+            ) : null}
+            {item.restSeconds !== null ? (
+              <span>Rest {item.restSeconds}s</span>
+            ) : null}
+            {item.tempo !== null ? <span>Tempo {item.tempo}</span> : null}
+            {item.notes !== null ? (
+              <span className="basis-full">Notes {item.notes}</span>
             ) : null}
           </div>
         </div>

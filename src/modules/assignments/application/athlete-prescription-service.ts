@@ -74,6 +74,14 @@ export interface AthletePrescriptionTransaction {
     itemSnapshotId: string;
     planSlotSnapshotId: string | null;
   }): Promise<ExistingOverride | null>;
+  hasLockedSession(input: {
+    organizationId: string;
+    assignmentId: string;
+    recipientId: string;
+    athleteUserId: string;
+    itemSnapshotId: string;
+    planSlotSnapshotId: string | null;
+  }): Promise<boolean>;
   createOverride(
     input: AthletePrescriptionOverrideInput,
   ): Promise<{ id: string; version: number }>;
@@ -168,6 +176,14 @@ export async function saveAthletePrescriptionOverride(
         "Only published assignments can have athlete prescriptions.",
       );
     }
+    if (
+      input.planSlotSnapshotId === null &&
+      (await transaction.hasLockedSession(input))
+    ) {
+      throw new DomainInvariantError(
+        "Started or completed sessions keep their original prescription.",
+      );
+    }
 
     const existing = await transaction.findOverride(input);
     if (!existing) {
@@ -222,7 +238,7 @@ export async function clearAthletePrescriptionOverride(
   }
 
   return unitOfWork.transaction(async (transaction) => {
-    await assertActorCanManageTarget(transaction, {
+    const authorizationInput = {
       ...input,
       overriddenFields: ["reps"],
       reps: null,
@@ -236,7 +252,16 @@ export async function clearAthletePrescriptionOverride(
       tempo: null,
       notes: null,
       reason: null,
-    });
+    } as const;
+    await assertActorCanManageTarget(transaction, authorizationInput);
+    if (
+      input.planSlotSnapshotId === null &&
+      (await transaction.hasLockedSession(authorizationInput))
+    ) {
+      throw new DomainInvariantError(
+        "Started or completed sessions keep their original prescription.",
+      );
+    }
     const existing = await transaction.findOverride(input);
     if (!existing || existing.version !== input.expectedVersion) {
       throw new DomainInvariantError(

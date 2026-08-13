@@ -47,6 +47,7 @@ function setup(overrides: Partial<AthletePrescriptionTransaction> = {}) {
     })),
     recipientHasManagedTeamScope: vi.fn(async () => true),
     findOverride: vi.fn(async () => null),
+    hasLockedSession: vi.fn(async () => false),
     createOverride: vi.fn(async () => ({ id: "override-1", version: 1 })),
     updateOverride: vi.fn(async () => ({ id: "override-1", version: 2 })),
     deleteOverride: vi.fn(async () => true),
@@ -101,6 +102,43 @@ describe("athlete prescription overrides", () => {
     ).rejects.toBeInstanceOf(AuthorizationError);
   });
 
+  it("rejects organization and team Viewers", async () => {
+    const { unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async () => "viewer" as const),
+      listTeamRoles: vi.fn(async () => [
+        { teamId: "team-1", role: "viewer" as const },
+      ]),
+    });
+
+    await expect(
+      saveAthletePrescriptionOverride(unitOfWork, input),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("rejects actors outside the active organization", async () => {
+    const { unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async () => null),
+    });
+
+    await expect(
+      saveAthletePrescriptionOverride(unitOfWork, input),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it("rejects a Team Manager whose team is outside the recipient scope", async () => {
+    const { unitOfWork } = setup({
+      findOrganizationRole: vi.fn(async () => "athlete" as const),
+      listTeamRoles: vi.fn(async () => [
+        { teamId: "foreign-team", role: "manager" as const },
+      ]),
+      recipientHasManagedTeamScope: vi.fn(async () => false),
+    });
+
+    await expect(
+      saveAthletePrescriptionOverride(unitOfWork, input),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
   it("rejects a stale override version", async () => {
     const { unitOfWork } = setup({
       findOverride: vi.fn(async () => ({ id: "override-1", version: 2 })),
@@ -112,6 +150,38 @@ describe("athlete prescription overrides", () => {
         expectedVersion: 1,
       }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("rejects changes after the athlete starts a matching session", async () => {
+    const { unitOfWork } = setup({
+      hasLockedSession: vi.fn(async () => true),
+    });
+
+    await expect(
+      saveAthletePrescriptionOverride(unitOfWork, input),
+    ).rejects.toThrow("Started or completed sessions");
+  });
+
+  it("replaces a plan-slot override for later starts without changing locked sessions", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOverride: vi.fn(async () => ({ id: "override-1", version: 1 })),
+      hasLockedSession: vi.fn(async () => true),
+    });
+    const planSlotInput = {
+      ...input,
+      planSlotSnapshotId: "88888888-8888-4888-8888-888888888888",
+      expectedVersion: 1,
+    };
+
+    await expect(
+      saveAthletePrescriptionOverride(unitOfWork, planSlotInput),
+    ).resolves.toEqual({ id: "override-1", version: 2 });
+
+    expect(transaction.updateOverride).toHaveBeenCalledWith({
+      ...planSlotInput,
+      overrideId: "override-1",
+    });
+    expect(transaction.hasLockedSession).not.toHaveBeenCalled();
   });
 
   it("clears a current override with its expected version", async () => {
@@ -136,5 +206,26 @@ describe("athlete prescription overrides", () => {
       overrideId: "override-1",
       expectedVersion: 2,
     });
+  });
+
+  it("clears a plan-slot override only for later unstarted sessions", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOverride: vi.fn(async () => ({ id: "override-1", version: 2 })),
+      hasLockedSession: vi.fn(async () => true),
+    });
+
+    await clearAthletePrescriptionOverride(unitOfWork, {
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      assignmentId: input.assignmentId,
+      recipientId: input.recipientId,
+      athleteUserId: input.athleteUserId,
+      itemSnapshotId: input.itemSnapshotId,
+      planSlotSnapshotId: "88888888-8888-4888-8888-888888888888",
+      expectedVersion: 2,
+    });
+
+    expect(transaction.deleteOverride).toHaveBeenCalled();
+    expect(transaction.hasLockedSession).not.toHaveBeenCalled();
   });
 });
