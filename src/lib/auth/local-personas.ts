@@ -27,6 +27,12 @@ export const localPersonas = {
     fullName: "Local Athlete",
     label: "Basketball Athlete",
   },
+  athleteTwo: {
+    externalId: "local:athlete-two",
+    email: "athlete-two@local.test",
+    fullName: "Local Athlete Two",
+    label: "Basketball Athlete Two",
+  },
   viewer: {
     externalId: "local:viewer",
     email: "viewer@local.test",

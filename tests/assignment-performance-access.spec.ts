@@ -145,7 +145,10 @@ test.describe("Training Tracker assignment and performance access", () => {
       .getByLabel("Scheduled date")
       .fill(new Date().toISOString().slice(0, 10));
     await page.getByRole("button", { name: "Individual athletes" }).click();
-    await page.getByRole("option", { name: /Local Athlete/ }).click();
+    await page
+      .getByRole("option")
+      .filter({ hasText: "athlete@local.test" })
+      .click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Save Draft and Review" }).click();
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?created=1$/);
@@ -189,7 +192,7 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.goto(performancePath);
     const athleteCard = page
       .locator('[data-slot="card"]')
-      .filter({ hasText: "Local Athlete" });
+      .filter({ hasText: "athlete@local.test" });
     await athleteCard.getByText("Individual prescription").click();
     const prescriptionForm = athleteCard
       .locator("form")
@@ -219,7 +222,7 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.goto(performancePath);
     const viewerCard = page
       .locator('[data-slot="card"]')
-      .filter({ hasText: "Local Athlete" });
+      .filter({ hasText: "athlete@local.test" });
     await viewerCard.getByText("Individual prescription").click();
     await expect(
       viewerCard.getByText("Read-only shared base and effective prescription."),

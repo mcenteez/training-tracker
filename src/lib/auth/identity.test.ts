@@ -51,6 +51,19 @@ describe("getAuthenticatedIdentity", () => {
     expect(getClerkIdentityMock).not.toHaveBeenCalled();
   });
 
+  it("resolves the second local athlete persona from the cookie", async () => {
+    process.env.AUTH_MODE = "local";
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: "athleteTwo" }),
+    });
+
+    await expect(getAuthenticatedIdentity()).resolves.toEqual({
+      externalId: "local:athlete-two",
+      email: "athlete-two@local.test",
+      fullName: "Local Athlete Two",
+    });
+  });
+
   it("does not authenticate an unknown local persona", async () => {
     process.env.AUTH_MODE = "local";
     cookiesMock.mockResolvedValue({

@@ -1,7 +1,13 @@
 import type { BrowserContext } from "@playwright/test";
 
 export type LocalPersona =
-  "owner" | "manager" | "revokedManager" | "athlete" | "viewer" | "invalid";
+  | "owner"
+  | "manager"
+  | "revokedManager"
+  | "athlete"
+  | "athleteTwo"
+  | "viewer"
+  | "invalid";
 
 export const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";

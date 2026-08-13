@@ -21,6 +21,7 @@ const users = {
   manager: "30000000-0000-4000-8000-000000000002",
   revokedManager: "30000000-0000-4000-8000-000000000005",
   athlete: "30000000-0000-4000-8000-000000000003",
+  athleteTwo: "30000000-0000-4000-8000-000000000006",
   viewer: "30000000-0000-4000-8000-000000000004",
 };
 
@@ -38,6 +39,7 @@ await sql.transaction([
       (${users.manager}, 'local:manager', 'manager@local.test', 'Local Team Manager'),
       (${users.revokedManager}, 'local:revoked-manager', 'revoked-manager@local.test', 'Revoked Team Manager'),
       (${users.athlete}, 'local:athlete', 'athlete@local.test', 'Local Athlete'),
+      (${users.athleteTwo}, 'local:athlete-two', 'athlete-two@local.test', 'Local Athlete Two'),
       (${users.viewer}, 'local:viewer', 'viewer@local.test', 'Local Viewer')
     ON CONFLICT (clerk_user_id) DO UPDATE
     SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, updated_at = now()
@@ -49,6 +51,7 @@ await sql.transaction([
       (${organizationId}, ${users.manager}, 'athlete'),
       (${organizationId}, ${users.revokedManager}, 'athlete'),
       (${organizationId}, ${users.athlete}, 'athlete'),
+      (${organizationId}, ${users.athleteTwo}, 'athlete'),
       (${organizationId}, ${users.viewer}, 'viewer')
     ON CONFLICT (organization_id, user_id) DO UPDATE
     SET role = EXCLUDED.role, updated_at = now()
@@ -65,6 +68,7 @@ await sql.transaction([
       (${organizationId}, ${teamId}, ${users.manager}, 'manager'),
       (${organizationId}, ${teamId}, ${users.revokedManager}, 'manager'),
       (${organizationId}, ${teamId}, ${users.athlete}, 'athlete'),
+      (${organizationId}, ${teamId}, ${users.athleteTwo}, 'athlete'),
       (${organizationId}, ${teamId}, ${users.viewer}, 'viewer')
     ON CONFLICT (team_id, user_id) DO UPDATE
     SET role = EXCLUDED.role, updated_at = now()
