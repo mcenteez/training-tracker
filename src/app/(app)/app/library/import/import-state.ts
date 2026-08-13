@@ -1,5 +1,6 @@
 import type { ImportDiagnostic } from "@/modules/library-import/application/diagnostics";
 import type { PlannedAction } from "@/modules/library-import/application/import-plan";
+import type { LibraryImportMode } from "@/modules/library-import/application/import-service";
 
 export interface LibraryImportEntry {
   entity: "exercise" | "workout" | "plan";
@@ -15,6 +16,7 @@ export interface LibraryImportState {
   canCommit: boolean;
   /** Validated source, replayed to the commit action so the user need not re-upload. */
   source?: string;
+  mode?: LibraryImportMode;
   created?: { exercises: number; workouts: number; plans: number };
 }
 

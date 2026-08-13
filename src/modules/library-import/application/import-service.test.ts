@@ -118,6 +118,99 @@ describe("library import service", () => {
     expect(transaction.createExercises).toHaveBeenCalledTimes(1);
     expect(transaction.createWorkout).toHaveBeenCalledTimes(1);
     expect(transaction.createPlan).toHaveBeenCalledTimes(1);
+    expect(transaction.createWorkout).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "draft" }),
+    );
+    expect(transaction.createPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "draft" }),
+    );
+  });
+
+  it("activates complete imported workouts before their plans", async () => {
+    const calls: string[] = [];
+    const { transaction, unitOfWork } = createTestUnitOfWork({
+      createWorkout: vi.fn(async ({ workout, status }) => {
+        calls.push(`workout:${status}`);
+        return { id: "workout-1", name: workout.name };
+      }),
+      createPlan: vi.fn(async ({ plan, status }) => {
+        calls.push(`plan:${status}`);
+        return { id: "plan-1", name: plan.name };
+      }),
+    });
+
+    const result = await commitLibraryImport(unitOfWork, {
+      ...request,
+      mode: "activate",
+    });
+
+    expect(result.status).toBe("imported");
+    expect(calls).toEqual(["workout:active", "plan:active"]);
+    expect(transaction.createWorkout).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active" }),
+    );
+    expect(transaction.createPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active" }),
+    );
+  });
+
+  it("rejects activation of an incomplete workout but permits draft import", async () => {
+    const incompleteBundle = bundle({
+      plans: [],
+      workouts: [
+        {
+          name: "Incomplete Workout",
+          description: null,
+          blocks: [],
+        },
+      ],
+    });
+    const { transaction, unitOfWork } = createTestUnitOfWork();
+
+    const activation = await previewLibraryImport(unitOfWork, {
+      ...request,
+      bundle: incompleteBundle,
+      mode: "activate",
+    });
+    const draft = await previewLibraryImport(unitOfWork, {
+      ...request,
+      bundle: incompleteBundle,
+      mode: "draft",
+    });
+
+    expect(activation.canCommit).toBe(false);
+    expect(activation.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "not_activatable" }),
+      ]),
+    );
+    expect(draft.canCommit).toBe(true);
+    expect(transaction.createWorkout).not.toHaveBeenCalled();
+  });
+
+  it("rejects an active plan that references an existing draft workout", async () => {
+    const { unitOfWork } = createTestUnitOfWork({
+      listUnarchivedWorkouts: vi.fn(async () => [
+        {
+          id: "existing-workout",
+          name: "Lower Body A",
+          status: "draft" as const,
+        },
+      ]),
+    });
+
+    const plan = await previewLibraryImport(unitOfWork, {
+      ...request,
+      bundle: bundle({ exercises: [], workouts: [] }),
+      mode: "activate",
+    });
+
+    expect(plan.canCommit).toBe(false);
+    expect(plan.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "inactive_workout" }),
+      ]),
+    );
   });
 
   it("allows a Team Manager to import", async () => {

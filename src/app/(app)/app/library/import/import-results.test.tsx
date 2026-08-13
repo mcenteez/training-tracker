@@ -125,4 +125,21 @@ describe("ImportResults", () => {
     );
     expect(screen.getByText("Created")).toBeInTheDocument();
   });
+
+  it("reports when imported workouts and plans were activated", () => {
+    render(
+      <ImportResults
+        state={state({
+          status: "imported",
+          canCommit: false,
+          mode: "activate",
+          created: { exercises: 1, workouts: 1, plans: 1 },
+        })}
+      />,
+    );
+
+    expect(screen.getByLabelText("Import results")).toHaveTextContent(
+      "Workouts and plans were activated.",
+    );
+  });
 });

@@ -40,7 +40,7 @@ function bundle(suffix: string) {
 }
 
 test.describe("Training Tracker library import", () => {
-  test("manager can preview and commit a JSON bundle", async ({
+  test("manager can preview, activate, and commit a complete JSON bundle", async ({
     context,
     page,
   }, testInfo) => {
@@ -50,6 +50,7 @@ test.describe("Training Tracker library import", () => {
     await usePersona(context, "manager");
     await page.goto("/app/library/import");
 
+    await page.getByLabel("Import and activate").check();
     await page.getByLabel("Paste JSON").fill(JSON.stringify(payload));
     await page.getByRole("button", { name: "Check this import" }).click();
 
@@ -65,6 +66,7 @@ test.describe("Training Tracker library import", () => {
     await expect(
       results.getByText(/Imported 1 exercise, 1 workout, and 1 plan/),
     ).toBeVisible();
+    await expect(results).toContainText("Workouts and plans were activated.");
 
     await page.goto(
       `/app/library/exercises?search=${encodeURIComponent(`Playwright Import Squat ${suffix}`)}`,
@@ -73,6 +75,24 @@ test.describe("Training Tracker library import", () => {
       page
         .locator('section[aria-label="Exercises"] > div')
         .filter({ hasText: `Playwright Import Squat ${suffix}` }),
+    ).toBeVisible();
+
+    await page.goto(
+      `/app/library/workouts?search=${encodeURIComponent(`Playwright Import Lower Body ${suffix}`)}`,
+    );
+    await expect(
+      page
+        .locator('section[aria-label="Workouts"]')
+        .getByText(`Playwright Import Lower Body ${suffix}`),
+    ).toBeVisible();
+
+    await page.goto(
+      `/app/library/plans?search=${encodeURIComponent(`Playwright Import Base ${suffix}`)}`,
+    );
+    await expect(
+      page
+        .locator('section[aria-label="Plans"]')
+        .getByText(`Playwright Import Base ${suffix}`),
     ).toBeVisible();
   });
 
@@ -115,6 +135,42 @@ test.describe("Training Tracker library import", () => {
     await expect(
       page.getByRole("button", { name: "Import into my library" }),
     ).toHaveCount(0);
+  });
+
+  test("incomplete content is guided to draft import instead of partial activation", async ({
+    context,
+    page,
+  }, testInfo) => {
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+
+    await usePersona(context, "manager");
+    await page.goto("/app/library/import");
+    await page.getByLabel("Import and activate").check();
+    await page.getByLabel("Paste JSON").fill(
+      JSON.stringify({
+        formatVersion: 1,
+        workouts: [
+          {
+            name: `Playwright Incomplete Workout ${suffix}`,
+            blocks: [],
+          },
+        ],
+      }),
+    );
+    await page.getByRole("button", { name: "Check this import" }).click();
+
+    await expect(
+      page.locator('section[aria-label="Import errors"]'),
+    ).toContainText("Import it as a draft instead");
+    await expect(
+      page.getByRole("button", { name: "Import into my library" }),
+    ).toHaveCount(0);
+
+    await page.getByLabel("Import as drafts").check();
+    await page.getByRole("button", { name: "Check this import" }).click();
+    await expect(
+      page.getByRole("button", { name: "Import into my library" }),
+    ).toBeVisible();
   });
 
   test("manager sees a single diagnostic for malformed JSON", async ({

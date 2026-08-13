@@ -63,7 +63,11 @@ export function createLibraryImportUnitOfWork(
           },
           async listUnarchivedWorkouts(organizationId) {
             return databaseTransaction
-              .select({ id: workouts.id, name: workouts.name })
+              .select({
+                id: workouts.id,
+                name: workouts.name,
+                status: workouts.status,
+              })
               .from(workouts)
               .where(
                 and(
@@ -109,7 +113,7 @@ export function createLibraryImportUnitOfWork(
                 organizationId: input.organizationId,
                 name: input.workout.name,
                 description: input.workout.description,
-                status: "draft",
+                status: input.status,
                 createdByUserId: input.actorUserId,
                 updatedByUserId: input.actorUserId,
               })
@@ -156,7 +160,7 @@ export function createLibraryImportUnitOfWork(
                 organizationId: input.organizationId,
                 name: input.plan.name,
                 description: input.plan.description,
-                status: "draft",
+                status: input.status,
                 createdByUserId: input.actorUserId,
                 updatedByUserId: input.actorUserId,
               })

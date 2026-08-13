@@ -9,6 +9,7 @@ import { libraryImportLimits } from "@/modules/library-import/application/format
 import {
   commitLibraryImport,
   previewLibraryImport,
+  type LibraryImportMode,
 } from "@/modules/library-import/application/import-service";
 import type { PlannedAction } from "@/modules/library-import/application/import-plan";
 import { parseLibraryImportBundle } from "@/modules/library-import/application/parse-bundle";
@@ -91,6 +92,10 @@ function entriesFrom(plan: {
   ];
 }
 
+function readMode(formData: FormData): LibraryImportMode {
+  return formData.get("mode") === "activate" ? "activate" : "draft";
+}
+
 export async function previewLibraryImportAction(
   _previousState: LibraryImportState,
   formData: FormData,
@@ -100,6 +105,7 @@ export async function previewLibraryImportAction(
   if (!source.ok) return source.state;
 
   const parsed = parseLibraryImportBundle(source.source);
+  const mode = readMode(formData);
 
   if (!parsed.ok) {
     return {
@@ -118,6 +124,7 @@ export async function previewLibraryImportAction(
         organizationId: context.membership.organizationId,
         actorUserId: context.user.id,
         bundle: parsed.bundle,
+        mode,
       }),
     );
 
@@ -130,6 +137,7 @@ export async function previewLibraryImportAction(
       entries: entriesFrom(plan),
       canCommit: plan.canCommit,
       source: plan.canCommit ? source.source : undefined,
+      mode,
     };
   } catch (error) {
     if (error instanceof AuthorizationError) {
@@ -145,6 +153,7 @@ export async function commitLibraryImportAction(
   formData: FormData,
 ): Promise<LibraryImportState> {
   const parsed = parseLibraryImportBundle(String(formData.get("source") ?? ""));
+  const mode = readMode(formData);
 
   if (!parsed.ok) {
     return {
@@ -163,6 +172,7 @@ export async function commitLibraryImportAction(
         organizationId: context.membership.organizationId,
         actorUserId: context.user.id,
         bundle: parsed.bundle,
+        mode,
       }),
     );
 
@@ -187,6 +197,7 @@ export async function commitLibraryImportAction(
       entries: entriesFrom(result.plan),
       canCommit: false,
       created: result.created,
+      mode,
     };
   } catch (error) {
     if (error instanceof AuthorizationError) {

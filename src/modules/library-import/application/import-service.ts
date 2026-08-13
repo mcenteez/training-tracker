@@ -19,9 +19,16 @@ export interface NamedRecord {
   name: string;
 }
 
+export interface NamedWorkoutRecord extends NamedRecord {
+  status: "draft" | "active" | "archived";
+}
+
+export type LibraryImportMode = "draft" | "activate";
+
 export interface CreateWorkoutInput {
   organizationId: string;
   actorUserId: string;
+  status: "draft" | "active";
   workout: {
     name: string;
     description: string | null;
@@ -46,6 +53,7 @@ export interface CreateWorkoutInput {
 export interface CreatePlanInput {
   organizationId: string;
   actorUserId: string;
+  status: "draft" | "active";
   plan: {
     name: string;
     description: string | null;
@@ -73,7 +81,7 @@ export interface LibraryImportTransaction {
   ): Promise<OrganizationRole | null>;
   listTeamRoles(organizationId: string, userId: string): Promise<TeamRole[]>;
   listActiveExercises(organizationId: string): Promise<NamedRecord[]>;
-  listUnarchivedWorkouts(organizationId: string): Promise<NamedRecord[]>;
+  listUnarchivedWorkouts(organizationId: string): Promise<NamedWorkoutRecord[]>;
   listUnarchivedPlans(organizationId: string): Promise<NamedRecord[]>;
   createExercises(input: {
     organizationId: string;
@@ -95,6 +103,7 @@ export interface LibraryImportRequest {
   actorUserId: string;
   bundle: LibraryImportBundle;
   conflictStrategy?: LibraryImportConflictStrategy;
+  mode?: LibraryImportMode;
 }
 
 export interface LibraryImportCounts {
@@ -136,7 +145,7 @@ async function planImport(
 ): Promise<{
   plan: ImportPlanResult;
   existingExercises: NamedRecord[];
-  existingWorkouts: NamedRecord[];
+  existingWorkouts: NamedWorkoutRecord[];
 }> {
   const [existingExercises, existingWorkouts, existingPlans] =
     await Promise.all([
@@ -145,13 +154,79 @@ async function planImport(
       transaction.listUnarchivedPlans(request.organizationId),
     ]);
 
-  const plan = buildImportPlan({
+  const basePlan = buildImportPlan({
     bundle: request.bundle,
     existingExerciseNames: existingExercises.map((record) => record.name),
     existingWorkoutNames: existingWorkouts.map((record) => record.name),
     existingPlanNames: existingPlans.map((record) => record.name),
     conflictStrategy: request.conflictStrategy,
   });
+
+  if ((request.mode ?? "draft") === "draft" || !basePlan.canCommit) {
+    return { plan: basePlan, existingExercises, existingWorkouts };
+  }
+
+  const importedWorkoutNames = new Set(
+    basePlan.workouts
+      .filter((entry) => entry.action === "create")
+      .map((entry) => normalizeImportName(entry.name)),
+  );
+  const activeWorkoutNames = new Set(
+    existingWorkouts
+      .filter((workout) => workout.status === "active")
+      .map((workout) => normalizeImportName(workout.name)),
+  );
+  const activationDiagnostics = [
+    ...basePlan.workouts.flatMap((entry, index) =>
+      entry.action === "create" &&
+      (entry.input.blocks.length === 0 ||
+        entry.input.blocks.some((block) => block.items.length === 0))
+        ? [
+            {
+              severity: "error" as const,
+              entity: "workout" as const,
+              location: `workouts[${index}].blocks`,
+              code: "not_activatable",
+              message: `"${entry.name}" must have at least one item in every block to be activated. Import it as a draft instead.`,
+            },
+          ]
+        : [],
+    ),
+    ...basePlan.plans.flatMap((entry, index) => {
+      if (entry.action !== "create") return [];
+      if (entry.input.scheduleSlots.length === 0) {
+        return [
+          {
+            severity: "error" as const,
+            entity: "plan" as const,
+            location: `plans[${index}].scheduleSlots`,
+            code: "not_activatable",
+            message: `"${entry.name}" needs at least one scheduled session to be activated. Import it as a draft instead.`,
+          },
+        ];
+      }
+      const inactiveReference = entry.input.scheduleSlots.find((slot) => {
+        const name = normalizeImportName(slot.workout);
+        return !importedWorkoutNames.has(name) && !activeWorkoutNames.has(name);
+      });
+      return inactiveReference
+        ? [
+            {
+              severity: "error" as const,
+              entity: "plan" as const,
+              location: `plans[${index}].scheduleSlots`,
+              code: "inactive_workout",
+              message: `"${entry.name}" references "${inactiveReference.workout}", which is not active. Activate that workout or import this bundle as drafts.`,
+            },
+          ]
+        : [];
+    }),
+  ];
+  const plan = {
+    ...basePlan,
+    diagnostics: [...basePlan.diagnostics, ...activationDiagnostics],
+    canCommit: activationDiagnostics.length === 0,
+  };
 
   return { plan, existingExercises, existingWorkouts };
 }
@@ -226,6 +301,7 @@ export async function commitLibraryImport(
       const created = await transaction.createWorkout({
         organizationId: request.organizationId,
         actorUserId: request.actorUserId,
+        status: request.mode === "activate" ? "active" : "draft",
         workout: {
           name: entry.input.name,
           description: entry.input.description,
@@ -259,6 +335,7 @@ export async function commitLibraryImport(
       await transaction.createPlan({
         organizationId: request.organizationId,
         actorUserId: request.actorUserId,
+        status: request.mode === "activate" ? "active" : "draft",
         plan: {
           name: entry.input.name,
           description: entry.input.description,

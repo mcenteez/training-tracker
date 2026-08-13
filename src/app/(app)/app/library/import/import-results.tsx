@@ -130,7 +130,9 @@ export function ImportResults({
           {state.created.exercises === 1 ? "" : "s"}, {state.created.workouts}{" "}
           workout{state.created.workouts === 1 ? "" : "s"}, and{" "}
           {state.created.plans} plan{state.created.plans === 1 ? "" : "s"}.
-          Workouts and plans were created as drafts.
+          {state.mode === "activate"
+            ? " Workouts and plans were activated."
+            : " Workouts and plans were created as drafts."}
         </p>
       ) : null}
 
