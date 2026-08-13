@@ -60,6 +60,8 @@ describe("staff session result page", () => {
       status: "submitted",
       startedAt: new Date("2026-08-12T12:00:00Z"),
       submittedAt: new Date("2026-08-12T13:00:00Z"),
+      durationMinutes: 45,
+      sessionRpe: 8,
       prescriptions: [
         {
           itemSnapshotId: "item-1",
@@ -90,6 +92,48 @@ describe("staff session result page", () => {
           notes: null,
         },
       ],
+      trainingLoad: {
+        id: "session-1",
+        organizationId: "organization-1",
+        assignmentId: "assignment-1",
+        recipientId: "recipient-1",
+        athleteUserId: "athlete-1",
+        scheduledDate: "2026-08-12",
+        timezone: "UTC",
+        durationMinutes: 45,
+        sessionRpe: 8,
+        submittedAt: new Date("2026-08-12T13:00:00Z"),
+        internalLoad: {
+          state: "internalLoadAvailable",
+          durationMinutes: 45,
+          sessionRpe: 8,
+          internalLoad: 360,
+          sampleCount: 1,
+          unavailableReasons: [],
+        },
+        externalWork: {
+          state: "externalWorkComparable",
+          prescribedVolumeKg: 475,
+          completedVolumeKg: 475,
+          completion: 1,
+          prescribedRowCount: 1,
+          prescribedMeasurableRowCount: 1,
+          completedRowCount: 1,
+          completedMeasurableRowCount: 1,
+          unavailableReason: null,
+        },
+        baseline: {
+          state: "available",
+          sampleCount: 3,
+          medianInternalLoad: 300,
+          difference: 60,
+          differencePercent: 0.2,
+          currentInternalLoad: 360,
+          unavailableReason: null,
+          windowStartDate: "2026-07-15",
+          windowEndDate: "2026-08-11",
+        },
+      },
       comments: [],
     });
   });
@@ -108,6 +152,12 @@ describe("staff session result page", () => {
     expect(screen.getByText(/Locked when this session started/)).toBeVisible();
     expect(screen.getAllByText("Back Squat")).toHaveLength(2);
     expect(screen.getByText("5 reps - 95 kg")).toBeVisible();
+    expect(screen.getByText("360")).toBeVisible();
+    expect(screen.getByText("45 minutes × session RPE 8")).toBeVisible();
+    expect(screen.getByText(/475.0 kg prescribed denominator/)).toBeVisible();
+    expect(screen.getByText(/Current 360; median 300/)).toBeVisible();
+    expect(screen.getByText(/3 preceding sessions/)).toBeVisible();
+    expect(screen.getByText(/not readiness or injury-risk/)).toBeVisible();
     expect(screen.getByText("Comment form")).toBeVisible();
   });
 

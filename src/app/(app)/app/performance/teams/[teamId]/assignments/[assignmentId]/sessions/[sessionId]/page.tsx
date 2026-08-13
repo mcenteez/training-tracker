@@ -107,6 +107,83 @@ export default async function StaffSessionResultPage({
         </p>
       </section>
 
+      {session.trainingLoad ? (
+        <section aria-labelledby="training-load-heading" className="space-y-4">
+          <div>
+            <h2 id="training-load-heading" className="text-xl font-semibold">
+              Training load
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Descriptive recorded work and athlete response. These values are
+              not readiness or injury-risk determinations.
+            </p>
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Card>
+              <CardHeader className="gap-1">
+                <dt className="text-sm text-muted-foreground">Internal load</dt>
+                <dd className="text-2xl font-semibold">
+                  {session.trainingLoad.internalLoad.internalLoad ??
+                    "Unavailable"}
+                </dd>
+                <dd className="text-sm text-muted-foreground">
+                  {session.trainingLoad.internalLoad.state ===
+                  "internalLoadAvailable"
+                    ? `${session.durationMinutes} minutes × session RPE ${session.sessionRpe}`
+                    : session.trainingLoad.internalLoad.unavailableReasons
+                        .join(" and ")
+                        .replaceAll("_", " ")}
+                </dd>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="gap-1">
+                <dt className="text-sm text-muted-foreground">
+                  Strength volume
+                </dt>
+                <dd className="text-2xl font-semibold">
+                  {session.trainingLoad.externalWork.completedVolumeKg === null
+                    ? "Unavailable"
+                    : `${session.trainingLoad.externalWork.completedVolumeKg.toFixed(1)} kg`}
+                </dd>
+                <dd className="text-sm text-muted-foreground">
+                  {session.trainingLoad.externalWork.state ===
+                  "externalWorkComparable"
+                    ? `${session.trainingLoad.externalWork.completedMeasurableRowCount} measurable result rows; ${session.trainingLoad.externalWork.prescribedVolumeKg?.toFixed(1)} kg prescribed denominator`
+                    : `${session.trainingLoad.externalWork.state.replace("externalWork", "").toLowerCase()}: ${session.trainingLoad.externalWork.completedMeasurableRowCount} of ${session.trainingLoad.externalWork.completedRowCount} result rows measurable`}
+                </dd>
+              </CardHeader>
+            </Card>
+          </dl>
+          {session.trainingLoad.baseline.state === "available" ? (
+            <div className="rounded-md border bg-card p-4 text-sm">
+              <h3 className="font-medium">28-day individual baseline</h3>
+              <p className="mt-1">
+                Current {session.trainingLoad.baseline.currentInternalLoad};
+                median {session.trainingLoad.baseline.medianInternalLoad};
+                difference {session.trainingLoad.baseline.difference} (
+                {new Intl.NumberFormat(undefined, {
+                  style: "percent",
+                  maximumFractionDigits: 0,
+                }).format(session.trainingLoad.baseline.differencePercent ?? 0)}
+                ).
+              </p>
+              <p className="text-muted-foreground">
+                {session.trainingLoad.baseline.sampleCount} preceding sessions ·{" "}
+                {session.trainingLoad.baseline.windowStartDate} to{" "}
+                {session.trainingLoad.baseline.windowEndDate}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Individual baseline unavailable:{" "}
+              {session.trainingLoad.baseline.sampleCount} of 3 required
+              preceding sessions.
+            </p>
+          )}
+        </section>
+      ) : null}
+
       <section
         aria-labelledby="effective-prescription-heading"
         className="space-y-4"

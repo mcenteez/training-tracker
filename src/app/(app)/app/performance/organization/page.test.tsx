@@ -123,6 +123,23 @@ function timeliness(
   };
 }
 
+function loadSummary() {
+  return {
+    sessionCount: 4,
+    athleteCount: 2,
+    internalLoadAvailableCount: 3,
+    notCapturedCount: 1,
+    externalWorkComparableCount: 2,
+    externalWorkPartialCount: 1,
+    externalWorkUnavailableCount: 1,
+    insufficientHistoryCount: 2,
+    totalDurationMinutes: 120,
+    totalInternalLoad: 900,
+    totalPrescribedVolumeKg: 2000,
+    totalCompletedVolumeKg: 1800,
+  };
+}
+
 describe("organization performance page", () => {
   afterEach(cleanup);
 
@@ -207,6 +224,7 @@ describe("organization performance page", () => {
           },
         ],
       },
+      loadSummary(),
     ]);
 
     render(
@@ -228,6 +246,9 @@ describe("organization performance page", () => {
     expect(
       screen.getByText(/1 improving · 0 declining · 1 unavailable/i),
     ).toBeInTheDocument();
+    expect(screen.getByText("3 of 4")).toBeInTheDocument();
+    expect(screen.getByText("900")).toBeInTheDocument();
+    expect(screen.getByText("1800.0 kg")).toBeInTheDocument();
     expect(screen.getAllByText("No due work").length).toBeGreaterThan(0);
     const teamLinks = screen
       .getAllByRole("link")
@@ -251,6 +272,7 @@ describe("organization performance page", () => {
       [],
       [],
       { summary: summary(), timeliness: timeliness(), teams: [] },
+      { ...loadSummary(), sessionCount: 0, internalLoadAvailableCount: 0 },
     ]);
 
     render(

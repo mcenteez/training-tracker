@@ -19,6 +19,7 @@ import {
   listSessionsForAthleteAssignment,
   listWorkoutsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
+import { findAthleteSessionTrainingLoad } from "@/modules/assignments/db/training-load-queries";
 
 import {
   autosaveWorkoutOccurrenceAction,
@@ -211,6 +212,18 @@ export default async function WorkoutOccurrencePage({
         }),
       )
     : [];
+  const trainingLoad =
+    session?.status === "submitted"
+      ? await withDatabase((database) =>
+          findAthleteSessionTrainingLoad(database, {
+            organizationId: context.membership.organizationId,
+            athleteUserId: context.user.id,
+            assignmentId,
+            sessionId: session.id,
+            asOf: new Date(),
+          }),
+        )
+      : null;
   const resultByItemId = new Map(
     sessionResults.map((result) => [result.itemSnapshotId, result]),
   );
@@ -338,6 +351,41 @@ export default async function WorkoutOccurrencePage({
           ) : null}
         </CardContent>
       </Card>
+
+      {trainingLoad ? (
+        <section aria-labelledby="athlete-load-heading" className="space-y-3">
+          <div>
+            <h2 id="athlete-load-heading" className="text-lg font-semibold">
+              Session load
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Your recorded response and measurable completed work.
+            </p>
+          </div>
+          <dl className="grid gap-3 rounded-md border bg-card p-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-muted-foreground">
+                Session response
+              </dt>
+              <dd className="text-sm font-medium">
+                {trainingLoad.internalLoad.state === "internalLoadAvailable"
+                  ? `${trainingLoad.durationMinutes} minutes × RPE ${trainingLoad.sessionRpe} = ${trainingLoad.internalLoad.internalLoad} internal load`
+                  : `Not available: ${trainingLoad.internalLoad.unavailableReasons.join(" and ").replaceAll("_", " ")}`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Strength volume</dt>
+              <dd className="text-sm font-medium">
+                {trainingLoad.externalWork.state === "externalWorkComparable"
+                  ? `${trainingLoad.externalWork.completedVolumeKg?.toFixed(1)} kg completed of ${trainingLoad.externalWork.prescribedVolumeKg?.toFixed(1)} kg prescribed`
+                  : trainingLoad.externalWork.state === "externalWorkPartial"
+                    ? "Partially measurable; some result rows do not have reps and a numeric load."
+                    : "Unavailable; no comparable numeric strength-load rows were recorded."}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       {session === null ? (
         <form action={startWorkoutOccurrenceAction}>

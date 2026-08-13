@@ -11,6 +11,7 @@ import {
   readAssignmentSessionCapture,
   readPublishedPlanPolicy,
   setAssignmentPrescriptionMeasurableLoad,
+  setAssignmentPrescriptionLegacyLoad,
 } from "./helpers/test-data";
 
 const { basketballTeamId } = testIds;
@@ -305,6 +306,13 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.getByLabel("Actual load unit").selectOption("kg");
     await page.getByRole("button", { name: "Save Progress" }).click();
     await expect(page.getByText("Progress saved.")).toBeVisible();
+    await expect(page.getByText("Session load", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("50 minutes × RPE 9 = 450 internal load"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("500.0 kg completed of 306.2 kg prescribed"),
+    ).toBeVisible();
 
     const afterEdit = await readAssignmentSessionCapture(assignmentId);
     expect(afterEdit).toMatchObject({
@@ -317,12 +325,75 @@ test.describe("Training Tracker assignment and performance access", () => {
       loadUnit: "kg",
       normalizedLoadKg: "100",
     });
+
+    await usePersona(context, "manager");
+    const performancePath = `/app/performance/teams/${basketballTeamId}/assignments/${assignmentId}`;
+    await page.goto(performancePath);
+    await page.getByRole("link", { name: "Review" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Training load" }),
+    ).toBeVisible();
+    await expect(page.getByText("50 minutes × session RPE 9")).toBeVisible();
+    await expect(
+      page.getByText(/306.2 kg prescribed denominator/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/0 of 3 required preceding sessions/),
+    ).toBeVisible();
+    const reviewPath = new URL(page.url()).pathname;
+
+    await usePersona(context, "viewer");
+    await page.goto(reviewPath);
+    await expect(
+      page.getByRole("heading", { name: "Training load" }),
+    ).toBeVisible();
+    await expect(page.getByText("Add comment")).toHaveCount(0);
     await page.setViewportSize({ width: 375, height: 812 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+  });
+
+  test("legacy free-text load stays readable without fabricated volume", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Legacy Load ${suffix}`;
+    const workoutName = `Playwright Legacy Workout ${suffix}`;
+    const scheduledDate = new Date().toISOString().slice(0, 10);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName, "10");
+    const assignmentPath = await publishWorkoutAssignment(
+      page,
+      workoutName,
+      scheduledDate,
+    );
+    const assignmentId = assignmentPath.split("/").pop()!;
+    await setAssignmentPrescriptionLegacyLoad(assignmentId, "bodyweight");
+
+    await usePersona(context, "athlete");
+    await page.goto("/app/athlete");
+    await page
+      .locator("li")
+      .filter({ hasText: workoutName })
+      .getByRole("link", { name: "Open" })
+      .click();
+    await page.getByRole("button", { name: "Start Workout" }).click();
+    await page.getByText("Actuals and notes", { exact: true }).click();
+    await expect(page.getByLabel("Actual load")).toHaveValue("bodyweight");
+    await expect(page.getByLabel("Actual load unit")).toHaveCount(0);
+    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    await page.getByRole("button", { name: "Complete Workout" }).click();
+    await expect(
+      page.getByText(/Unavailable; no comparable numeric strength-load rows/),
+    ).toBeVisible();
+    await expect(page.getByText(/0.0 kg completed/)).toHaveCount(0);
   });
 
   test("late completion is visible and closed late-entry is rejected", async ({

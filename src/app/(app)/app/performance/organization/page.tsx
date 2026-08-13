@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ComplianceDefinitions } from "@/components/compliance-definitions";
 import { TimelinessSummary } from "@/components/timeliness-summary";
+import { TrainingLoadSummary } from "@/components/training-load-summary";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
 import { getOrganizationComplianceDashboard } from "@/modules/assignments/db/team-compliance-queries";
+import { summarizeOrganizationTrainingLoad } from "@/modules/assignments/db/training-load-queries";
 import { listOrganizationInvitationsByOrganizationId } from "@/modules/organizations/db/queries";
 import {
   listOrganizationMembersByOrganizationId,
@@ -67,19 +69,32 @@ export default async function OrganizationPerformancePage({
   const windowDays = parseWindowDays(filters.window);
   const { organizationId, organizationName, organizationRole } =
     context.membership;
-  const [teams, organizationMembers, teamMembers, invitations, compliance] =
-    await withDatabase((database) =>
-      Promise.all([
-        listTeamsByOrganizationId(database, organizationId),
-        listOrganizationMembersByOrganizationId(database, organizationId),
-        listTeamMembersByOrganizationId(database, organizationId),
-        listOrganizationInvitationsByOrganizationId(database, organizationId),
-        getOrganizationComplianceDashboard(database, {
-          organizationId,
-          windowDays,
-        }),
-      ]),
-    );
+  const asOf = new Date();
+  const [
+    teams,
+    organizationMembers,
+    teamMembers,
+    invitations,
+    compliance,
+    loadSummary,
+  ] = await withDatabase((database) =>
+    Promise.all([
+      listTeamsByOrganizationId(database, organizationId),
+      listOrganizationMembersByOrganizationId(database, organizationId),
+      listTeamMembersByOrganizationId(database, organizationId),
+      listOrganizationInvitationsByOrganizationId(database, organizationId),
+      getOrganizationComplianceDashboard(database, {
+        organizationId,
+        windowDays,
+        now: asOf,
+      }),
+      summarizeOrganizationTrainingLoad(database, {
+        organizationId,
+        windowDays,
+        asOf,
+      }),
+    ]),
+  );
   const pendingInvitationCount = invitations.filter(
     (invitation) => invitation.status === "pending",
   ).length;
@@ -227,6 +242,11 @@ export default async function OrganizationPerformancePage({
       <TimelinessSummary
         timeliness={compliance.timeliness}
         label="Organization timeliness summary"
+      />
+
+      <TrainingLoadSummary
+        summary={loadSummary}
+        label="organization-training-load"
       />
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">

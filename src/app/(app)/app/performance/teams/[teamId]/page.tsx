@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ComplianceDefinitions } from "@/components/compliance-definitions";
 import { TimelinessSummary } from "@/components/timeliness-summary";
+import { TrainingLoadSummary } from "@/components/training-load-summary";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { getTeamComplianceDashboard } from "@/modules/assignments/db/team-compliance-queries";
+import { summarizeTeamTrainingLoad } from "@/modules/assignments/db/training-load-queries";
 import { listTeamMembersByTeamId } from "@/modules/teams/db/queries";
 
 type TeamPerformancePageProps = {
@@ -55,15 +57,24 @@ export default async function TeamPerformancePage({
   const windowDays = parseWindowDays(filters.window);
   const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const organizationId = context.membership.organizationId;
-  const [members, complianceDashboard] = await withDatabase((database) =>
-    Promise.all([
-      listTeamMembersByTeamId(database, { organizationId, teamId }),
-      getTeamComplianceDashboard(database, {
-        organizationId,
-        teamId,
-        windowDays,
-      }),
-    ]),
+  const asOf = new Date();
+  const [members, complianceDashboard, loadSummary] = await withDatabase(
+    (database) =>
+      Promise.all([
+        listTeamMembersByTeamId(database, { organizationId, teamId }),
+        getTeamComplianceDashboard(database, {
+          organizationId,
+          teamId,
+          windowDays,
+          now: asOf,
+        }),
+        summarizeTeamTrainingLoad(database, {
+          organizationId,
+          teamId,
+          windowDays,
+          asOf,
+        }),
+      ]),
   );
   const assignmentCompliance = complianceDashboard.assignments;
   const complianceSummary = complianceDashboard.summary;
@@ -168,6 +179,8 @@ export default async function TeamPerformancePage({
         timeliness={complianceDashboard.timeliness}
         label="Team timeliness summary"
       />
+
+      <TrainingLoadSummary summary={loadSummary} label="team-training-load" />
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>

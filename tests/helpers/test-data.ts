@@ -80,6 +80,21 @@ export async function setAssignmentPrescriptionMeasurableLoad(
   `;
 }
 
+export async function setAssignmentPrescriptionLegacyLoad(
+  assignmentId: string,
+  load: string,
+): Promise<void> {
+  const sql = testDatabase();
+  await sql`
+    UPDATE assignment_workout_item_snapshots
+    SET load = ${load},
+        load_value = NULL,
+        load_unit = NULL,
+        normalized_load_kg = NULL
+    WHERE assignment_id = ${assignmentId}
+  `;
+}
+
 export async function readAssignmentSessionCapture(assignmentId: string) {
   const sql = testDatabase();
   const rows = await sql`

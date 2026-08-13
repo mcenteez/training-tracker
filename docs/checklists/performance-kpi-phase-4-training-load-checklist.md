@@ -371,44 +371,44 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 ### Athlete Experience
 
-- [ ] Show session duration, RPE, and internal load after they are captured.
-- [ ] Explain internal load as duration multiplied by session RPE.
-- [ ] Show measurable completed and prescribed strength volume only when the comparison is available.
-- [ ] Explain unavailable or partial external work in factual, non-punitive language.
-- [ ] Do not expose team, peer, organization, or staff-only baseline comparisons to athletes.
-- [ ] Keep the existing workout completion and result-edit flows primary.
+- [x] Show session duration, RPE, and internal load after they are captured.
+- [x] Explain internal load as duration multiplied by session RPE.
+- [x] Show measurable completed and prescribed strength volume only when the comparison is available.
+- [x] Explain unavailable or partial external work in factual, non-punitive language.
+- [x] Do not expose team, peer, organization, or staff-only baseline comparisons to athletes.
+- [x] Keep the existing workout completion and result-edit flows primary.
 
 ### Staff Drill-Down
 
 - [x] Let authorized staff navigate from an athlete's assignment detail to their future prescription overrides.
-- [ ] Add duration, RPE, internal load, and measurable-volume comparison to the submitted session review.
-- [ ] Show raw values, normalized units, comparison denominator, and missing-data context.
-- [ ] Add the athlete's individual 28-day baseline only when the minimum sample exists.
-- [ ] Present current load, individual median, percentage difference, baseline sample count, and window dates together.
-- [ ] Use neutral text and descriptive differences rather than risk labels or traffic-light thresholds.
-- [ ] Preserve existing comments, result rows, selected-window context, and read-only Viewer access.
+- [x] Add duration, RPE, internal load, and measurable-volume comparison to the submitted session review.
+- [x] Show raw values, normalized units, comparison denominator, and missing-data context.
+- [x] Add the athlete's individual 28-day baseline only when the minimum sample exists.
+- [x] Present current load, individual median, percentage difference, baseline sample count, and window dates together.
+- [x] Use neutral text and descriptive differences rather than risk labels or traffic-light thresholds.
+- [x] Preserve existing comments, result rows, selected-window context, and read-only Viewer access.
 
 ### Team and Organization Presentation
 
-- [ ] Add load capture coverage before aggregate load totals so staff can see representativeness.
-- [ ] Show aggregate internal load and measurable strength volume with session counts, not unexplained averages.
-- [ ] Keep compliance and overdue-action surfaces ahead of descriptive load context.
-- [ ] Provide assignment and athlete drill-down links for every aggregate.
-- [ ] Avoid ranking athletes, publishing peer comparisons, or surfacing universal-threshold alerts.
+- [x] Add load capture coverage before aggregate load totals so staff can see representativeness.
+- [x] Show aggregate internal load and measurable strength volume with session counts, not unexplained averages.
+- [x] Keep compliance and overdue-action surfaces ahead of descriptive load context.
+- [x] Provide assignment and athlete drill-down links for every aggregate.
+- [x] Avoid ranking athletes, publishing peer comparisons, or surfacing universal-threshold alerts.
 
 ### Accessibility and Responsive UX
 
-- [ ] Use semantic labels and descriptions for duration, RPE, units, derived values, missing-data states, and baseline samples.
-- [ ] Ensure keyboard operation of all numeric and RPE controls.
-- [ ] Ensure screen readers announce value, unit, source, and unavailable reason together.
-- [ ] Verify mobile layouts do not truncate values, units, formulas, names, or comparison fractions.
-- [ ] Do not rely on color alone to indicate partial capture or individual-baseline differences.
+- [x] Use semantic labels and descriptions for duration, RPE, units, derived values, missing-data states, and baseline samples.
+- [x] Ensure keyboard operation of all numeric and RPE controls.
+- [x] Ensure screen readers announce value, unit, source, and unavailable reason together.
+- [x] Verify mobile layouts do not truncate values, units, formulas, names, or comparison fractions.
+- [x] Do not rely on color alone to indicate partial capture or individual-baseline differences.
 
 ### Acceptance Criteria
 
-- [ ] An athlete can understand and correct their own captured session response.
-- [ ] Staff can explain a displayed load value from raw session facts and its documented formula.
-- [ ] No screen implies a diagnosis, universal risk threshold, or peer-performance ranking.
+- [x] An athlete can understand and correct their own captured session response.
+- [x] Staff can explain a displayed load value from raw session facts and its documented formula.
+- [x] No screen implies a diagnosis, universal risk threshold, or peer-performance ranking.
 
 ## Milestone 7: Verification and Rollout
 
@@ -423,16 +423,16 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 - [x] Athlete logs duration and RPE, saves, reloads, and submits a session.
 - [x] Athlete logs a measurable pound and kilogram strength result and sees the entered units retained.
-- [ ] Athlete logs a non-measurable free-text load without a fabricated volume metric.
+- [x] Athlete logs a non-measurable free-text load without a fabricated volume metric.
 - [x] Coach individualizes one athlete's future prescription while another recipient keeps the shared prescription.
 - [x] Athlete begins a session with the individualized prescription, and the staff review shows that immutable effective prescription.
 - [ ] Coach changes an override after session completion without altering the completed-session comparison.
 - [x] Athlete edits completed load data without changing original completion and timeliness facts.
-- [ ] Coach sees the authorized session load facts and an available prescription comparison.
-- [ ] Coach sees an explicit partial or unavailable state when values are missing.
+- [x] Coach sees the authorized session load facts and an available prescription comparison.
+- [x] Coach sees an explicit partial or unavailable state when values are missing.
 - [ ] Coach sees an individual baseline only after the required prior-session sample exists.
 - [ ] Athlete cannot access another athlete's load data or staff-only aggregate routes.
-- [ ] Team Viewer remains read-only and unauthorized users receive no load details.
+- [x] Team Viewer remains read-only and unauthorized users receive no load details.
 - [ ] Foreign-team and foreign-organization routes do not leak load values, baselines, or counts.
 
 ### Migration and Operational Verification
