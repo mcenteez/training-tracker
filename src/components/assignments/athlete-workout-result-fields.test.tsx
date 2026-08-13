@@ -17,6 +17,8 @@ const item: AthleteWorkoutItemSnapshot = {
   itemPosition: 0,
   reps: 10,
   load: null,
+  loadValue: null,
+  loadUnit: null,
   durationSeconds: null,
   distanceMeters: null,
   restSeconds: null,
@@ -67,6 +69,9 @@ describe("AthleteWorkoutResultFields", () => {
           roundNumber: 1,
           reps: 12,
           load: null,
+          loadValue: null,
+          loadUnit: null,
+          normalizedLoadKg: null,
           durationSeconds: null,
           distanceMeters: null,
           notes: "Moved well",
@@ -87,6 +92,9 @@ describe("AthleteWorkoutResultFields", () => {
       roundNumber: 1,
       reps: null,
       load: null,
+      loadValue: null,
+      loadUnit: null,
+      normalizedLoadKg: null,
       durationSeconds: null,
       distanceMeters: null,
       notes: "Felt good",
@@ -109,5 +117,52 @@ describe("AthleteWorkoutResultFields", () => {
     expect(screen.queryByText("Actuals and notes")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Notes")).toHaveValue("Felt good");
     expect(screen.getByRole("button", { name: "Completed" })).toBeVisible();
+  });
+
+  it("uses numeric value and unit controls for a measurable prescription", () => {
+    render(
+      <AthleteWorkoutResultFields
+        item={{
+          ...item,
+          load: "135 lb",
+          loadValue: "135",
+          loadUnit: "lb",
+        }}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("Actual load value")).toHaveValue(135);
+    expect(screen.getByLabelText("Actual load unit")).toHaveValue("lb");
+  });
+
+  it("keeps legacy non-measurable loads as free text", () => {
+    render(
+      <AthleteWorkoutResultFields
+        item={{ ...item, load: "bodyweight" }}
+        disabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("Actual load")).toHaveValue("bodyweight");
+    expect(screen.queryByLabelText("Actual load unit")).toBeNull();
+  });
+
+  it("disables measurable controls when the session is not editable", () => {
+    render(
+      <AthleteWorkoutResultFields
+        item={{
+          ...item,
+          load: "60 kg",
+          loadValue: "60",
+          loadUnit: "kg",
+        }}
+        disabled
+      />,
+    );
+
+    expect(screen.getByLabelText("Actual load value")).toBeDisabled();
+    expect(screen.getByLabelText("Actual load unit")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Complete" })).toBeDisabled();
   });
 });

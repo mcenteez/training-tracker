@@ -96,6 +96,8 @@ export interface AthletePlanSessionSummary {
   version: number;
   startedAt: Date | null;
   submittedAt: Date | null;
+  durationMinutes: number | null;
+  sessionRpe: number | null;
 }
 
 export interface AthleteWorkoutItemSnapshot {
@@ -106,6 +108,8 @@ export interface AthleteWorkoutItemSnapshot {
   itemPosition: number;
   reps: number | null;
   load: string | null;
+  loadValue: string | null;
+  loadUnit: "kg" | "lb" | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -119,6 +123,9 @@ export interface AthleteSessionResultItem {
   roundNumber: number;
   reps: number | null;
   load: string | null;
+  loadValue: string | null;
+  loadUnit: "kg" | "lb" | null;
+  normalizedLoadKg: string | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
@@ -480,6 +487,8 @@ export async function findLatestSessionForAthleteAssignment(
       version: assignmentSessions.version,
       startedAt: assignmentSessions.startedAt,
       submittedAt: assignmentSessions.submittedAt,
+      durationMinutes: assignmentSessions.durationMinutes,
+      sessionRpe: assignmentSessions.sessionRpe,
       resultCount: sql<number>`(
           SELECT count(*)::int FROM ${assignmentSessionItemResults}
           WHERE ${assignmentSessionItemResults.organizationId} = ${assignmentSessions.organizationId}
@@ -606,6 +615,8 @@ export async function listSessionsForAthleteAssignment(
       version: assignmentSessions.version,
       startedAt: assignmentSessions.startedAt,
       submittedAt: assignmentSessions.submittedAt,
+      durationMinutes: assignmentSessions.durationMinutes,
+      sessionRpe: assignmentSessions.sessionRpe,
     })
     .from(assignmentSessions)
     .where(
@@ -635,6 +646,8 @@ export async function listWorkoutItemsForSnapshot(
       itemPosition: assignmentWorkoutItemSnapshots.position,
       reps: assignmentWorkoutItemSnapshots.reps,
       load: assignmentWorkoutItemSnapshots.load,
+      loadValue: assignmentWorkoutItemSnapshots.loadValue,
+      loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
       restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
@@ -710,6 +723,8 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
           assignmentSessionEffectiveItemPrescriptions.itemSnapshotId,
         reps: assignmentSessionEffectiveItemPrescriptions.reps,
         load: assignmentSessionEffectiveItemPrescriptions.load,
+        loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
+        loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
         durationSeconds:
           assignmentSessionEffectiveItemPrescriptions.durationSeconds,
         distanceMeters:
@@ -771,6 +786,8 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
       overriddenFields: assignmentAthleteItemOverrides.overriddenFields,
       reps: assignmentAthleteItemOverrides.reps,
       load: assignmentAthleteItemOverrides.load,
+      loadValue: assignmentAthleteItemOverrides.loadValue,
+      loadUnit: assignmentAthleteItemOverrides.loadUnit,
       durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
       distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
       restSeconds: assignmentAthleteItemOverrides.restSeconds,
@@ -811,6 +828,12 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
       ...item,
       reps: overriddenFields.has("reps") ? override.reps : item.reps,
       load: overriddenFields.has("load") ? override.load : item.load,
+      loadValue: overriddenFields.has("load")
+        ? override.loadValue
+        : item.loadValue,
+      loadUnit: overriddenFields.has("load")
+        ? override.loadUnit
+        : item.loadUnit,
       durationSeconds: overriddenFields.has("durationSeconds")
         ? override.durationSeconds
         : item.durationSeconds,
@@ -858,6 +881,8 @@ export async function listPrimaryWorkoutItemsForAssignment(
       itemPosition: assignmentWorkoutItemSnapshots.position,
       reps: assignmentWorkoutItemSnapshots.reps,
       load: assignmentWorkoutItemSnapshots.load,
+      loadValue: assignmentWorkoutItemSnapshots.loadValue,
+      loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
       restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
@@ -931,6 +956,9 @@ export async function listSessionResultsForAthleteAssignment(
       roundNumber: assignmentSessionItemResults.roundNumber,
       reps: assignmentSessionItemResults.reps,
       load: assignmentSessionItemResults.load,
+      loadValue: assignmentSessionItemResults.loadValue,
+      loadUnit: assignmentSessionItemResults.loadUnit,
+      normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
       durationSeconds: assignmentSessionItemResults.durationSeconds,
       distanceMeters: assignmentSessionItemResults.distanceMeters,
       notes: assignmentSessionItemResults.notes,

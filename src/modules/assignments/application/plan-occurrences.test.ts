@@ -41,6 +41,8 @@ function session(
     version: 2,
     startedAt: new Date("2026-08-10T10:00:00.000Z"),
     submittedAt: new Date("2026-08-10T11:00:00.000Z"),
+    durationMinutes: null,
+    sessionRpe: null,
     ...overrides,
   };
 }

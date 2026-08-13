@@ -15,6 +15,7 @@ import {
   resetAssignmentSession,
   startAssignmentSession,
   autosaveAssignmentSessionResults,
+  submitAssignmentSession,
 } from "@/modules/assignments/application/assignment-session-service";
 import {
   clearAthletePrescriptionOverride,
@@ -27,6 +28,8 @@ import {
   listEffectiveWorkoutItemsForAthleteOccurrence,
   listPlanSlotSnapshotsForAthleteAssignment,
   listPublishedAssignmentsForAthlete,
+  listSessionResultsForAthleteAssignment,
+  listSessionsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
 import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
 import { createAssignmentUnitOfWork } from "@/modules/assignments/db/unit-of-work";
@@ -976,6 +979,8 @@ describe("assignment unit of work", () => {
         expectedVersion: started.version,
         mutationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         now: new Date("2026-08-12T12:05:00.000Z"),
+        durationMinutes: 45,
+        sessionRpe: 8,
         results: [
           {
             itemSnapshotId: itemSnapshots.rows[0].id,
@@ -1008,8 +1013,10 @@ describe("assignment unit of work", () => {
       version: number;
       started_at: string | null;
       submitted_at: string | null;
+      duration_minutes: number | null;
+      session_rpe: number | null;
     }>(`
-      SELECT status, version, started_at, submitted_at
+      SELECT status, version, started_at, submitted_at, duration_minutes, session_rpe
       FROM assignment_sessions
       WHERE id = '${started.id}';
     `);
@@ -1026,9 +1033,179 @@ describe("assignment unit of work", () => {
         version: 1,
         started_at: null,
         submitted_at: null,
+        duration_minutes: null,
+        session_rpe: null,
       },
     ]);
     expect(resultRows.rows).toEqual([{ count: 0 }]);
+  });
+
+  it("persists optional session response and measurable loads through retry, submit, reload, and completed edit", async () => {
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-12",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    await publishAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    await client.query(`
+      UPDATE assignments
+      SET timeliness_policy_effective_at = '2026-08-11T00:00:00.000Z'
+      WHERE id = '${draft.id}';
+    `);
+
+    const sessionUnitOfWork = createAssignmentSessionUnitOfWork(database);
+    const started = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      now: new Date("2026-08-12T12:00:00.000Z"),
+    });
+    const itemRows = await client.query<{ id: string }>(`
+      SELECT id
+      FROM assignment_workout_item_snapshots
+      WHERE assignment_id = '${draft.id}'
+      LIMIT 1;
+    `);
+    const itemSnapshotId = itemRows.rows[0]!.id;
+    const firstMutationId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const saved = await autosaveAssignmentSessionResults(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: started.id,
+      expectedVersion: started.version,
+      mutationId: firstMutationId,
+      now: new Date("2026-08-12T12:10:00.000Z"),
+      durationMinutes: 45,
+      sessionRpe: 8,
+      results: [
+        {
+          itemSnapshotId,
+          completedAt: new Date("2026-08-12T12:10:00.000Z"),
+          roundNumber: 1,
+          reps: 5,
+          load: null,
+          loadValue: 135,
+          loadUnit: "lb",
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+    const retried = await autosaveAssignmentSessionResults(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: started.id,
+      expectedVersion: started.version,
+      mutationId: firstMutationId,
+      now: new Date("2026-08-12T12:11:00.000Z"),
+      durationMinutes: 45,
+      sessionRpe: 8,
+      results: [],
+    });
+    expect(retried.version).toBe(saved.version);
+
+    const submitted = await submitAssignmentSession(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: started.id,
+      expectedVersion: saved.version,
+      now: new Date("2026-08-12T13:00:00.000Z"),
+    });
+    const originalSubmittedAt = submitted.submittedAt;
+    const originalDueAt = submitted.dueAt;
+
+    await autosaveAssignmentSessionResults(sessionUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: started.id,
+      expectedVersion: submitted.version,
+      mutationId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      now: new Date("2026-08-12T14:00:00.000Z"),
+      durationMinutes: 50,
+      sessionRpe: 9,
+      allowSubmittedEdit: true,
+      results: [
+        {
+          itemSnapshotId,
+          completedAt: new Date("2026-08-12T12:10:00.000Z"),
+          roundNumber: 1,
+          reps: 5,
+          load: null,
+          loadValue: 100,
+          loadUnit: "kg",
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+
+    const [sessions, results] = await Promise.all([
+      listSessionsForAthleteAssignment(database, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+      }),
+      listSessionResultsForAthleteAssignment(database, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        sessionId: started.id,
+      }),
+    ]);
+    expect(sessions).toEqual([
+      expect.objectContaining({
+        durationMinutes: 50,
+        sessionRpe: 9,
+        submittedAt: originalSubmittedAt,
+      }),
+    ]);
+    expect(sessions[0]?.submittedAt).toEqual(originalSubmittedAt);
+    expect(submitted.dueAt).toEqual(originalDueAt);
+    expect(results).toEqual([
+      expect.objectContaining({
+        load: "100 kg",
+        loadValue: "100",
+        loadUnit: "kg",
+        normalizedLoadKg: "100",
+      }),
+    ]);
+
+    await expect(
+      autosaveAssignmentSessionResults(sessionUnitOfWork, {
+        organizationId: "10000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000001",
+        sessionId: started.id,
+        expectedVersion: submitted.version + 1,
+        mutationId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        results: [],
+      }),
+    ).rejects.toThrow("permission");
   });
 
   it("applies an athlete prescription override without changing the shared snapshot", async () => {

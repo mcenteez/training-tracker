@@ -253,43 +253,43 @@ Capture athlete-entered session response and measurable external work through th
 
 ### Implementation Checklist
 
-- [ ] Extend server-side Zod input schemas for duration, session RPE, numeric load, and unit.
-- [ ] Reject non-finite values, unsupported units, out-of-range RPE, and incompatible value/unit combinations.
-- [ ] Normalize numeric strength loads to kilograms on the server; never trust client-provided normalized values.
+- [x] Extend server-side Zod input schemas for duration, session RPE, numeric load, and unit.
+- [x] Reject non-finite values, unsupported units, out-of-range RPE, and incompatible value/unit combinations.
+- [x] Normalize numeric strength loads to kilograms on the server; never trust client-provided normalized values.
 - [x] Use shared typed load values and the exact pounds-to-kilograms normalization at the server boundary.
 - [x] Use the shared internal-load calculator from persisted duration and session RPE; never accept an internal-load value from the client.
-- [ ] Extend session FormData parsing while preserving absent values as `null`.
-- [ ] Extend autosave and submit mutations without weakening version checks or idempotency behavior.
-- [ ] Keep athletes limited to their own organization-scoped assignment sessions and result rows.
-- [ ] Allow a submitted-session edit to update load data without changing first submission time.
-- [ ] Return structured, actionable validation errors at the existing session form boundary.
-- [ ] Do not require load capture to start, save, or submit a session.
+- [x] Extend session FormData parsing while preserving absent values as `null`.
+- [x] Extend autosave and submit mutations without weakening version checks or idempotency behavior.
+- [x] Keep athletes limited to their own organization-scoped assignment sessions and result rows.
+- [x] Allow a submitted-session edit to update load data without changing first submission time.
+- [x] Return structured, actionable validation errors at the existing session form boundary.
+- [x] Do not require load capture to start, save, or submit a session.
 
 ### Athlete Workflow
 
-- [ ] Add compact session-level duration and RPE controls near session completion, with labels and validation messages.
-- [ ] Use a numeric input with clear units for duration and a bounded stepper or segmented control for RPE.
-- [ ] Render numeric-load and unit controls only where a measurable load is appropriate.
-- [ ] Preserve free-text logging for non-measurable loads such as bodyweight, bands, and percentages.
-- [ ] Show entered values after autosave, refresh, and explicit completed-session edit.
-- [ ] Provide explicit empty and disabled states without blocking unrelated exercise-result logging.
-- [ ] Preserve keyboard access, visible focus, mobile usability, and offline-safe mutation behavior.
+- [x] Add compact session-level duration and RPE controls near session completion, with labels and validation messages.
+- [x] Use a numeric input with clear units for duration and a bounded stepper or segmented control for RPE.
+- [x] Render numeric-load and unit controls only where a measurable load is appropriate.
+- [x] Preserve free-text logging for non-measurable loads such as bodyweight, bands, and percentages.
+- [x] Show entered values after autosave, refresh, and explicit completed-session edit.
+- [x] Provide explicit empty and disabled states without blocking unrelated exercise-result logging.
+- [x] Preserve keyboard access, visible focus, mobile usability, and offline-safe mutation behavior.
 
 ### Tests
 
-- [ ] Valid duration and RPE persist through autosave and submission.
-- [ ] Omitted duration or RPE leaves internal load unavailable rather than zero.
-- [ ] Invalid RPE, duration, load value, or unit is rejected at the server boundary.
+- [x] Valid duration and RPE persist through autosave and submission.
+- [x] Omitted duration or RPE leaves internal load unavailable rather than zero.
+- [x] Invalid RPE, duration, load value, or unit is rejected at the server boundary.
 - [x] A numeric pound value normalizes to the expected kilograms value in the shared domain.
-- [ ] A submitted-session edit preserves first submission time and timeliness state.
-- [ ] A retry with the same mutation ID remains idempotent for load values.
-- [ ] An athlete cannot mutate another athlete's session load values.
+- [x] A submitted-session edit preserves first submission time and timeliness state.
+- [x] A retry with the same mutation ID remains idempotent for load values.
+- [x] An athlete cannot mutate another athlete's session load values.
 
 ### Acceptance Criteria
 
-- [ ] Athlete-entered session response and measurable result data survive the normal save, submit, reload, and edit workflow.
-- [ ] The server, not the browser, owns validation and unit conversion.
-- [ ] Existing session mutations remain backward compatible when no load values are supplied.
+- [x] Athlete-entered session response and measurable result data survive the normal save, submit, reload, and edit workflow.
+- [x] The server, not the browser, owns validation and unit conversion.
+- [x] Existing session mutations remain backward compatible when no load values are supplied.
 
 ## Milestone 4: Shared Training-Load Domain
 
@@ -421,13 +421,13 @@ Show the athlete's recorded response and staff-facing comparison context without
 
 ### Browser / E2E
 
-- [ ] Athlete logs duration and RPE, saves, reloads, and submits a session.
-- [ ] Athlete logs a measurable pound and kilogram strength result and sees the entered units retained.
+- [x] Athlete logs duration and RPE, saves, reloads, and submits a session.
+- [x] Athlete logs a measurable pound and kilogram strength result and sees the entered units retained.
 - [ ] Athlete logs a non-measurable free-text load without a fabricated volume metric.
 - [x] Coach individualizes one athlete's future prescription while another recipient keeps the shared prescription.
 - [x] Athlete begins a session with the individualized prescription, and the staff review shows that immutable effective prescription.
 - [ ] Coach changes an override after session completion without altering the completed-session comparison.
-- [ ] Athlete edits completed load data without changing original completion and timeliness facts.
+- [x] Athlete edits completed load data without changing original completion and timeliness facts.
 - [ ] Coach sees the authorized session load facts and an available prescription comparison.
 - [ ] Coach sees an explicit partial or unavailable state when values are missing.
 - [ ] Coach sees an individual baseline only after the required prior-session sample exists.

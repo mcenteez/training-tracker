@@ -165,8 +165,12 @@ describe("workout occurrence actions", () => {
     const formData = occurrenceFormData();
     formData.set("sessionId", ids.sessionId);
     formData.set("expectedVersion", "1");
+    formData.set("durationMinutes", "45");
+    formData.set("sessionRpe", "8");
     formData.append("itemSnapshotIds", ids.itemSnapshotId);
     formData.set(`result:${ids.itemSnapshotId}:reps`, "12");
+    formData.set(`result:${ids.itemSnapshotId}:loadValue`, "135");
+    formData.set(`result:${ids.itemSnapshotId}:loadUnit`, "lb");
     formData.set(`result:${ids.itemSnapshotId}:notes`, "good tempo");
 
     await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
@@ -179,10 +183,14 @@ describe("workout occurrence actions", () => {
         sessionId: ids.sessionId,
         expectedVersion: 1,
         mutationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        durationMinutes: 45,
+        sessionRpe: 8,
         results: [
           expect.objectContaining({
             itemSnapshotId: ids.itemSnapshotId,
             reps: 12,
+            loadValue: 135,
+            loadUnit: "lb",
             notes: "good tempo",
           }),
         ],
@@ -190,6 +198,55 @@ describe("workout occurrence actions", () => {
     );
 
     randomUuidSpy.mockRestore();
+  });
+
+  it("preserves omitted session response as null", async () => {
+    const formData = occurrenceFormData();
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "1");
+    formData.set("durationMinutes", "");
+    formData.set("sessionRpe", "");
+
+    await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?saved=1`,
+    );
+
+    expect(autosaveAssignmentSessionResultsMock).toHaveBeenCalledWith(
+      { unitOfWork: "session-uow" },
+      expect.objectContaining({
+        durationMinutes: null,
+        sessionRpe: null,
+      }),
+    );
+  });
+
+  it("returns actionable feedback for malformed session capture", async () => {
+    const formData = occurrenceFormData();
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "1");
+    formData.set("sessionRpe", "hard");
+
+    await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?error=invalid_session_load`,
+    );
+    expect(autosaveAssignmentSessionResultsMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { loadValue: "100", loadUnit: "stone" },
+    { loadValue: "Infinity", loadUnit: "kg" },
+  ])("rejects invalid structured load input %#", async (load) => {
+    const formData = occurrenceFormData();
+    formData.set("sessionId", ids.sessionId);
+    formData.set("expectedVersion", "1");
+    formData.append("itemSnapshotIds", ids.itemSnapshotId);
+    formData.set(`result:${ids.itemSnapshotId}:loadValue`, load.loadValue);
+    formData.set(`result:${ids.itemSnapshotId}:loadUnit`, load.loadUnit);
+
+    await expect(autosaveWorkoutOccurrenceAction(formData)).rejects.toThrow(
+      `REDIRECT:${occurrenceUrl}?error=invalid_session_load`,
+    );
+    expect(autosaveAssignmentSessionResultsMock).not.toHaveBeenCalled();
   });
 
   it("maps expected domain errors to the occurrence error redirect", async () => {

@@ -479,6 +479,9 @@ export function createAssignmentSessionUnitOfWork(
                   roundNumber: result.roundNumber,
                   reps: result.reps,
                   load: result.load,
+                  loadValue: result.loadValue,
+                  loadUnit: result.loadUnit,
+                  normalizedLoadKg: result.normalizedLoadKg,
                   durationSeconds: result.durationSeconds,
                   distanceMeters: result.distanceMeters,
                   notes: result.notes,
@@ -494,6 +497,8 @@ export function createAssignmentSessionUnitOfWork(
                 updatedAt: new Date(),
                 version: sql`${assignmentSessions.version} + 1`,
                 lastMutationId: input.mutationId,
+                durationMinutes: input.durationMinutes,
+                sessionRpe: input.sessionRpe,
               })
               .where(
                 and(
@@ -571,6 +576,8 @@ export function createAssignmentSessionUnitOfWork(
                 status: "assigned",
                 startedAt: null,
                 submittedAt: null,
+                durationMinutes: null,
+                sessionRpe: null,
                 updatedAt: new Date(),
                 version: 1,
                 lastMutationId: null,

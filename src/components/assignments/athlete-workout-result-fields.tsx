@@ -23,6 +23,7 @@ export function AthleteWorkoutResultFields({
   const [completedAt, setCompletedAt] = useState<Date | null>(
     result?.completedAt ?? null,
   );
+  const hasMeasurableLoad = item.loadValue !== null && item.loadUnit !== null;
   const hasPrescribedMetrics =
     item.reps !== null ||
     item.load !== null ||
@@ -108,7 +109,32 @@ export function AthleteWorkoutResultFields({
                   />
                 </label>
               ) : null}
-              {item.load !== null ? (
+              {hasMeasurableLoad ? (
+                <fieldset className="grid gap-1 text-xs">
+                  <legend>Actual load</legend>
+                  <div className="flex gap-2">
+                    <Input
+                      name={`result:${item.id}:loadValue`}
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      defaultValue={result?.loadValue ?? item.loadValue ?? ""}
+                      aria-label="Actual load value"
+                      disabled={disabled}
+                    />
+                    <select
+                      name={`result:${item.id}:loadUnit`}
+                      defaultValue={result?.loadUnit ?? item.loadUnit ?? ""}
+                      aria-label="Actual load unit"
+                      className="h-9 rounded-md border bg-background px-2"
+                      disabled={disabled}
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                    </select>
+                  </div>
+                </fieldset>
+              ) : item.load !== null ? (
                 <label className="grid gap-1 text-xs">
                   Actual load
                   <Input

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { DomainInvariantError } from "@/modules/access-control/errors";
+
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string") {
     return null;
@@ -11,11 +13,30 @@ function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   }
 
   const numeric = Number(trimmed);
-  if (!Number.isFinite(numeric)) {
-    return null;
+  if (!Number.isFinite(numeric) || !Number.isInteger(numeric)) {
+    throw new DomainInvariantError("Enter a valid whole number.");
   }
 
-  return Math.floor(numeric);
+  return numeric;
+}
+
+function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const numeric = Number(value.trim());
+  if (!Number.isFinite(numeric)) {
+    throw new DomainInvariantError("Enter a valid numeric load.");
+  }
+  return numeric;
+}
+
+function parseOptionalLoadUnit(
+  value: FormDataEntryValue | null,
+): "kg" | "lb" | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  if (value !== "kg" && value !== "lb") {
+    throw new DomainInvariantError("Choose kilograms or pounds.");
+  }
+  return value;
 }
 
 function parseOptionalDate(value: FormDataEntryValue | null): Date | null {
@@ -71,6 +92,12 @@ export function parseAssignmentSessionResults(formData: FormData) {
         formData.get(`result:${itemSnapshotId}:load`),
         80,
       ),
+      loadValue: parseOptionalNumber(
+        formData.get(`result:${itemSnapshotId}:loadValue`),
+      ),
+      loadUnit: parseOptionalLoadUnit(
+        formData.get(`result:${itemSnapshotId}:loadUnit`),
+      ),
       durationSeconds: parseOptionalInt(
         formData.get(`result:${itemSnapshotId}:durationSeconds`),
       ),
@@ -88,6 +115,8 @@ export function parseAssignmentSessionResults(formData: FormData) {
         result.completedAt !== null ||
         result.reps !== null ||
         result.load !== null ||
+        result.loadValue !== null ||
+        result.loadUnit !== null ||
         result.durationSeconds !== null ||
         result.distanceMeters !== null ||
         result.notes !== null;
@@ -102,10 +131,22 @@ export function parseAssignmentSessionResults(formData: FormData) {
         roundNumber: result.roundNumber,
         reps: result.reps,
         load: result.load,
+        loadValue: result.loadValue,
+        loadUnit: result.loadUnit,
         durationSeconds: result.durationSeconds,
         distanceMeters: result.distanceMeters,
         notes: result.notes,
       };
     })
     .filter(isNonNullable);
+}
+
+export function parseAssignmentSessionCapture(formData: FormData) {
+  return {
+    durationMinutes: parseOptionalInt(formData.get("durationMinutes")),
+    sessionRpe: parseOptionalInt(formData.get("sessionRpe")),
+    hasSessionResponseFields:
+      formData.has("durationMinutes") || formData.has("sessionRpe"),
+    results: parseAssignmentSessionResults(formData),
+  };
 }

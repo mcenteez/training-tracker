@@ -84,18 +84,32 @@ export const autosaveSessionResultsInputSchema = z.object({
   sessionId: z.uuid(),
   expectedVersion: z.number().int().positive(),
   mutationId: z.string().trim().min(1).max(120),
+  durationMinutes: z.number().int().nonnegative().nullable().optional(),
+  sessionRpe: z.number().int().min(1).max(10).nullable().optional(),
   results: z
     .array(
-      z.object({
-        itemSnapshotId: z.uuid(),
-        completedAt: z.date(),
-        roundNumber: z.number().int().positive(),
-        reps: z.number().int().nonnegative().nullable(),
-        load: z.string().trim().max(80).nullable(),
-        durationSeconds: z.number().int().nonnegative().nullable(),
-        distanceMeters: z.number().int().nonnegative().nullable(),
-        notes: z.string().trim().max(2000).nullable(),
-      }),
+      z
+        .object({
+          itemSnapshotId: z.uuid(),
+          completedAt: z.date(),
+          roundNumber: z.number().int().positive(),
+          reps: z.number().int().nonnegative().nullable(),
+          load: z.string().trim().max(80).nullable(),
+          loadValue: z.number().finite().positive().nullable().optional(),
+          loadUnit: z.enum(["kg", "lb"]).nullable().optional(),
+          durationSeconds: z.number().int().nonnegative().nullable(),
+          distanceMeters: z.number().int().nonnegative().nullable(),
+          notes: z.string().trim().max(2000).nullable(),
+        })
+        .superRefine((result, context) => {
+          if ((result.loadValue == null) !== (result.loadUnit == null)) {
+            context.addIssue({
+              code: "custom",
+              path: ["loadValue"],
+              message: "Enter both a numeric load and its unit.",
+            });
+          }
+        }),
     )
     .max(2000),
 });

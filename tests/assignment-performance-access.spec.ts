@@ -8,7 +8,9 @@ import {
   createWorkout,
   markCompletedAssignmentLate,
   publishWorkoutAssignment,
+  readAssignmentSessionCapture,
   readPublishedPlanPolicy,
+  setAssignmentPrescriptionMeasurableLoad,
 } from "./helpers/test-data";
 
 const { basketballTeamId } = testIds;
@@ -243,6 +245,84 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(
       page.getByText(/Locked when this session started/),
     ).toBeVisible();
+  });
+
+  test("athlete session response and measurable load survive save, submit, and completed edit", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Load Exercise ${suffix}`;
+    const workoutName = `Playwright Load Workout ${suffix}`;
+    const scheduledDate = new Date().toISOString().slice(0, 10);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName, "5");
+    const assignmentPath = await publishWorkoutAssignment(
+      page,
+      workoutName,
+      scheduledDate,
+    );
+    const assignmentId = assignmentPath.split("/").pop()!;
+    await setAssignmentPrescriptionMeasurableLoad(assignmentId, 135, "lb");
+
+    await usePersona(context, "athlete");
+    await page.goto("/app/athlete");
+    const assignment = page.locator("li").filter({ hasText: workoutName });
+    await assignment.getByRole("link", { name: "Open" }).click();
+    await page.getByRole("button", { name: "Start Workout" }).click();
+    await expect(page.getByText("Workout started.")).toBeVisible();
+    await page.getByLabel("Duration (minutes)").fill("45");
+    await page.getByLabel("Session RPE (1-10)").selectOption("8");
+    await page.getByText("Actuals and notes", { exact: true }).click();
+    await page.getByLabel("Actual load value").fill("135");
+    await page.getByLabel("Actual load unit").selectOption("lb");
+    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    await page.getByRole("button", { name: "Save Progress" }).click();
+    await expect(page.getByText("Progress saved.")).toBeVisible();
+    await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
+    await expect(page.getByLabel("Session RPE (1-10)")).toHaveValue("8");
+    await expect(page.getByLabel("Actual load value")).toHaveValue("135");
+
+    await page.getByRole("button", { name: "Complete Workout" }).click();
+    await expect(page.getByText("Workout completed.")).toBeVisible();
+    const beforeEdit = await readAssignmentSessionCapture(assignmentId);
+    expect(beforeEdit).toMatchObject({
+      durationMinutes: 45,
+      sessionRpe: 8,
+      load: "135 lb",
+      loadValue: "135",
+      loadUnit: "lb",
+      normalizedLoadKg: "61.23496995",
+    });
+
+    await page.getByRole("link", { name: "Edit results" }).click();
+    await page.getByLabel("Duration (minutes)").fill("50");
+    await page.getByLabel("Session RPE (1-10)").selectOption("9");
+    await page.getByLabel("Actual load value").fill("100");
+    await page.getByLabel("Actual load unit").selectOption("kg");
+    await page.getByRole("button", { name: "Save Progress" }).click();
+    await expect(page.getByText("Progress saved.")).toBeVisible();
+
+    const afterEdit = await readAssignmentSessionCapture(assignmentId);
+    expect(afterEdit).toMatchObject({
+      durationMinutes: 50,
+      sessionRpe: 9,
+      submittedAt: beforeEdit?.submittedAt,
+      dueAt: beforeEdit?.dueAt,
+      load: "100 kg",
+      loadValue: "100",
+      loadUnit: "kg",
+      normalizedLoadKg: "100",
+    });
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
   });
 
   test("late completion is visible and closed late-entry is rejected", async ({

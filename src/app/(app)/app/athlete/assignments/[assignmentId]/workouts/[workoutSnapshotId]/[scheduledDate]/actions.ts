@@ -11,7 +11,7 @@ import {
   startAssignmentSession,
   submitAssignmentSession,
 } from "@/modules/assignments/application/assignment-session-service";
-import { parseAssignmentSessionResults } from "@/modules/assignments/application/session-form";
+import { parseAssignmentSessionCapture } from "@/modules/assignments/application/session-form";
 import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
 import {
   AuthorizationError,
@@ -81,6 +81,15 @@ function sessionErrorReason(error: Error): string {
   if (message.includes("not available to start")) return "not_yet_available";
   if (message.includes("submitted")) return "already_submitted";
   if (message.includes("updated elsewhere")) return "version_conflict";
+  if (
+    message.includes("valid whole number") ||
+    message.includes("numeric load") ||
+    message.includes("kilograms or pounds") ||
+    message.includes("enter both") ||
+    message.includes("too small") ||
+    message.includes("too big")
+  )
+    return "invalid_session_load";
 
   return "assignment_session_action_failed";
 }
@@ -129,9 +138,8 @@ export async function autosaveWorkoutOccurrenceAction(
     redirect("/app/athlete?error=invalid_assignment");
   }
 
-  const results = parseAssignmentSessionResults(formData);
-
   try {
+    const capture = parseAssignmentSessionCapture(formData);
     await withDatabase((database) =>
       autosaveAssignmentSessionResults(
         createAssignmentSessionUnitOfWork(database),
@@ -142,7 +150,9 @@ export async function autosaveWorkoutOccurrenceAction(
           sessionId,
           expectedVersion,
           mutationId: crypto.randomUUID(),
-          results,
+          results: capture.results,
+          durationMinutes: capture.durationMinutes,
+          sessionRpe: capture.sessionRpe,
           allowSubmittedEdit,
         },
       ),
@@ -167,14 +177,13 @@ export async function submitWorkoutOccurrenceAction(
     redirect("/app/athlete?error=invalid_assignment");
   }
 
-  const results = parseAssignmentSessionResults(formData);
-
   try {
+    const capture = parseAssignmentSessionCapture(formData);
     await withDatabase(async (database) => {
       const unitOfWork = createAssignmentSessionUnitOfWork(database);
       let finalVersion = expectedVersion;
 
-      if (results.length > 0) {
+      if (capture.results.length > 0 || capture.hasSessionResponseFields) {
         const saved = await autosaveAssignmentSessionResults(unitOfWork, {
           organizationId: context.membership.organizationId,
           assignmentId: ref.assignmentId,
@@ -182,7 +191,9 @@ export async function submitWorkoutOccurrenceAction(
           sessionId,
           expectedVersion: finalVersion,
           mutationId: crypto.randomUUID(),
-          results,
+          results: capture.results,
+          durationMinutes: capture.durationMinutes,
+          sessionRpe: capture.sessionRpe,
         });
 
         finalVersion = saved.version;

@@ -26,6 +26,7 @@ import type {
   AssignmentSessionItemResult,
 } from "@/modules/assignments/db/schema";
 import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
+import { normalizeStrengthLoad } from "./training-load";
 
 interface AssignmentRecipientRecord {
   assignmentId: string;
@@ -85,9 +86,20 @@ interface AssignmentSessionResultInput {
   roundNumber: number;
   reps: number | null;
   load: string | null;
+  loadValue?: number | null;
+  loadUnit?: "kg" | "lb" | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
+}
+
+interface PersistedAssignmentSessionResultInput extends Omit<
+  AssignmentSessionResultInput,
+  "loadValue"
+> {
+  loadValue: string | null;
+  loadUnit: "kg" | "lb" | null;
+  normalizedLoadKg: string | null;
 }
 
 export interface AssignmentSessionTransaction {
@@ -154,7 +166,7 @@ export interface AssignmentSessionTransaction {
     organizationId: string;
     assignmentId: string;
     sessionId: string;
-    results: readonly AssignmentSessionResultInput[];
+    results: readonly PersistedAssignmentSessionResultInput[];
   }): Promise<void>;
   touchSessionProgress(input: {
     organizationId: string;
@@ -162,6 +174,8 @@ export interface AssignmentSessionTransaction {
     sessionId: string;
     expectedVersion: number;
     mutationId: string;
+    durationMinutes: number | null;
+    sessionRpe: number | null;
     preserveSubmitted?: boolean;
   }): Promise<AssignmentSession | null>;
   submitSession(input: {
@@ -591,6 +605,8 @@ export async function autosaveAssignmentSessionResults(
     now?: Date;
     mutationId: string;
     results: readonly AssignmentSessionResultInput[];
+    durationMinutes?: number | null;
+    sessionRpe?: number | null;
     allowSubmittedEdit?: boolean;
   },
 ): Promise<AssignmentSession> {
@@ -598,6 +614,8 @@ export async function autosaveAssignmentSessionResults(
     sessionId: input.sessionId,
     expectedVersion: input.expectedVersion,
     mutationId: input.mutationId,
+    durationMinutes: input.durationMinutes ?? null,
+    sessionRpe: input.sessionRpe ?? null,
     results: input.results,
   });
 
@@ -618,12 +636,6 @@ export async function autosaveAssignmentSessionResults(
       throw new DomainInvariantError("Submitted sessions cannot be edited.");
     }
 
-    if (session.version !== parsed.expectedVersion) {
-      throw new DomainInvariantError(
-        "This session was updated elsewhere. Reload and try again.",
-      );
-    }
-
     if (session.lastMutationId === parsed.mutationId) {
       const current = await transaction.findSessionByIdForAthlete(
         input.organizationId,
@@ -637,6 +649,12 @@ export async function autosaveAssignmentSessionResults(
       }
 
       return current as AssignmentSession;
+    }
+
+    if (session.version !== parsed.expectedVersion) {
+      throw new DomainInvariantError(
+        "This session was updated elsewhere. Reload and try again.",
+      );
     }
 
     assertSessionWindow(session, now);
@@ -657,11 +675,32 @@ export async function autosaveAssignmentSessionResults(
       }
     }
 
+    const normalizedResults = parsed.results.map((result) => {
+      const normalizedLoad =
+        result.loadValue != null && result.loadUnit != null
+          ? normalizeStrengthLoad({
+              value: result.loadValue,
+              unit: result.loadUnit,
+            })
+          : null;
+
+      return {
+        ...result,
+        load:
+          normalizedLoad === null
+            ? result.load
+            : `${normalizedLoad.value} ${normalizedLoad.unit}`,
+        loadValue: normalizedLoad?.value.toString() ?? null,
+        loadUnit: normalizedLoad?.unit ?? null,
+        normalizedLoadKg: normalizedLoad?.normalizedKg.toString() ?? null,
+      };
+    });
+
     await transaction.replaceSessionResults({
       organizationId: input.organizationId,
       assignmentId: input.assignmentId,
       sessionId: parsed.sessionId,
-      results: parsed.results,
+      results: normalizedResults,
     });
 
     const updated = await transaction.touchSessionProgress({
@@ -670,6 +709,8 @@ export async function autosaveAssignmentSessionResults(
       sessionId: parsed.sessionId,
       expectedVersion: parsed.expectedVersion,
       mutationId: parsed.mutationId,
+      durationMinutes: parsed.durationMinutes ?? null,
+      sessionRpe: parsed.sessionRpe ?? null,
       preserveSubmitted: input.allowSubmittedEdit,
     });
 

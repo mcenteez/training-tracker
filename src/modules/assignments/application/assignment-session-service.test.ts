@@ -631,7 +631,7 @@ describe("assignment session service", () => {
       assignmentId: ids.assignmentId,
       athleteUserId: ids.athleteUserId,
       sessionId: ids.sessionId,
-      expectedVersion: 2,
+      expectedVersion: 1,
       mutationId: ids.mutationId,
       results: [
         {
@@ -650,6 +650,106 @@ describe("assignment session service", () => {
     expect(updated.id).toBe(ids.sessionId);
     expect(transaction.replaceSessionResults).not.toHaveBeenCalled();
     expect(transaction.touchSessionProgress).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a measurable pound result and persists session response atomically", async () => {
+    const { transaction, unitOfWork } = setup();
+
+    await autosaveAssignmentSessionResults(unitOfWork, {
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      athleteUserId: ids.athleteUserId,
+      sessionId: ids.sessionId,
+      expectedVersion: 1,
+      mutationId: ids.mutationId,
+      now,
+      durationMinutes: 45,
+      sessionRpe: 8,
+      results: [
+        {
+          itemSnapshotId: ids.itemSnapshotId,
+          completedAt: now,
+          roundNumber: 1,
+          reps: 5,
+          load: null,
+          loadValue: 135,
+          loadUnit: "lb",
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+
+    expect(transaction.replaceSessionResults).toHaveBeenCalledWith({
+      organizationId: ids.organizationId,
+      assignmentId: ids.assignmentId,
+      sessionId: ids.sessionId,
+      results: [
+        expect.objectContaining({
+          load: "135 lb",
+          loadValue: "135",
+          loadUnit: "lb",
+          normalizedLoadKg: "61.23496995",
+        }),
+      ],
+    });
+    expect(transaction.touchSessionProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ durationMinutes: 45, sessionRpe: 8 }),
+    );
+  });
+
+  it.each([
+    { durationMinutes: -1, sessionRpe: 8 },
+    { durationMinutes: 45.5, sessionRpe: 8 },
+    { durationMinutes: 45, sessionRpe: 0 },
+    { durationMinutes: 45, sessionRpe: 11 },
+  ])("rejects invalid session response %#", async (capture) => {
+    const { transaction, unitOfWork } = setup();
+
+    await expect(
+      autosaveAssignmentSessionResults(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+        mutationId: ids.mutationId,
+        ...capture,
+        results: [],
+      }),
+    ).rejects.toThrow();
+    expect(transaction.replaceSessionResults).not.toHaveBeenCalled();
+  });
+
+  it("rejects an incomplete measurable load", async () => {
+    const { transaction, unitOfWork } = setup();
+
+    await expect(
+      autosaveAssignmentSessionResults(unitOfWork, {
+        organizationId: ids.organizationId,
+        assignmentId: ids.assignmentId,
+        athleteUserId: ids.athleteUserId,
+        sessionId: ids.sessionId,
+        expectedVersion: 1,
+        mutationId: ids.mutationId,
+        results: [
+          {
+            itemSnapshotId: ids.itemSnapshotId,
+            completedAt: now,
+            roundNumber: 1,
+            reps: 5,
+            load: null,
+            loadValue: 100,
+            loadUnit: null,
+            durationSeconds: null,
+            distanceMeters: null,
+            notes: null,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Enter both a numeric load and its unit");
+    expect(transaction.replaceSessionResults).not.toHaveBeenCalled();
   });
 
   it("rejects autosave with stale expected version", async () => {
@@ -696,7 +796,7 @@ describe("assignment session service", () => {
       mutationId: ids.mutationId,
       allowSubmittedEdit: true,
       now,
-      results: [makeResult()],
+      results: [{ ...makeResult(), loadValue: null }],
     });
 
     expect(result.status).toBe("submitted");
@@ -707,6 +807,8 @@ describe("assignment session service", () => {
       sessionId: ids.sessionId,
       expectedVersion: 2,
       mutationId: ids.mutationId,
+      durationMinutes: null,
+      sessionRpe: null,
       preserveSubmitted: true,
     });
   });

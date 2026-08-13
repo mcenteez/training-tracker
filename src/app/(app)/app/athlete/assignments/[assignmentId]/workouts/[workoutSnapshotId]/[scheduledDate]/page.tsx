@@ -66,6 +66,8 @@ const errorCopy: Record<string, string> = {
   already_submitted: "This workout was already completed and cannot change.",
   version_conflict:
     "This workout was updated somewhere else. Review it and try again.",
+  invalid_session_load:
+    "Check the duration, session RPE, and exercise load values and try again.",
   assignment_session_action_failed: "Unable to complete that session action.",
 };
 
@@ -379,6 +381,44 @@ export default async function WorkoutOccurrencePage({
             {editSubmitted ? (
               <input type="hidden" name="allowSubmittedEdit" value="1" />
             ) : null}
+
+            <fieldset
+              disabled={!canEdit}
+              className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3 sm:grid-cols-2"
+            >
+              <legend className="px-1 text-sm font-medium">
+                Session response
+              </legend>
+              <label className="grid gap-1 text-xs">
+                Duration (minutes)
+                <input
+                  name="durationMinutes"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  defaultValue={session?.durationMinutes ?? ""}
+                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                />
+              </label>
+              <label className="grid gap-1 text-xs">
+                Session RPE (1-10)
+                <select
+                  name="sessionRpe"
+                  defaultValue={session?.sessionRpe ?? ""}
+                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">Not captured</option>
+                  {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                    (value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+            </fieldset>
 
             <div className="space-y-3">
               {workoutItems.map((item) => {

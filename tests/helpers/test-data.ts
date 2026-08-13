@@ -63,6 +63,58 @@ export async function readPublishedPlanPolicy(assignmentId: string): Promise<{
   };
 }
 
+export async function setAssignmentPrescriptionMeasurableLoad(
+  assignmentId: string,
+  value: number,
+  unit: "kg" | "lb",
+): Promise<void> {
+  const sql = testDatabase();
+  const normalizedKg = unit === "kg" ? value : value * 0.45359237;
+  await sql`
+    UPDATE assignment_workout_item_snapshots
+    SET load = ${`${value} ${unit}`},
+        load_value = ${value},
+        load_unit = ${unit},
+        normalized_load_kg = ${normalizedKg}
+    WHERE assignment_id = ${assignmentId}
+  `;
+}
+
+export async function readAssignmentSessionCapture(assignmentId: string) {
+  const sql = testDatabase();
+  const rows = await sql`
+    SELECT
+      sessions.duration_minutes,
+      sessions.session_rpe,
+      sessions.submitted_at,
+      sessions.due_at,
+      results.load,
+      results.load_value,
+      results.load_unit,
+      results.normalized_load_kg
+    FROM assignment_sessions sessions
+    LEFT JOIN assignment_session_item_results results
+      ON results.organization_id = sessions.organization_id
+      AND results.assignment_id = sessions.assignment_id
+      AND results.session_id = sessions.id
+    WHERE sessions.assignment_id = ${assignmentId}
+    LIMIT 1
+  `;
+  const row = rows[0];
+  return row
+    ? {
+        durationMinutes: Number(row.duration_minutes),
+        sessionRpe: Number(row.session_rpe),
+        submittedAt: String(row.submitted_at),
+        dueAt: String(row.due_at),
+        load: String(row.load),
+        loadValue: String(row.load_value),
+        loadUnit: String(row.load_unit),
+        normalizedLoadKg: String(row.normalized_load_kg),
+      }
+    : null;
+}
+
 export async function createExercise(
   page: Page,
   name: string,
