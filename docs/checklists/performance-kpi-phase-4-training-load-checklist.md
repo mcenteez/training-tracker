@@ -297,28 +297,28 @@ Build pure, reusable load calculations outside pages, components, and database q
 
 ### Implementation Checklist
 
-- [ ] Add typed value objects for duration, session RPE, load unit, entered load, and normalized kilograms.
-- [ ] Add a pure pounds-to-kilograms converter using the approved exact conversion.
-- [ ] Add a pure effective-prescription resolver that applies athlete overrides without mutating shared snapshots.
-- [ ] Add a pure internal-load calculator.
-- [ ] Add pure prescribed and completed strength-volume calculators.
-- [ ] Add a pure comparison builder that distinguishes unavailable, partial, and comparable external work.
-- [ ] Add a pure individual rolling-baseline builder using ordered eligible sessions.
+- [x] Add typed value objects for duration, session RPE, load unit, entered load, and normalized kilograms.
+- [x] Add a pure pounds-to-kilograms converter using the approved exact conversion.
+- [x] Add a pure effective-prescription resolver that applies athlete overrides without mutating shared snapshots.
+- [x] Add a pure internal-load calculator.
+- [x] Add pure prescribed and completed strength-volume calculators.
+- [x] Add a pure comparison builder that distinguishes unavailable, partial, and comparable external work.
+- [x] Add a pure individual rolling-baseline builder using ordered eligible sessions.
 - [ ] Return structured unavailable reasons and sample counts from every derived metric.
 - [ ] Keep compliance, timeliness, and load calculations independently testable and composable.
 - [ ] Avoid metric formulas in route files, React components, and SQL string formatting.
 
 ### Unit Tests
 
-- [ ] Kilogram loads remain unchanged during normalization.
-- [ ] Pound loads normalize with the approved conversion.
-- [ ] Missing or invalid load parts produce unavailable external volume.
-- [ ] Internal load multiplies only valid duration and RPE values.
-- [ ] A result with reps and normalized kilograms contributes expected strength volume.
-- [ ] Free-text, bodyweight, and percentage entries do not contribute fabricated strength volume.
-- [ ] Partial measurable results remain distinct from fully comparable prescription/result sets.
-- [ ] Three eligible prior sessions produce an individual median baseline.
-- [ ] Fewer than three prior eligible sessions return `insufficient_history`.
+- [x] Kilogram loads remain unchanged during normalization.
+- [x] Pound loads normalize with the approved conversion.
+- [x] Missing or invalid load parts produce unavailable external volume.
+- [x] Internal load multiplies only valid duration and RPE values.
+- [x] A result with reps and normalized kilograms contributes expected strength volume.
+- [x] Free-text, bodyweight, and percentage entries do not contribute fabricated strength volume.
+- [x] Partial measurable results remain distinct from fully comparable prescription/result sets.
+- [x] Three eligible prior sessions produce an individual median baseline.
+- [x] Fewer than three prior eligible sessions return `insufficient_history`.
 - [ ] Current session is excluded from its own baseline.
 - [ ] Timezone and calendar boundaries select the correct preceding 28-day sessions.
 
