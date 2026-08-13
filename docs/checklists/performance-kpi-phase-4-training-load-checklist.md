@@ -120,32 +120,32 @@ strengthVolumeCompletion = completedStrengthVolumeKg / prescribedStrengthVolumeK
 
 ### Session Load States
 
-- [ ] `notCaptured`: submitted session is missing duration or session RPE.
-- [ ] `internalLoadAvailable`: submitted session has valid duration and session RPE.
-- [ ] `externalWorkUnavailable`: no comparable measurable result rows exist.
-- [ ] `externalWorkPartial`: some, but not all, prescribed or completed result rows are measurable.
-- [ ] `externalWorkComparable`: prescribed and completed measurable strength volume are both available.
-- [ ] Keep lifecycle compliance and timeliness states independent from load-capture state.
+- [x] `notCaptured`: submitted session is missing duration or session RPE.
+- [x] `internalLoadAvailable`: submitted session has valid duration and session RPE.
+- [x] `externalWorkUnavailable`: no comparable measurable result rows exist.
+- [x] `externalWorkPartial`: some, but not all, prescribed or completed result rows are measurable.
+- [x] `externalWorkComparable`: prescribed and completed measurable strength volume are both available.
+- [x] Keep lifecycle compliance and timeliness states independent from load-capture state.
 
 ### Formulas
 
-- [ ] Define `internalLoad = durationMinutes * sessionRpe` at the application layer.
-- [ ] Define completed and prescribed strength volume from normalized kilograms only.
-- [ ] Define volume completion only when both volumes are greater than zero.
-- [ ] Preserve raw duration, RPE, kilograms, reps, and sample counts beside every derived metric.
-- [ ] Return `null`, not `0`, for unavailable or unmeasurable metrics.
-- [ ] Keep partial external work visibly distinct from fully comparable external work.
+- [x] Define `internalLoad = durationMinutes * sessionRpe` at the application layer.
+- [x] Define completed and prescribed strength volume from normalized kilograms only.
+- [x] Define volume completion only when both volumes are greater than zero.
+- [x] Preserve raw duration, RPE, kilograms, reps, and sample counts beside every derived metric.
+- [x] Return `null`, not `0`, for unavailable or unmeasurable metrics.
+- [x] Keep partial external work visibly distinct from fully comparable external work.
 - [ ] Aggregate organization and team totals from raw duration, internal-load, and volume facts.
 
 ### Baseline Formulas
 
-- [ ] Select only submitted, internal-load-eligible sessions in the 28 calendar days preceding the current session's scheduled date.
-- [ ] Use the assignment timezone for calendar-window boundaries.
-- [ ] Define `individualMedianInternalLoad` as the median of eligible preceding session internal loads.
-- [ ] Define `internalLoadDifference = currentInternalLoad - individualMedianInternalLoad`.
-- [ ] Define `internalLoadDifferencePercent = internalLoadDifference / individualMedianInternalLoad` only when the baseline is greater than zero.
-- [ ] Require at least three preceding eligible sessions before returning baseline values.
-- [ ] Do not turn a baseline difference into a risk level, alert color, or prescribed staff action.
+- [x] Select only submitted, internal-load-eligible sessions in the 28 calendar days preceding the current session's scheduled date.
+- [x] Use the assignment timezone for calendar-window boundaries.
+- [x] Define `individualMedianInternalLoad` as the median of eligible preceding session internal loads.
+- [x] Define `internalLoadDifference = currentInternalLoad - individualMedianInternalLoad`.
+- [x] Define `internalLoadDifferencePercent = internalLoadDifference / individualMedianInternalLoad` only when the baseline is greater than zero.
+- [x] Require at least three preceding eligible sessions before returning baseline values.
+- [x] Do not turn a baseline difference into a risk level, alert color, or prescribed staff action.
 
 ## Priority Sequence
 
@@ -303,9 +303,9 @@ Build pure, reusable load calculations outside pages, components, and database q
 - [x] Add pure prescribed and completed strength-volume calculators.
 - [x] Add a pure comparison builder that distinguishes unavailable, partial, and comparable external work.
 - [x] Add a pure individual rolling-baseline builder using ordered eligible sessions.
-- [ ] Return structured unavailable reasons and sample counts from every derived metric.
-- [ ] Keep compliance, timeliness, and load calculations independently testable and composable.
-- [ ] Avoid metric formulas in route files, React components, and SQL string formatting.
+- [x] Return structured unavailable reasons and sample counts from every derived metric.
+- [x] Keep compliance, timeliness, and load calculations independently testable and composable.
+- [x] Avoid metric formulas in route files, React components, and SQL string formatting.
 
 ### Unit Tests
 
@@ -315,14 +315,14 @@ Build pure, reusable load calculations outside pages, components, and database q
 - [x] Partial measurable results remain distinct from fully comparable prescription/result sets.
 - [x] Three eligible prior sessions produce an individual median baseline.
 - [x] Fewer than three prior eligible sessions return `insufficient_history`.
-- [ ] Current session is excluded from its own baseline.
-- [ ] Timezone and calendar boundaries select the correct preceding 28-day sessions.
+- [x] Current session is excluded from its own baseline.
+- [x] Timezone and calendar boundaries select the correct preceding 28-day sessions.
 
 ### Acceptance Criteria
 
-- [ ] No UI or query layer independently calculates internal load, volume, or baseline percentages.
-- [ ] Every displayed derived value can be reconstructed from visible raw values and documented formulas.
-- [ ] Missing data is not represented as zero work or a negative performance signal.
+- [x] No UI or query layer independently calculates internal load, volume, or baseline percentages.
+- [x] Every displayed derived value can be reconstructed from visible raw values and documented formulas.
+- [x] Missing data is not represented as zero work or a negative performance signal.
 
 ## Milestone 5: Authorized Load Read Models
 
