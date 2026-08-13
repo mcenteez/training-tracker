@@ -5,12 +5,14 @@ import {
   foreignKey,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -31,6 +33,7 @@ import {
   workoutBlocks,
   workoutItems,
   workouts,
+  strengthLoadUnit,
 } from "@/modules/workouts/db/schema";
 
 export const assignmentStatuses = ["draft", "published", "canceled"] as const;
@@ -420,6 +423,9 @@ export const assignmentWorkoutItemSnapshots = pgTable(
     position: integer().notNull(),
     reps: integer(),
     load: text(),
+    loadValue: numeric("load_value"),
+    loadUnit: strengthLoadUnit("load_unit"),
+    normalizedLoadKg: numeric("normalized_load_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -456,6 +462,18 @@ export const assignmentWorkoutItemSnapshots = pgTable(
     check(
       "assignment_workout_item_snapshots_reps_nonnegative",
       sql`${table.reps} IS NULL OR ${table.reps} >= 0`,
+    ),
+    check(
+      "assignment_workout_item_snapshots_structured_load_complete",
+      sql`(
+        ${table.loadValue} IS NULL
+        AND ${table.loadUnit} IS NULL
+        AND ${table.normalizedLoadKg} IS NULL
+      ) OR (
+        ${table.loadValue} > 0
+        AND ${table.loadUnit} IS NOT NULL
+        AND ${table.normalizedLoadKg} > 0
+      )`,
     ),
     check(
       "assignment_workout_item_snapshots_duration_nonnegative",
@@ -572,6 +590,8 @@ export const assignmentSessions = pgTable(
       withTimezone: true,
     }).notNull(),
     dueAt: timestamp("due_at", { withTimezone: true }),
+    durationMinutes: integer("duration_minutes"),
+    sessionRpe: integer("session_rpe"),
     status: assignmentSessionStatus().default("assigned").notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
@@ -629,6 +649,14 @@ export const assignmentSessions = pgTable(
       "assignment_sessions_availability_order",
       sql`${table.availableFrom} < ${table.availableUntil}`,
     ),
+    check(
+      "assignment_sessions_duration_nonnegative",
+      sql`${table.durationMinutes} IS NULL OR ${table.durationMinutes} >= 0`,
+    ),
+    check(
+      "assignment_sessions_rpe_bounds",
+      sql`${table.sessionRpe} IS NULL OR (${table.sessionRpe} >= 1 AND ${table.sessionRpe} <= 10)`,
+    ),
     check("assignment_sessions_version_positive", sql`${table.version} > 0`),
     unique("assignment_sessions_schedule_unique").on(
       table.assignmentId,
@@ -640,6 +668,11 @@ export const assignmentSessions = pgTable(
       table.organizationId,
       table.athleteUserId,
       table.scheduledDate,
+    ),
+    index("assignment_sessions_athlete_submitted_idx").on(
+      table.organizationId,
+      table.athleteUserId,
+      table.submittedAt,
     ),
     index("assignment_sessions_organization_due_at_idx").on(
       table.organizationId,
@@ -663,6 +696,9 @@ export const assignmentSessionItemResults = pgTable(
     roundNumber: integer("round_number").notNull(),
     reps: integer(),
     load: text(),
+    loadValue: numeric("load_value"),
+    loadUnit: strengthLoadUnit("load_unit"),
+    normalizedLoadKg: numeric("normalized_load_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     notes: text(),
@@ -701,6 +737,18 @@ export const assignmentSessionItemResults = pgTable(
       sql`${table.reps} IS NULL OR ${table.reps} >= 0`,
     ),
     check(
+      "assignment_session_item_results_structured_load_complete",
+      sql`(
+        ${table.loadValue} IS NULL
+        AND ${table.loadUnit} IS NULL
+        AND ${table.normalizedLoadKg} IS NULL
+      ) OR (
+        ${table.loadValue} > 0
+        AND ${table.loadUnit} IS NOT NULL
+        AND ${table.normalizedLoadKg} > 0
+      )`,
+    ),
+    check(
       "assignment_session_item_results_duration_nonnegative",
       sql`${table.durationSeconds} IS NULL OR ${table.durationSeconds} >= 0`,
     ),
@@ -714,6 +762,205 @@ export const assignmentSessionItemResults = pgTable(
       table.roundNumber,
     ),
     index("assignment_session_item_results_session_idx").on(table.sessionId),
+  ],
+);
+
+export const assignmentAthleteItemOverrides = pgTable(
+  "assignment_athlete_item_overrides",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    assignmentId: uuid("assignment_id").notNull(),
+    recipientId: uuid("recipient_id").notNull(),
+    athleteUserId: uuid("athlete_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    itemSnapshotId: uuid("item_snapshot_id").notNull(),
+    planSlotSnapshotId: uuid("plan_slot_snapshot_id"),
+    reps: integer(),
+    load: text(),
+    loadValue: numeric("load_value"),
+    loadUnit: strengthLoadUnit("load_unit"),
+    normalizedLoadKg: numeric("normalized_load_kg"),
+    durationSeconds: integer("duration_seconds"),
+    distanceMeters: integer("distance_meters"),
+    restSeconds: integer("rest_seconds"),
+    tempo: text(),
+    notes: text(),
+    reason: text(),
+    version: integer().default(1).notNull(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId, table.assignmentId, table.recipientId],
+      foreignColumns: [
+        assignmentRecipients.organizationId,
+        assignmentRecipients.assignmentId,
+        assignmentRecipients.id,
+      ],
+      name: "assignment_athlete_item_overrides_recipient_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.organizationId, table.assignmentId, table.itemSnapshotId],
+      foreignColumns: [
+        assignmentWorkoutItemSnapshots.organizationId,
+        assignmentWorkoutItemSnapshots.assignmentId,
+        assignmentWorkoutItemSnapshots.id,
+      ],
+      name: "assignment_athlete_item_overrides_item_snapshot_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [
+        table.organizationId,
+        table.assignmentId,
+        table.planSlotSnapshotId,
+      ],
+      foreignColumns: [
+        assignmentPlanSlotSnapshots.organizationId,
+        assignmentPlanSlotSnapshots.assignmentId,
+        assignmentPlanSlotSnapshots.id,
+      ],
+      name: "assignment_athlete_item_overrides_plan_slot_snapshot_fk",
+    }).onDelete("cascade"),
+    check(
+      "assignment_athlete_item_overrides_reps_nonnegative",
+      sql`${table.reps} IS NULL OR ${table.reps} >= 0`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_duration_nonnegative",
+      sql`${table.durationSeconds} IS NULL OR ${table.durationSeconds} >= 0`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_distance_nonnegative",
+      sql`${table.distanceMeters} IS NULL OR ${table.distanceMeters} >= 0`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_rest_nonnegative",
+      sql`${table.restSeconds} IS NULL OR ${table.restSeconds} >= 0`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_structured_load_complete",
+      sql`(
+        ${table.loadValue} IS NULL
+        AND ${table.loadUnit} IS NULL
+        AND ${table.normalizedLoadKg} IS NULL
+      ) OR (
+        ${table.loadValue} > 0
+        AND ${table.loadUnit} IS NOT NULL
+        AND ${table.normalizedLoadKg} > 0
+      )`,
+    ),
+    check(
+      "assignment_athlete_item_overrides_version_positive",
+      sql`${table.version} > 0`,
+    ),
+    uniqueIndex(
+      "assignment_athlete_item_overrides_recipient_item_slot_unique",
+    ).on(
+      table.recipientId,
+      table.itemSnapshotId,
+      sql`coalesce(${table.planSlotSnapshotId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+    ),
+    index("assignment_athlete_item_overrides_recipient_idx").on(
+      table.organizationId,
+      table.recipientId,
+    ),
+  ],
+);
+
+export const assignmentSessionEffectiveItemPrescriptions = pgTable(
+  "assignment_session_effective_item_prescriptions",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id").notNull(),
+    assignmentId: uuid("assignment_id").notNull(),
+    sessionId: uuid("session_id").notNull(),
+    itemSnapshotId: uuid("item_snapshot_id").notNull(),
+    sourceOverrideId: uuid("source_override_id"),
+    reps: integer(),
+    load: text(),
+    loadValue: numeric("load_value"),
+    loadUnit: strengthLoadUnit("load_unit"),
+    normalizedLoadKg: numeric("normalized_load_kg"),
+    durationSeconds: integer("duration_seconds"),
+    distanceMeters: integer("distance_meters"),
+    restSeconds: integer("rest_seconds"),
+    tempo: text(),
+    notes: text(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId, table.assignmentId, table.sessionId],
+      foreignColumns: [
+        assignmentSessions.organizationId,
+        assignmentSessions.assignmentId,
+        assignmentSessions.id,
+      ],
+      name: "assignment_session_effective_item_prescriptions_session_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.organizationId, table.assignmentId, table.itemSnapshotId],
+      foreignColumns: [
+        assignmentWorkoutItemSnapshots.organizationId,
+        assignmentWorkoutItemSnapshots.assignmentId,
+        assignmentWorkoutItemSnapshots.id,
+      ],
+      name: "assignment_session_effective_item_prescriptions_item_snapshot_fk",
+    }),
+    foreignKey({
+      columns: [table.sourceOverrideId],
+      foreignColumns: [assignmentAthleteItemOverrides.id],
+      name: "assignment_session_effective_item_prescriptions_override_fk",
+    }).onDelete("set null"),
+    check(
+      "assignment_session_effective_item_prescriptions_reps_nonnegative",
+      sql`${table.reps} IS NULL OR ${table.reps} >= 0`,
+    ),
+    check(
+      "assignment_session_effective_item_prescriptions_duration_nonnegative",
+      sql`${table.durationSeconds} IS NULL OR ${table.durationSeconds} >= 0`,
+    ),
+    check(
+      "assignment_session_effective_item_prescriptions_distance_nonnegative",
+      sql`${table.distanceMeters} IS NULL OR ${table.distanceMeters} >= 0`,
+    ),
+    check(
+      "assignment_session_effective_item_prescriptions_rest_nonnegative",
+      sql`${table.restSeconds} IS NULL OR ${table.restSeconds} >= 0`,
+    ),
+    check(
+      "assignment_session_effective_item_prescriptions_structured_load_complete",
+      sql`(
+        ${table.loadValue} IS NULL
+        AND ${table.loadUnit} IS NULL
+        AND ${table.normalizedLoadKg} IS NULL
+      ) OR (
+        ${table.loadValue} > 0
+        AND ${table.loadUnit} IS NOT NULL
+        AND ${table.normalizedLoadKg} > 0
+      )`,
+    ),
+    unique(
+      "assignment_session_effective_item_prescriptions_session_item_unique",
+    ).on(table.sessionId, table.itemSnapshotId),
+    index("assignment_session_effective_item_prescriptions_session_idx").on(
+      table.sessionId,
+    ),
   ],
 );
 
@@ -778,6 +1025,14 @@ export type AssignmentSessionItemResult =
   typeof assignmentSessionItemResults.$inferSelect;
 export type NewAssignmentSessionItemResult =
   typeof assignmentSessionItemResults.$inferInsert;
+export type AssignmentAthleteItemOverride =
+  typeof assignmentAthleteItemOverrides.$inferSelect;
+export type NewAssignmentAthleteItemOverride =
+  typeof assignmentAthleteItemOverrides.$inferInsert;
+export type AssignmentSessionEffectiveItemPrescription =
+  typeof assignmentSessionEffectiveItemPrescriptions.$inferSelect;
+export type NewAssignmentSessionEffectiveItemPrescription =
+  typeof assignmentSessionEffectiveItemPrescriptions.$inferInsert;
 export type AssignmentSessionComment =
   typeof assignmentSessionComments.$inferSelect;
 export type NewAssignmentSessionComment =

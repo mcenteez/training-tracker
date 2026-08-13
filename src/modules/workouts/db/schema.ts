@@ -4,6 +4,7 @@ import {
   foreignKey,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -19,9 +20,11 @@ import { users } from "@/modules/users/db/schema";
 
 export const workoutStatuses = ["draft", "active", "archived"] as const;
 export const workoutBlockTypes = ["straight", "circuit", "superset"] as const;
+export const strengthLoadUnits = ["kg", "lb"] as const;
 
 export const workoutStatus = pgEnum("workout_status", workoutStatuses);
 export const workoutBlockType = pgEnum("workout_block_type", workoutBlockTypes);
+export const strengthLoadUnit = pgEnum("strength_load_unit", strengthLoadUnits);
 
 export const workouts = pgTable(
   "workouts",
@@ -114,6 +117,9 @@ export const workoutItems = pgTable(
     position: integer().notNull(),
     reps: integer(),
     load: text(),
+    loadValue: numeric("load_value"),
+    loadUnit: strengthLoadUnit("load_unit"),
+    normalizedLoadKg: numeric("normalized_load_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -142,6 +148,18 @@ export const workoutItems = pgTable(
     check(
       "workout_items_reps_nonnegative",
       sql`${table.reps} IS NULL OR ${table.reps} >= 0`,
+    ),
+    check(
+      "workout_items_structured_load_complete",
+      sql`(
+        ${table.loadValue} IS NULL
+        AND ${table.loadUnit} IS NULL
+        AND ${table.normalizedLoadKg} IS NULL
+      ) OR (
+        ${table.loadValue} > 0
+        AND ${table.loadUnit} IS NOT NULL
+        AND ${table.normalizedLoadKg} > 0
+      )`,
     ),
     check(
       "workout_items_duration_nonnegative",
