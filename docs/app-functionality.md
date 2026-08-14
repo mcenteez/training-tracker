@@ -45,6 +45,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - `/app/performance/teams` is a portfolio of managed teams, or viewed teams when the user manages none.
 - `/app/performance/teams/[teamId]` is the canonical staff Team Performance Dashboard and independently requires team-scoped result-read access.
 - Team assignment drill-downs show team recipients, occurrence status, and submitted-session review links using immutable publish-time team scope.
+- Dashboard compliance, timeliness, and training-load metrics link to bounded, authorized drill-down fact lists. Drill-down routes preserve the selected window, identify the metric and raw contributing facts, and lead back to existing assignment/session detail routes. Organization lists label direct-athlete assignment facts as organization-only; team lists use persisted publication-time team scope.
 - `/app/athlete` focuses athletes on their teams and assigned workouts.
 - `/app/organizations` lets multi-organization users choose an active organization; the saved preference is always revalidated against membership.
 - Only owners and managers can access the admin interface for operational changes.

@@ -406,14 +406,29 @@ export default async function OrganizationPerformancePage({
         </div>
         <dl className="grid gap-px overflow-hidden rounded-md border bg-border sm:grid-cols-4">
           {[
-            ["Teams", teams.length],
-            ["Athletes", athleteCount],
-            ["Roster entries", teamMembers.length],
-            ["Pending invitations", pendingInvitationCount],
-          ].map(([label, value]) => (
+            { label: "Teams", value: teams.length, href: "/app/teams" },
+            { label: "Athletes", value: athleteCount, href: "/app/admin" },
+            {
+              label: "Roster entries",
+              value: teamMembers.length,
+              href: "/app/teams",
+            },
+            {
+              label: "Pending invitations",
+              value: pendingInvitationCount,
+              href: "/app/admin",
+            },
+          ].map(({ label, value, href }) => (
             <div key={label} className="bg-card px-4 py-3">
               <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="mt-1 text-lg font-semibold">{value}</dd>
+              <dd className="mt-1">
+                <Link
+                  href={href}
+                  className="text-lg font-semibold underline-offset-4 hover:underline"
+                >
+                  {value}
+                </Link>
+              </dd>
             </div>
           ))}
         </dl>

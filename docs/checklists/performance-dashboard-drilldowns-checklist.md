@@ -237,23 +237,23 @@ Provide organization-wide explainability while preserving Team and direct-athlet
 
 ### Implementation Checklist
 
-- [ ] Add an explicit drill-down definition section to [../app-functionality.md](../app-functionality.md).
-- [ ] Add metric definitions and unavailable-state copy that match existing compliance, timeliness, and training-load contracts.
-- [ ] Add dashboard-to-drill-down link labels for every supported metric.
-- [ ] Verify all links preserve selected window and valid tab state.
-- [ ] Add loading, empty, error, and disabled states for every drill-down route.
-- [ ] Verify mobile and desktop screenshots for Team and Organization routes.
-- [ ] Verify screen-reader labels include metric, scope, selected window, count, unit, and unavailable reason where applicable.
-- [ ] Add query-plan checks and indexes only for demonstrated slow drill-down access patterns.
-- [ ] Document any forward-safe migration or index remediation needed after production volume is observed.
+- [x] Add an explicit drill-down definition section to [../app-functionality.md](../app-functionality.md).
+- [x] Add metric definitions and unavailable-state copy that match existing compliance, timeliness, and training-load contracts.
+- [x] Add dashboard-to-drill-down link labels for every supported metric.
+- [x] Verify all links preserve selected window and valid tab state.
+- [x] Add loading, empty, error, and disabled states for every drill-down route.
+- [x] Verify mobile and desktop screenshots for Team and Organization routes.
+- [x] Verify screen-reader labels include metric, scope, selected window, count, unit, and unavailable reason where applicable.
+- [x] Add query-plan checks and indexes only for demonstrated slow drill-down access patterns.
+- [x] Document any forward-safe migration or index remediation needed after production volume is observed.
 
 ### Required Verification
 
-- [ ] Focused unit tests for metric/tab parsing and reconciliation helpers pass.
-- [ ] Team and Organization integration tests cover tenant isolation, publish-time scope, direct-athlete behavior, and summary reconciliation.
-- [ ] Playwright tests cover dashboard links, fact lists, detail navigation, Viewer access, athlete denial, and mobile layouts.
-- [ ] `npm run validate` passes.
-- [ ] `npm run build` passes.
+- [x] Focused unit tests for metric/tab parsing and reconciliation helpers pass.
+- [x] Team and Organization integration tests cover tenant isolation, publish-time scope, direct-athlete behavior, and summary reconciliation.
+- [x] Playwright tests cover dashboard links, fact lists, detail navigation, Viewer access, athlete denial, and mobile layouts.
+- [x] `npm run validate` passes.
+- [x] `npm run build` passes.
 
 ## Deferred
 
