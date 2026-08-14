@@ -4,6 +4,11 @@ import {
   type PerformanceDrilldownMetric,
   type PerformanceDrilldownTab,
 } from "@/modules/assignments/application/performance-drilldowns";
+import {
+  classifyOccurrenceTimeliness,
+  type OccurrenceTimelinessState,
+} from "@/modules/assignments/application/timeliness-summary";
+import { resolveEquivalentMetricWindows } from "@/modules/assignments/application/timeliness-policy";
 import { getTeamComplianceDashboard } from "./team-compliance-queries";
 
 export interface TeamComplianceDrilldownFact {
@@ -21,6 +26,26 @@ export interface TeamComplianceDrilldownFact {
   status: "completed" | "overdue" | "started" | "dueToday" | "upcoming";
   dueAt: Date | null;
   submittedAt: Date | null;
+}
+
+export interface TeamTimelinessDrilldownFact {
+  metric: "timeliness";
+  cohort: "current" | "previous";
+  athleteName: string;
+  athleteEmail: string;
+  athleteUserId: string;
+  assignmentId: string;
+  assignmentName: string;
+  assignmentTimezone: string;
+  sessionId: string | null;
+  scheduledDate: string;
+  workoutName: string;
+  label: string | null;
+  state: OccurrenceTimelinessState;
+  dueAt: Date;
+  submittedAt: Date | null;
+  latenessMilliseconds: number | null;
+  overdueMilliseconds: number | null;
 }
 
 function occurrenceStatusToFactStatus(
@@ -107,4 +132,96 @@ export async function listTeamComplianceDrilldownFacts(
         left.athleteName.localeCompare(right.athleteName)
       );
     });
+}
+
+export async function listTeamTimelinessDrilldownFacts(
+  database: Parameters<typeof getTeamComplianceDashboard>[0],
+  input: {
+    organizationId: string;
+    teamId: string;
+    metric: Extract<PerformanceDrilldownMetric, "onTime" | "lateCompleted">;
+    tab: PerformanceDrilldownTab;
+    windowDays: number | null;
+    asOf: Date;
+  },
+): Promise<TeamTimelinessDrilldownFact[]> {
+  const dashboard = await getTeamComplianceDashboard(database, {
+    organizationId: input.organizationId,
+    teamId: input.teamId,
+    windowDays: null,
+    now: input.asOf,
+  });
+  const windows = resolveEquivalentMetricWindows({
+    asOf: input.asOf,
+    windowDays:
+      input.windowDays === 90 ? 90 : input.windowDays === null ? null : 30,
+  });
+  const currentStart = windows?.current.startAt;
+  const previous = windows?.previous ?? null;
+  const facts: TeamTimelinessDrilldownFact[] = dashboard.assignments.flatMap(
+    (assignment) =>
+      assignment.recipients.flatMap((recipient) =>
+        recipient.occurrences.flatMap((occurrence) => {
+          const classified = classifyOccurrenceTimeliness({
+            occurrence: {
+              athleteUserId: recipient.athleteUserId,
+              dueAt: occurrence.dueAt,
+              firstSubmittedAt: occurrence.submittedAt,
+              policyEffectiveAt: occurrence.policyEffectiveAt,
+            },
+            asOf: input.asOf,
+          });
+          if (!classified) return [];
+          const cohort =
+            previous &&
+            classified.dueAt >= previous.startAt &&
+            classified.dueAt < previous.endAt
+              ? "previous"
+              : currentStart && classified.dueAt < currentStart
+                ? null
+                : "current";
+          if (!cohort) return [];
+          return [
+            {
+              metric: "timeliness" as const,
+              cohort,
+              athleteName: recipient.fullName?.trim() || recipient.email,
+              athleteEmail: recipient.email,
+              athleteUserId: recipient.athleteUserId,
+              assignmentId: assignment.id,
+              assignmentName: assignment.sourceName,
+              assignmentTimezone: assignment.timezone,
+              sessionId: occurrence.sessionId,
+              scheduledDate: occurrence.scheduledDate,
+              workoutName: occurrence.workoutName,
+              label: occurrence.label,
+              state: classified.state,
+              dueAt: classified.dueAt,
+              submittedAt: classified.firstSubmittedAt,
+              latenessMilliseconds: classified.latenessMilliseconds,
+              overdueMilliseconds: classified.overdueMilliseconds,
+            },
+          ];
+        }),
+      ),
+  );
+  const matchesTab = (fact: TeamTimelinessDrilldownFact) => {
+    if (input.metric === "lateCompleted") return fact.state === "lateCompleted";
+    if (input.tab === "all") return true;
+    return (
+      (input.tab === "onTime" && fact.state === "onTimeCompleted") ||
+      (input.tab === "late" && fact.state === "lateCompleted") ||
+      (input.tab === "openOverdue" && fact.state === "openOverdue")
+    );
+  };
+  return facts.filter(matchesTab).toSorted((left, right) => {
+    const priority = (fact: TeamTimelinessDrilldownFact) =>
+      fact.state === "openOverdue" ? 0 : fact.state === "lateCompleted" ? 1 : 2;
+    return (
+      priority(left) - priority(right) ||
+      (right.latenessMilliseconds ?? right.overdueMilliseconds ?? 0) -
+        (left.latenessMilliseconds ?? left.overdueMilliseconds ?? 0) ||
+      left.scheduledDate.localeCompare(right.scheduledDate)
+    );
+  });
 }

@@ -174,6 +174,23 @@ test.describe("Training Tracker assignment and performance access", () => {
     ).toBe(true);
   });
 
+  test("manager can drill into Team open overdue timeliness facts", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "manager");
+    await page.goto(`/app/performance/teams/${basketballTeamId}`);
+    await page.getByRole("link", { name: "View open overdue facts" }).click();
+
+    await expect(page).toHaveURL(/metric=onTime.*tab=openOverdue/);
+    await expect(
+      page.getByRole("heading", { name: "On-time completion facts" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Open overdue", { exact: true }).first(),
+    ).toBeVisible();
+  });
+
   test("manager can publish directly to a managed athlete", async ({
     context,
     page,

@@ -153,25 +153,25 @@ Explain on-time completion, lateness, overdue work, and equivalent-window change
 
 ### Implementation Checklist
 
-- [ ] Extend the Team drill-down query with on-time, late-completed, and open-overdue fact modes.
-- [ ] Include due instant, first submission instant, lateness duration, and overdue duration where applicable.
-- [ ] Add an `onTime` drill-down from the on-time completion card with `all`, `onTime`, `late`, and `openOverdue` tabs.
-- [ ] Add a `lateCompleted` drill-down from average completed lateness.
-- [ ] Reuse open-overdue facts from Milestone 1 rather than creating a conflicting calculation.
-- [ ] Add an equivalent-window comparison view that shows current and previous raw cohorts and counts.
-- [ ] Keep all-time trend behavior factual: no previous-window cohort exists.
+- [x] Extend the Team drill-down query with on-time, late-completed, and open-overdue fact modes.
+- [x] Include due instant, first submission instant, lateness duration, and overdue duration where applicable.
+- [x] Add an `onTime` drill-down from the on-time completion card with `all`, `onTime`, `late`, and `openOverdue` tabs.
+- [x] Add a `lateCompleted` drill-down from average completed lateness.
+- [x] Reuse open-overdue facts from Milestone 1 rather than creating a conflicting calculation.
+- [x] Add an equivalent-window comparison view that shows current and previous raw cohorts and counts.
+- [x] Keep all-time trend behavior factual: no previous-window cohort exists.
 
 ### Tests
 
-- [ ] On-time, late, and open-overdue drill-down rows reconcile with timeliness summary counts.
-- [ ] Equivalent-window current and previous cohorts match the dashboard comparison inputs.
-- [ ] Due instant and submission instant display in the assignment timezone.
-- [ ] No-due-work and insufficient-history states remain distinct.
+- [x] On-time, late, and open-overdue drill-down rows reconcile with timeliness summary counts.
+- [x] Equivalent-window current and previous cohorts match the dashboard comparison inputs.
+- [x] Due instant and submission instant display in the assignment timezone.
+- [x] No-due-work and insufficient-history states remain distinct.
 
 ### Acceptance Criteria
 
-- [ ] A coach can identify the actual late or open occurrences behind a timeliness card.
-- [ ] A coach can inspect the occurrence facts behind an equivalent-window change without interpreting it as a risk score.
+- [x] A coach can identify the actual late or open occurrences behind a timeliness card.
+- [x] A coach can inspect the occurrence facts behind an equivalent-window change without interpreting it as a risk score.
 
 ## Milestone 3: Team Training-Load Drill-Downs
 

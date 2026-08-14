@@ -210,6 +210,7 @@ export default async function TeamPerformancePage({
       <TimelinessSummary
         timeliness={complianceDashboard.timeliness}
         label="Team timeliness summary"
+        drilldownBaseHref={`/app/performance/teams/${teamId}/drilldown?window=${windowDays ?? "all"}`}
       />
 
       <TrainingLoadSummary summary={loadSummary} label="team-training-load" />

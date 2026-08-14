@@ -17,7 +17,12 @@ import {
   performanceDrilldownTabLabel,
   tabsForPerformanceDrilldown,
 } from "@/modules/assignments/application/performance-drilldowns";
-import { listTeamComplianceDrilldownFacts } from "@/modules/assignments/db/performance-drilldown-queries";
+import {
+  listTeamComplianceDrilldownFacts,
+  listTeamTimelinessDrilldownFacts,
+  type TeamComplianceDrilldownFact,
+  type TeamTimelinessDrilldownFact,
+} from "@/modules/assignments/db/performance-drilldown-queries";
 
 interface TeamDrilldownPageProps {
   params: Promise<{ teamId: string }>;
@@ -33,6 +38,12 @@ function isComplianceMetric(
     metric === "overdue" ||
     metric === "dueNow"
   );
+}
+
+function isTimelinessMetric(
+  metric: string,
+): metric is "onTime" | "lateCompleted" {
+  return metric === "onTime" || metric === "lateCompleted";
 }
 
 function formatDateTime(value: Date | null, timezone: string): string {
@@ -56,6 +67,23 @@ function statusLabel(status: string): string {
   );
 }
 
+function timelinessLabel(state: string): string {
+  return (
+    {
+      onTimeCompleted: "On time",
+      lateCompleted: "Completed late",
+      openOverdue: "Open overdue",
+      notYetDue: "Not yet due",
+    }[state] ?? state
+  );
+}
+
+function formatDuration(milliseconds: number | null): string | null {
+  if (milliseconds === null) return null;
+  const hours = Math.max(0, Math.round(milliseconds / 3_600_000));
+  return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
+}
+
 export default async function TeamDrilldownPage({
   params,
   searchParams,
@@ -65,23 +93,57 @@ export default async function TeamDrilldownPage({
   const parsed = performanceDrilldownSearchSchema.safeParse(rawSearch);
   if (!parsed.success) notFound();
   const search = parsed.data;
-  if (!isComplianceMetric(search.metric)) {
+  if (
+    !isComplianceMetric(search.metric) &&
+    !isTimelinessMetric(search.metric)
+  ) {
     notFound();
   }
-  const metric = search.metric as
-    "completion" | "attention" | "overdue" | "dueNow";
+  const metric = search.metric;
 
   const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const asOf = new Date();
-  const facts = await withDatabase((database) =>
-    listTeamComplianceDrilldownFacts(database, {
-      organizationId: context.membership.organizationId,
-      teamId,
-      metric,
-      tab: search.tab,
-      windowDays: search.windowDays,
-      asOf,
-    }),
+  let facts: TeamComplianceDrilldownFact[] | TeamTimelinessDrilldownFact[];
+  if (isComplianceMetric(metric)) {
+    facts = await withDatabase((database) =>
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: context.membership.organizationId,
+        teamId,
+        metric,
+        tab: search.tab,
+        windowDays: search.windowDays,
+        asOf,
+      }),
+    );
+  } else {
+    facts = await withDatabase((database) =>
+      listTeamTimelinessDrilldownFacts(database, {
+        organizationId: context.membership.organizationId,
+        teamId,
+        metric,
+        tab: search.tab,
+        windowDays: search.windowDays,
+        asOf,
+      }),
+    );
+  }
+  const rows = facts.map((fact) =>
+    fact.metric === "compliance"
+      ? {
+          ...fact,
+          displayStatus: statusLabel(fact.status),
+          duration: null,
+          reviewable: fact.status === "completed",
+        }
+      : {
+          ...fact,
+          displayStatus: timelinessLabel(fact.state),
+          duration: formatDuration(
+            fact.latenessMilliseconds ?? fact.overdueMilliseconds,
+          ),
+          reviewable:
+            fact.state === "onTimeCompleted" || fact.state === "lateCompleted",
+        },
   );
   const windowLabel =
     search.window === "all" ? "all-time" : `${search.window}-day`;
@@ -99,8 +161,8 @@ export default async function TeamDrilldownPage({
         </Link>
         <h1 className="text-3xl font-semibold">{metricLabel}</h1>
         <p className="text-sm text-muted-foreground">
-          {facts.length} fact{facts.length === 1 ? "" : "s"} in the{" "}
-          {windowLabel} window as of {asOf.toLocaleString()}.
+          {rows.length} fact{rows.length === 1 ? "" : "s"} in the {windowLabel}{" "}
+          window as of {asOf.toLocaleString()}.
         </p>
       </section>
 
@@ -121,7 +183,7 @@ export default async function TeamDrilldownPage({
         ))}
       </nav>
 
-      {facts.length === 0 ? (
+      {rows.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>No matching facts</CardTitle>
@@ -142,7 +204,7 @@ export default async function TeamDrilldownPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-3 md:hidden">
-              {facts.map((fact) => (
+              {rows.map((fact) => (
                 <article
                   key={`${fact.assignmentId}:${fact.athleteUserId}:${fact.scheduledDate}:${fact.workoutName}`}
                   className="space-y-2 rounded-md border p-3 text-sm"
@@ -159,12 +221,13 @@ export default async function TeamDrilldownPage({
                   <p className="text-muted-foreground">
                     {fact.scheduledDate}
                     {fact.label ? ` · ${fact.label}` : ""} ·{" "}
-                    {statusLabel(fact.status)}
+                    {fact.displayStatus}
+                    {fact.duration ? ` · ${fact.duration}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Due {formatDateTime(fact.dueAt, fact.assignmentTimezone)}
                   </p>
-                  {fact.sessionId && fact.status === "completed" ? (
+                  {fact.sessionId && fact.reviewable ? (
                     <Link
                       href={`/app/performance/teams/${teamId}/assignments/${fact.assignmentId}/sessions/${fact.sessionId}`}
                       className="font-medium underline-offset-4 hover:underline"
@@ -206,7 +269,7 @@ export default async function TeamDrilldownPage({
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {facts.map((fact) => (
+                {rows.map((fact) => (
                   <tr
                     key={`${fact.assignmentId}:${fact.athleteUserId}:${fact.scheduledDate}:${fact.workoutName}`}
                   >
@@ -226,12 +289,19 @@ export default async function TeamDrilldownPage({
                         {fact.label ? ` · ${fact.label}` : ""}
                       </span>
                     </td>
-                    <td className="px-3 py-3">{statusLabel(fact.status)}</td>
+                    <td className="px-3 py-3">
+                      {fact.displayStatus}
+                      {fact.duration ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {fact.duration}
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-3 text-xs text-muted-foreground">
                       {formatDateTime(fact.dueAt, fact.assignmentTimezone)}
                     </td>
                     <td className="px-3 py-3">
-                      {fact.sessionId && fact.status === "completed" ? (
+                      {fact.sessionId && fact.reviewable ? (
                         <Link
                           href={`/app/performance/teams/${teamId}/assignments/${fact.assignmentId}/sessions/${fact.sessionId}`}
                           className="font-medium underline-offset-4 hover:underline"

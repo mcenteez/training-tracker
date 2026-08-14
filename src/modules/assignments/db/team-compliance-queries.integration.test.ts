@@ -13,6 +13,7 @@ import {
   listTeamAssignmentCompliance,
 } from "./team-compliance-queries";
 import { listTeamComplianceDrilldownFacts } from "./performance-drilldown-queries";
+import { listTeamTimelinessDrilldownFacts } from "./performance-drilldown-queries";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
@@ -270,6 +271,30 @@ describe("team compliance queries", () => {
     expect(
       otherTeamFacts.every((fact) => fact.athleteEmail === "other@example.com"),
     ).toBe(true);
+  });
+
+  it("returns timeliness facts that reconcile with open overdue counts", async () => {
+    const now = new Date("2026-08-12T16:00:00.000Z");
+    const [dashboard, facts] = await Promise.all([
+      getTeamComplianceDashboard(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        windowDays: null,
+        now,
+      }),
+      listTeamTimelinessDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "onTime",
+        tab: "openOverdue",
+        windowDays: null,
+        asOf: now,
+      }),
+    ]);
+
+    expect(facts).toHaveLength(dashboard.timeliness.current.counts.openOverdue);
+    expect(facts.every((fact) => fact.state === "openOverdue")).toBe(true);
+    expect(facts.every((fact) => fact.dueAt <= now)).toBe(true);
   });
 
   it("returns reconciled team totals, attention, coverage, and oldest overdue date", async () => {

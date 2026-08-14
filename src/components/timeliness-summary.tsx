@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Card, CardHeader } from "@/components/ui/card";
 import type { TeamTimelinessDashboard } from "@/modules/assignments/db/team-compliance-queries";
 
@@ -39,14 +41,18 @@ function comparisonAriaLabel(timeliness: TeamTimelinessDashboard): string {
 export function TimelinessSummary({
   timeliness,
   label,
+  drilldownBaseHref,
 }: {
   timeliness: TeamTimelinessDashboard;
   label: string;
+  drilldownBaseHref?: string;
 }) {
   const current = timeliness.current;
   const oldestAge = current.oldestOpenOverdueAt
     ? timeliness.asOf.getTime() - current.oldestOpenOverdueAt.getTime()
     : null;
+  const drilldownHref = (metric: string, tab: string) =>
+    `${drilldownBaseHref}${drilldownBaseHref?.includes("?") ? "&" : "?"}metric=${metric}&tab=${tab}`;
 
   return (
     <dl
@@ -66,6 +72,16 @@ export function TimelinessSummary({
             {current.counts.onTimeCompleted} of {current.timelinessEligible} due
             occurrences
           </dd>
+          {drilldownBaseHref ? (
+            <dd>
+              <Link
+                href={drilldownHref("onTime", "all")}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View timeliness facts
+              </Link>
+            </dd>
+          ) : null}
         </CardHeader>
       </Card>
       <Card>
@@ -84,6 +100,16 @@ export function TimelinessSummary({
               ? `${timeliness.previous.counts.onTimeCompleted}/${timeliness.previous.timelinessEligible} previously`
               : "All-time has no previous window"}
           </dd>
+          {drilldownBaseHref ? (
+            <dd>
+              <Link
+                href={drilldownHref("onTime", "all")}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View window facts
+              </Link>
+            </dd>
+          ) : null}
         </CardHeader>
       </Card>
       <Card>
@@ -99,6 +125,16 @@ export function TimelinessSummary({
           <dd className="text-sm text-muted-foreground">
             {current.counts.lateCompleted} completed late
           </dd>
+          {drilldownBaseHref ? (
+            <dd>
+              <Link
+                href={drilldownHref("lateCompleted", "all")}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View late completions
+              </Link>
+            </dd>
+          ) : null}
         </CardHeader>
       </Card>
       <Card>
@@ -112,6 +148,16 @@ export function TimelinessSummary({
               ? "No open overdue work"
               : `Oldest ${formatDuration(oldestAge)}`}
           </dd>
+          {drilldownBaseHref ? (
+            <dd>
+              <Link
+                href={drilldownHref("onTime", "openOverdue")}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View open overdue facts
+              </Link>
+            </dd>
+          ) : null}
         </CardHeader>
       </Card>
     </dl>
