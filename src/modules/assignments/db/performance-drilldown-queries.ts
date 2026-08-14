@@ -5,6 +5,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   type PerformanceDrilldownMetric,
   type PerformanceDrilldownTab,
+  drilldownUnavailableState,
+  type DrilldownUnavailableState,
 } from "@/modules/assignments/application/performance-drilldowns";
 import {
   classifyOccurrenceTimeliness,
@@ -17,7 +19,11 @@ import {
 } from "./team-compliance-queries";
 import { listTeamTrainingLoadDetails } from "./training-load-queries";
 import { users } from "@/modules/users/db/schema";
-import { assignmentRecipientTeamScopes } from "@/modules/assignments/db/schema";
+import {
+  assignmentRecipientTeamScopes,
+  assignmentSessionEffectiveItemPrescriptions,
+  assignmentSessionItemResults,
+} from "@/modules/assignments/db/schema";
 import { teams } from "@/modules/teams/db/schema";
 import { listOrganizationTrainingLoadDetails } from "./training-load-queries";
 
@@ -86,6 +92,22 @@ export interface TeamTrainingLoadDrilldownFact {
   completedMeasurableRowCount: number;
   completedRowCount: number;
   unavailableReason: string | null;
+  baselineSampleCount?: number;
+  unavailableStates?: DrilldownUnavailableState[];
+  resultLoads?: Array<{
+    reps: number | null;
+    load: string | null;
+    loadValue: string | null;
+    loadUnit: "kg" | "lb" | null;
+    normalizedLoadKg: string | null;
+  }>;
+  prescriptionLoads?: Array<{
+    reps: number | null;
+    load: string | null;
+    loadValue: string | null;
+    loadUnit: "kg" | "lb" | null;
+    normalizedLoadKg: string | null;
+  }>;
 }
 
 export interface OrganizationTrainingLoadDrilldownFact extends TeamTrainingLoadDrilldownFact {
@@ -455,12 +477,65 @@ export async function listTeamTrainingLoadDrilldownFacts(
   const athleteIds = [
     ...new Set(details.map((detail) => detail.athleteUserId)),
   ];
-  const people = athleteIds.length
-    ? await database
-        .select({ id: users.id, email: users.email, fullName: users.fullName })
-        .from(users)
-        .where(inArray(users.id, athleteIds))
-    : [];
+  const sessionIds = details.map((detail) => detail.id);
+  const [people, resultRows, prescriptionRows] = await Promise.all([
+    athleteIds.length
+      ? database
+          .select({
+            id: users.id,
+            email: users.email,
+            fullName: users.fullName,
+          })
+          .from(users)
+          .where(inArray(users.id, athleteIds))
+      : Promise.resolve([]),
+    sessionIds.length
+      ? database
+          .select({
+            sessionId: assignmentSessionItemResults.sessionId,
+            reps: assignmentSessionItemResults.reps,
+            load: assignmentSessionItemResults.load,
+            loadValue: assignmentSessionItemResults.loadValue,
+            loadUnit: assignmentSessionItemResults.loadUnit,
+            normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+          })
+          .from(assignmentSessionItemResults)
+          .where(
+            and(
+              eq(
+                assignmentSessionItemResults.organizationId,
+                input.organizationId,
+              ),
+              inArray(assignmentSessionItemResults.sessionId, sessionIds),
+            ),
+          )
+      : Promise.resolve([]),
+    sessionIds.length
+      ? database
+          .select({
+            sessionId: assignmentSessionEffectiveItemPrescriptions.sessionId,
+            reps: assignmentSessionEffectiveItemPrescriptions.reps,
+            load: assignmentSessionEffectiveItemPrescriptions.load,
+            loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
+            loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
+            normalizedLoadKg:
+              assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+          })
+          .from(assignmentSessionEffectiveItemPrescriptions)
+          .where(
+            and(
+              eq(
+                assignmentSessionEffectiveItemPrescriptions.organizationId,
+                input.organizationId,
+              ),
+              inArray(
+                assignmentSessionEffectiveItemPrescriptions.sessionId,
+                sessionIds,
+              ),
+            ),
+          )
+      : Promise.resolve([]),
+  ]);
   const personById = new Map(people.map((person) => [person.id, person]));
   const facts: TeamTrainingLoadDrilldownFact[] = details.map((detail) => {
     const person = personById.get(detail.athleteUserId);
@@ -498,6 +573,31 @@ export async function listTeamTrainingLoadDrilldownFacts(
         detail.externalWork.completedMeasurableRowCount,
       completedRowCount: detail.externalWork.completedRowCount,
       unavailableReason: detail.externalWork.unavailableReason,
+      baselineSampleCount: detail.baseline.sampleCount,
+      unavailableStates: drilldownUnavailableState({
+        durationMinutes: detail.durationMinutes,
+        sessionRpe: detail.sessionRpe,
+        externalWorkState,
+        baselineSampleCount: detail.baseline.sampleCount,
+      }),
+      resultLoads: resultRows
+        .filter((row) => row.sessionId === detail.id)
+        .map((row) => ({
+          reps: row.reps,
+          load: row.load,
+          loadValue: row.loadValue,
+          loadUnit: row.loadUnit,
+          normalizedLoadKg: row.normalizedLoadKg,
+        })),
+      prescriptionLoads: prescriptionRows
+        .filter((row) => row.sessionId === detail.id)
+        .map((row) => ({
+          reps: row.reps,
+          load: row.load,
+          loadValue: row.loadValue,
+          loadUnit: row.loadUnit,
+          normalizedLoadKg: row.normalizedLoadKg,
+        })),
     };
   });
   return facts.filter((fact) => {
@@ -529,7 +629,8 @@ export async function listOrganizationTrainingLoadDrilldownFacts(
   const recipientIds = [
     ...new Set(details.map((detail) => detail.recipientId)),
   ];
-  const [people, scopes] = await Promise.all([
+  const sessionIds = details.map((detail) => detail.id);
+  const [people, scopes, resultRows, prescriptionRows] = await Promise.all([
     athleteIds.length
       ? database
           .select({
@@ -565,6 +666,52 @@ export async function listOrganizationTrainingLoadDrilldownFacts(
                 input.organizationId,
               ),
               inArray(assignmentRecipientTeamScopes.recipientId, recipientIds),
+            ),
+          )
+      : Promise.resolve([]),
+    sessionIds.length
+      ? database
+          .select({
+            sessionId: assignmentSessionItemResults.sessionId,
+            reps: assignmentSessionItemResults.reps,
+            load: assignmentSessionItemResults.load,
+            loadValue: assignmentSessionItemResults.loadValue,
+            loadUnit: assignmentSessionItemResults.loadUnit,
+            normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+          })
+          .from(assignmentSessionItemResults)
+          .where(
+            and(
+              eq(
+                assignmentSessionItemResults.organizationId,
+                input.organizationId,
+              ),
+              inArray(assignmentSessionItemResults.sessionId, sessionIds),
+            ),
+          )
+      : Promise.resolve([]),
+    sessionIds.length
+      ? database
+          .select({
+            sessionId: assignmentSessionEffectiveItemPrescriptions.sessionId,
+            reps: assignmentSessionEffectiveItemPrescriptions.reps,
+            load: assignmentSessionEffectiveItemPrescriptions.load,
+            loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
+            loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
+            normalizedLoadKg:
+              assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+          })
+          .from(assignmentSessionEffectiveItemPrescriptions)
+          .where(
+            and(
+              eq(
+                assignmentSessionEffectiveItemPrescriptions.organizationId,
+                input.organizationId,
+              ),
+              inArray(
+                assignmentSessionEffectiveItemPrescriptions.sessionId,
+                sessionIds,
+              ),
             ),
           )
       : Promise.resolve([]),
@@ -611,6 +758,31 @@ export async function listOrganizationTrainingLoadDrilldownFacts(
           detail.externalWork.completedMeasurableRowCount,
         completedRowCount: detail.externalWork.completedRowCount,
         unavailableReason: detail.externalWork.unavailableReason,
+        baselineSampleCount: detail.baseline.sampleCount,
+        unavailableStates: drilldownUnavailableState({
+          durationMinutes: detail.durationMinutes,
+          sessionRpe: detail.sessionRpe,
+          externalWorkState,
+          baselineSampleCount: detail.baseline.sampleCount,
+        }),
+        resultLoads: resultRows
+          .filter((row) => row.sessionId === detail.id)
+          .map((row) => ({
+            reps: row.reps,
+            load: row.load,
+            loadValue: row.loadValue,
+            loadUnit: row.loadUnit,
+            normalizedLoadKg: row.normalizedLoadKg,
+          })),
+        prescriptionLoads: prescriptionRows
+          .filter((row) => row.sessionId === detail.id)
+          .map((row) => ({
+            reps: row.reps,
+            load: row.load,
+            loadValue: row.loadValue,
+            loadUnit: row.loadUnit,
+            normalizedLoadKg: row.normalizedLoadKg,
+          })),
         teamId: scope?.teamId ?? null,
         teamName: scope?.teamName ?? null,
       };

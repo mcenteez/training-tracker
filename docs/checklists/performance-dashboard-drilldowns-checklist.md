@@ -92,16 +92,16 @@ Existing linked detail routes remain authoritative:
 
 - [x] Return a discriminated row payload with `metric` as its kind.
 - [x] Include athlete, assignment, session, occurrence, scheduled date, and publish-time team-scope references only when applicable.
-- [ ] Include raw values beside every derived display value: numerator/denominator, due instant, submission instant, duration, RPE, entered unit, normalized kilograms, and sample count.
-- [ ] Include a structured unavailable reason rather than a fabricated zero for missing load metrics.
+- [x] Include raw values beside every derived display value: numerator/denominator, due instant, submission instant, duration, RPE, entered unit, normalized kilograms, and sample count.
+- [x] Include a structured unavailable reason rather than a fabricated zero for missing load metrics.
 - [x] Keep drill-down query results module-owned and server-only.
 
 ### Reconciliation
 
 - [x] Add reusable reconciliation assertions that the dashboard numerator, denominator, count, or total equals the corresponding drill-down facts.
-- [ ] Preserve direct-athlete organization facts and exclude them from a team drill-down without persisted scope.
+- [x] Preserve direct-athlete organization facts and exclude them from a team drill-down without persisted scope.
 - [x] Deduplicate athlete counts only where the source dashboard metric is explicitly unique-athlete based.
-- [ ] Never reconstruct team or organization totals by averaging athlete rates or baseline percentages.
+- [x] Never reconstruct team or organization totals by averaging athlete rates or baseline percentages.
 
 ## Milestone 1: Team Compliance Drill-Downs
 
@@ -218,7 +218,7 @@ Provide organization-wide explainability while preserving Team and direct-athlet
 - [x] Mark direct-athlete assignment rows as organization-only rather than inventing a team association.
 - [x] Link team-scoped rows to the team drill-down with the same metric, window, and relevant tab when possible.
 - [x] Link submitted-session rows to existing team session review only when a permitted team scope exists.
-- [ ] Link organization operations counts to existing team/admin management surfaces rather than exposing performance facts through administrative mutations.
+- [x] Link organization operations counts to existing team/admin management surfaces rather than exposing performance facts through administrative mutations.
 - [x] Add metric links from organization KPI cards, team rows, and training-load cards.
 
 ### Tests
@@ -271,50 +271,50 @@ Close the remaining explainability and reconciliation gaps without turning drill
 
 ### Raw Fact Disclosure
 
-- [ ] Add a compact `Details` disclosure to session-level drill-down rows, or enrich the existing submitted-session review, for all raw values relevant to the metric.
-- [ ] For compliance facts, disclose occurrence status, numerator/denominator membership, scheduled date, due instant, first submission instant, and overdue or lateness duration where applicable.
-- [ ] For training-load facts, disclose duration, session RPE, derived internal load, entered numeric value/unit, normalized kilograms, prescribed/completed volume, measurable-row counts, and baseline sample count where applicable.
-- [ ] Keep raw entered load text visible for legacy/non-measurable rows without attempting to parse it.
-- [ ] Include explicit accessible labels that identify value, unit, data source, and metric scope.
-- [ ] Verify raw-detail disclosures remain usable on mobile without horizontal overflow or clipped values.
+- [x] Add a compact `Details` disclosure to session-level drill-down rows, or enrich the existing submitted-session review, for all raw values relevant to the metric.
+- [x] For compliance facts, disclose occurrence status, numerator/denominator membership, scheduled date, due instant, first submission instant, and overdue or lateness duration where applicable.
+- [x] For training-load facts, disclose duration, session RPE, derived internal load, entered numeric value/unit, normalized kilograms, prescribed/completed volume, measurable-row counts, and baseline sample count where applicable.
+- [x] Keep raw entered load text visible for legacy/non-measurable rows without attempting to parse it.
+- [x] Include explicit accessible labels that identify value, unit, data source, and metric scope.
+- [x] Verify raw-detail disclosures remain usable on mobile without horizontal overflow or clipped values.
 
 ### Structured Unavailable States
 
-- [ ] Add a discriminated unavailable-state payload to drill-down fact rows for missing duration, missing RPE, missing both, unmeasurable external work, and insufficient history.
-- [ ] Preserve the existing raw counts and values beside unavailable reasons.
-- [ ] Map unavailable payloads to neutral factual copy such as `Duration was not recorded` or `No numeric strength-load rows were recorded`.
-- [ ] Confirm unavailable states do not render a numeric zero, completion percentage, traffic-light color, readiness label, or risk interpretation.
+- [x] Add a discriminated unavailable-state payload to drill-down fact rows for missing duration, missing RPE, missing both, unmeasurable external work, and insufficient history.
+- [x] Preserve the existing raw counts and values beside unavailable reasons.
+- [x] Map unavailable payloads to neutral factual copy such as `Duration was not recorded` or `No numeric strength-load rows were recorded`.
+- [x] Confirm unavailable states do not render a numeric zero, completion percentage, traffic-light color, readiness label, or risk interpretation.
 
 ### Scope and Aggregate Safeguards
 
-- [ ] Add a direct-athlete assignment integration test proving Organization facts include it while Team facts omit it when no persisted scope exists.
-- [ ] Add a persisted-scope integration test proving a direct target with a valid captured team scope appears only in that authorized Team drill-down.
-- [ ] Add reconciliation tests that organization/team internal-load and strength-volume totals equal the sum of raw drill-down facts.
-- [ ] Add negative tests proving no summary or drill-down aggregation averages athlete completion rates, timeliness rates, or baseline percentages.
-- [ ] Preserve unique-athlete deduplication only for metrics explicitly defined as athlete counts.
-- [ ] Add regression coverage for organization-only rows remaining unlabeled as any team.
+- [x] Add a direct-athlete assignment integration test proving Organization facts include it while Team facts omit it when no persisted scope exists.
+- [x] Add a persisted-scope integration test proving a direct target with a valid captured team scope appears only in that authorized Team drill-down.
+- [x] Add reconciliation tests that organization/team internal-load and strength-volume totals equal the sum of raw drill-down facts.
+- [x] Add negative tests proving no summary or drill-down aggregation averages athlete completion rates, timeliness rates, or baseline percentages.
+- [x] Preserve unique-athlete deduplication only for metrics explicitly defined as athlete counts.
+- [x] Add regression coverage for organization-only rows remaining unlabeled as any team.
 
 ### Role-Aware Operations Links
 
-- [ ] Link `Teams` and `Roster entries` to `/app/teams` only when the actor has a permitted team operations route.
-- [ ] Link `Athletes` and `Pending invitations` to `/app/admin` only for organization roles permitted to access administration.
-- [ ] Render non-clickable count text with a concise access explanation when no permitted destination exists.
-- [ ] Verify Team Managers, Team Viewers, organization Viewers, and athletes never receive a link that leads to an unauthorized management surface.
+- [x] Link `Teams` and `Roster entries` to `/app/teams` only when the actor has a permitted team operations route.
+- [x] Link `Athletes` and `Pending invitations` to `/app/admin` only for organization roles permitted to access administration.
+- [x] Render non-clickable count text with a concise access explanation when no permitted destination exists.
+- [x] Verify Team Managers, Team Viewers, organization Viewers, and athletes never receive a link that leads to an unauthorized management surface.
 
 ### Verification
 
-- [ ] Add unit tests for unavailable payload selection and raw aggregation helpers.
-- [ ] Add integration tests for direct-athlete scope, persisted scope, raw-total reconciliation, and non-averaged aggregate guards.
-- [ ] Add component tests for raw-detail disclosure, unavailable copy, and role-aware operations links.
-- [ ] Add Playwright coverage for mobile fact details and role-aware operations links.
-- [ ] Run `npm run validate` and `npm run build`.
+- [x] Add unit tests for unavailable payload selection and raw aggregation helpers.
+- [x] Add integration tests for direct-athlete scope, persisted scope, raw-total reconciliation, and non-averaged aggregate guards.
+- [x] Add component tests for raw-detail disclosure, unavailable copy, and role-aware operations links.
+- [x] Add Playwright coverage for mobile fact details and role-aware operations links.
+- [x] Run `npm run validate` and `npm run build`.
 
 ### Acceptance Criteria
 
-- [ ] Every displayed derived drill-down value can be traced to visible raw facts through an existing detail route or explicit disclosure.
-- [ ] Missing data is stated as unavailable with a factual reason and never presented as zero work.
-- [ ] Direct-athlete assignments, persisted team scope, and tenant boundaries remain mathematically and authorization-safe.
-- [ ] Operations counts offer only destinations the current actor may access.
+- [x] Every displayed derived drill-down value can be traced to visible raw facts through an existing detail route or explicit disclosure.
+- [x] Missing data is stated as unavailable with a factual reason and never presented as zero work.
+- [x] Direct-athlete assignments, persisted team scope, and tenant boundaries remain mathematically and authorization-safe.
+- [x] Operations counts offer only destinations the current actor may access.
 
 ## Deferred
 

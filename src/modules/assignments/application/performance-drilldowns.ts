@@ -30,6 +30,65 @@ const tabsByMetric = {
 export type PerformanceDrilldownTab =
   (typeof tabsByMetric)[PerformanceDrilldownMetric][number];
 
+export type DrilldownUnavailableState =
+  | { state: "available" }
+  | {
+      state: "unavailable";
+      reason:
+        | "missingDuration"
+        | "missingRpe"
+        | "missingBoth"
+        | "unmeasurableExternalWork"
+        | "insufficientHistory";
+      message: string;
+    };
+
+export function drilldownUnavailableState(input: {
+  durationMinutes: number | null;
+  sessionRpe: number | null;
+  externalWorkState?: "comparable" | "partial" | "unavailable";
+  baselineSampleCount?: number;
+}): DrilldownUnavailableState[] {
+  const states: DrilldownUnavailableState[] = [];
+  if (input.durationMinutes === null && input.sessionRpe === null) {
+    states.push({
+      state: "unavailable",
+      reason: "missingBoth",
+      message: "Duration and session RPE were not recorded.",
+    });
+  } else if (input.durationMinutes === null) {
+    states.push({
+      state: "unavailable",
+      reason: "missingDuration",
+      message: "Duration was not recorded.",
+    });
+  } else if (input.sessionRpe === null) {
+    states.push({
+      state: "unavailable",
+      reason: "missingRpe",
+      message: "Session RPE was not recorded.",
+    });
+  }
+  if (input.externalWorkState === "unavailable") {
+    states.push({
+      state: "unavailable",
+      reason: "unmeasurableExternalWork",
+      message: "No numeric strength-load rows were recorded.",
+    });
+  }
+  if (
+    input.baselineSampleCount !== undefined &&
+    input.baselineSampleCount < 3
+  ) {
+    states.push({
+      state: "unavailable",
+      reason: "insufficientHistory",
+      message: `${input.baselineSampleCount} of 3 required preceding sessions are available for an individual baseline.`,
+    });
+  }
+  return states.length > 0 ? states : [{ state: "available" }];
+}
+
 const windowSchema = z.enum(["30", "90", "all"]).default("30");
 
 export const performanceDrilldownSearchSchema = z

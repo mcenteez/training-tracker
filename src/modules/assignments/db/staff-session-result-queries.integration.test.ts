@@ -11,6 +11,10 @@ import { appendSessionComment } from "@/modules/assignments/application/session-
 import { createSessionCommentUnitOfWork } from "@/modules/assignments/db/session-comment-unit-of-work";
 import { findStaffSessionResultDetail } from "./staff-session-result-queries";
 import {
+  listOrganizationTrainingLoadDrilldownFacts,
+  listTeamTrainingLoadDrilldownFacts,
+} from "./performance-drilldown-queries";
+import {
   findAthleteSessionTrainingLoad,
   summarizeAthleteAssignmentTrainingLoad,
   summarizeOrganizationTrainingLoad,
@@ -412,6 +416,48 @@ describe("staff session result queries", () => {
         sampleCount: 0,
       },
     });
+
+    const [teamFacts, organizationFacts] = await Promise.all([
+      listTeamTrainingLoadDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "internalLoad",
+        tab: "all",
+        windowDays: 30,
+        asOf,
+      }),
+      listOrganizationTrainingLoadDrilldownFacts(database, {
+        organizationId: ids.organization,
+        metric: "internalLoad",
+        tab: "all",
+        windowDays: 30,
+        asOf,
+      }),
+    ]);
+    expect(
+      teamFacts.reduce((total, fact) => total + (fact.internalLoad ?? 0), 0),
+    ).toBe(team.totalInternalLoad);
+    expect(
+      teamFacts.reduce(
+        (total, fact) => total + (fact.completedVolumeKg ?? 0),
+        0,
+      ),
+    ).toBe(team.totalCompletedVolumeKg);
+    expect(
+      organizationFacts.reduce(
+        (total, fact) => total + (fact.internalLoad ?? 0),
+        0,
+      ),
+    ).toBe(organization.totalInternalLoad);
+    expect(
+      organizationFacts.reduce(
+        (total, fact) => total + (fact.completedVolumeKg ?? 0),
+        0,
+      ),
+    ).toBe(organization.totalCompletedVolumeKg);
+    expect(
+      organizationFacts.find((fact) => fact.sessionId === directSession),
+    ).toMatchObject({ teamId: null, teamName: null });
 
     await client.exec(`
       DELETE FROM team_memberships

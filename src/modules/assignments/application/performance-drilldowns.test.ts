@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  drilldownUnavailableState,
   performanceDrilldownSearchSchema,
   tabsForPerformanceDrilldown,
 } from "./performance-drilldowns";
@@ -43,5 +44,28 @@ describe("performance drill-down contract", () => {
       "started",
       "dueToday",
     ]);
+  });
+
+  it("returns structured factual unavailable states", () => {
+    expect(
+      drilldownUnavailableState({
+        durationMinutes: null,
+        sessionRpe: null,
+        externalWorkState: "unavailable",
+        baselineSampleCount: 1,
+      }),
+    ).toEqual([
+      expect.objectContaining({ reason: "missingBoth" }),
+      expect.objectContaining({ reason: "unmeasurableExternalWork" }),
+      expect.objectContaining({ reason: "insufficientHistory" }),
+    ]);
+    expect(
+      drilldownUnavailableState({
+        durationMinutes: 30,
+        sessionRpe: 7,
+        externalWorkState: "comparable",
+        baselineSampleCount: 3,
+      }),
+    ).toEqual([{ state: "available" }]);
   });
 });

@@ -96,6 +96,64 @@ function formatDuration(milliseconds: number | null): string | null {
   return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
 }
 
+function OccurrenceFactDetails({
+  fact,
+}: {
+  fact: TeamComplianceDrilldownFact | TeamTimelinessDrilldownFact;
+}) {
+  const isTimeliness = fact.metric === "timeliness";
+  const membership =
+    fact.metric === "compliance" && fact.status !== "upcoming"
+      ? "Included in this metric's eligible-due denominator."
+      : "Included in this metric's timeliness-eligible cohort.";
+  const duration = isTimeliness
+    ? formatDuration(fact.latenessMilliseconds ?? fact.overdueMilliseconds)
+    : null;
+  return (
+    <details className="rounded-md border border-border/70 p-3 text-xs">
+      <summary className="cursor-pointer font-medium">
+        Raw occurrence facts
+      </summary>
+      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Metric membership</dt>
+          <dd>{membership}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Occurrence status</dt>
+          <dd>
+            {isTimeliness
+              ? timelinessLabel(fact.state)
+              : statusLabel(fact.status)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Scheduled date</dt>
+          <dd>{fact.scheduledDate}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Due instant</dt>
+          <dd>{formatDateTime(fact.dueAt, fact.assignmentTimezone)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">First submission</dt>
+          <dd>
+            {fact.submittedAt
+              ? formatDateTime(fact.submittedAt, fact.assignmentTimezone)
+              : "Not submitted"}
+          </dd>
+        </div>
+        {isTimeliness && duration ? (
+          <div>
+            <dt className="text-muted-foreground">Timing difference</dt>
+            <dd>{duration}</dd>
+          </div>
+        ) : null}
+      </dl>
+    </details>
+  );
+}
+
 export default async function TeamDrilldownPage({
   params,
   searchParams,
@@ -243,15 +301,15 @@ export default async function TeamDrilldownPage({
               {rows.map((fact) => (
                 <article
                   key={`${fact.assignmentId}:${fact.athleteUserId}:${fact.scheduledDate}:${fact.workoutName}`}
-                  className="space-y-2 rounded-md border p-3 text-sm"
+                  className="min-w-0 space-y-2 rounded-md border p-3 text-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{fact.athleteName}</p>
                     <p className="text-xs text-muted-foreground">
                       {fact.athleteEmail}
                     </p>
                   </div>
-                  <p>
+                  <p className="break-words">
                     {fact.assignmentName} · {fact.workoutName}
                   </p>
                   <p className="text-muted-foreground">
@@ -263,6 +321,7 @@ export default async function TeamDrilldownPage({
                   <p className="text-xs text-muted-foreground">
                     Due {formatDateTime(fact.dueAt, fact.assignmentTimezone)}
                   </p>
+                  <OccurrenceFactDetails fact={fact} />
                   {fact.sessionId && fact.reviewable ? (
                     <Link
                       href={`/app/performance/teams/${teamId}/assignments/${fact.assignmentId}/sessions/${fact.sessionId}`}
@@ -352,6 +411,9 @@ export default async function TeamDrilldownPage({
                           Assignment
                         </Link>
                       )}
+                      <div className="mt-2">
+                        <OccurrenceFactDetails fact={fact} />
+                      </div>
                     </td>
                   </tr>
                 ))}

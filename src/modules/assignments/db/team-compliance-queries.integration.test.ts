@@ -303,13 +303,23 @@ describe("team compliance queries", () => {
 
   it("keeps direct-athlete facts organization-only and excludes foreign organization facts", async () => {
     const now = new Date("2026-08-12T16:00:00.000Z");
-    const facts = await listOrganizationComplianceDrilldownFacts(database, {
-      organizationId: ids.organization,
-      metric: "completion",
-      tab: "all",
-      windowDays: null,
-      asOf: now,
-    });
+    const [facts, unscopedTeamFacts] = await Promise.all([
+      listOrganizationComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+    ]);
 
     const directFact = facts.find(
       (fact) => fact.assignmentId === ids.directAssignment,
@@ -323,6 +333,46 @@ describe("team compliance queries", () => {
     expect(teamFact).toMatchObject({ teamId: ids.team, teamName: "Varsity" });
     expect(
       facts.some((fact) => fact.assignmentId === ids.foreignAssignment),
+    ).toBe(false);
+    expect(
+      unscopedTeamFacts.some(
+        (fact) => fact.assignmentId === ids.directAssignment,
+      ),
+    ).toBe(false);
+
+    await client.exec(`
+      INSERT INTO assignment_recipient_team_scopes (
+        organization_id, assignment_id, recipient_id, team_id
+      ) VALUES (
+        '${ids.organization}', '${ids.directAssignment}',
+        '${ids.directRecipient}', '${ids.team}'
+      );
+    `);
+    const [scopedTeamFacts, otherTeamFacts] = await Promise.all([
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.otherTeam,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+    ]);
+    expect(
+      scopedTeamFacts.some(
+        (fact) => fact.assignmentId === ids.directAssignment,
+      ),
+    ).toBe(true);
+    expect(
+      otherTeamFacts.some((fact) => fact.assignmentId === ids.directAssignment),
     ).toBe(false);
   });
 

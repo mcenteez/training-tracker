@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { withDatabase } from "@/db/client";
 import { loadActiveAppContext } from "@/lib/app-context";
+import { hasPermission } from "@/modules/access-control/permissions";
 import { getOrganizationComplianceDashboard } from "@/modules/assignments/db/team-compliance-queries";
 import { summarizeOrganizationTrainingLoad } from "@/modules/assignments/db/training-load-queries";
 import { listOrganizationInvitationsByOrganizationId } from "@/modules/organizations/db/queries";
@@ -132,6 +133,14 @@ export default async function OrganizationPerformancePage({
       return counts;
     },
     { improved: 0, declined: 0, unavailable: 0 },
+  );
+  const organizationAccess = {
+    organizationRole: context.membership.organizationRole,
+  } as const;
+  const canManageTeams = hasPermission(organizationAccess, "team.update");
+  const canManageOrganizationMembers = hasPermission(
+    organizationAccess,
+    "organization.members.manage",
   );
 
   return (
@@ -406,28 +415,45 @@ export default async function OrganizationPerformancePage({
         </div>
         <dl className="grid gap-px overflow-hidden rounded-md border bg-border sm:grid-cols-4">
           {[
-            { label: "Teams", value: teams.length, href: "/app/teams" },
-            { label: "Athletes", value: athleteCount, href: "/app/admin" },
+            {
+              label: "Teams",
+              value: teams.length,
+              href: canManageTeams ? "/app/teams" : null,
+            },
+            {
+              label: "Athletes",
+              value: athleteCount,
+              href: canManageOrganizationMembers ? "/app/admin" : null,
+            },
             {
               label: "Roster entries",
               value: teamMembers.length,
-              href: "/app/teams",
+              href: canManageTeams ? "/app/teams" : null,
             },
             {
               label: "Pending invitations",
               value: pendingInvitationCount,
-              href: "/app/admin",
+              href: canManageOrganizationMembers ? "/app/admin" : null,
             },
           ].map(({ label, value, href }) => (
             <div key={label} className="bg-card px-4 py-3">
               <dt className="text-xs text-muted-foreground">{label}</dt>
               <dd className="mt-1">
-                <Link
-                  href={href}
-                  className="text-lg font-semibold underline-offset-4 hover:underline"
-                >
-                  {value}
-                </Link>
+                {href ? (
+                  <Link
+                    href={href}
+                    className="text-lg font-semibold underline-offset-4 hover:underline"
+                  >
+                    {value}
+                  </Link>
+                ) : (
+                  <>
+                    <span className="text-lg font-semibold">{value}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Management access required for details
+                    </span>
+                  </>
+                )}
               </dd>
             </div>
           ))}

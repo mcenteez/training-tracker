@@ -128,6 +128,19 @@ test.describe("Training Tracker assignment and performance access", () => {
   }) => {
     await usePersona(context, "viewer");
     await page.goto("/app/performance/organization");
+    await expect(
+      page.getByText("Management access required for details").first(),
+    ).toBeVisible();
+    const operations = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "Organization operations" }),
+    });
+    await expect(
+      operations
+        .locator("dt")
+        .filter({ hasText: "Teams" })
+        .locator("..")
+        .locator("a"),
+    ).toHaveCount(0);
     await page.getByRole("link", { name: "View completion facts" }).click();
     await expect(page).toHaveURL(
       /\/organization\/drilldown\?metric=completion/,
@@ -189,6 +202,8 @@ test.describe("Training Tracker assignment and performance access", () => {
     await usePersona(context, "manager");
     await page.goto(drilldownPath);
     await page.setViewportSize({ width: 375, height: 812 });
+    await page.getByText("Raw occurrence facts").first().click();
+    await expect(page.getByText("Metric membership").first()).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

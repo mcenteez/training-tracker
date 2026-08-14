@@ -263,6 +263,52 @@ describe("organization performance page", () => {
       "href",
       "/app/performance/teams/team-2?window=90",
     );
+    expect(
+      screen.getByText("Teams").closest("div")?.querySelector("a"),
+    ).toBeNull();
+    expect(
+      screen.getAllByText("Management access required for details"),
+    ).toHaveLength(4);
+  });
+
+  it("links operations counts only for organization management roles", async () => {
+    loadActiveAppContextMock.mockResolvedValue({
+      membership: {
+        organizationId: "organization-1",
+        organizationName: "North High",
+        organizationRole: "manager",
+      },
+    });
+    withDatabaseMock.mockResolvedValue([
+      [{ id: "team-1", name: "Varsity" }],
+      [{ organizationRole: "athlete" }],
+      [{ teamId: "team-1" }],
+      [{ status: "pending" }],
+      { summary: summary(), timeliness: timeliness(), teams: [] },
+      loadSummary(),
+    ]);
+
+    render(
+      await OrganizationPerformancePage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(
+      screen.getByText("Teams").closest("div")?.querySelector("a"),
+    ).toHaveAttribute("href", "/app/teams");
+    expect(
+      screen.getByText("Athletes").closest("div")?.querySelector("a"),
+    ).toHaveAttribute("href", "/app/admin");
+    expect(
+      screen.getByText("Roster entries").closest("div")?.querySelector("a"),
+    ).toHaveAttribute("href", "/app/teams");
+    expect(
+      screen
+        .getByText("Pending invitations")
+        .closest("div")
+        ?.querySelector("a"),
+    ).toHaveAttribute("href", "/app/admin");
   });
 
   it("shows setup guidance when the organization has no teams", async () => {

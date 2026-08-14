@@ -17,6 +17,86 @@ import {
 } from "@/modules/assignments/application/performance-drilldowns";
 import type { TeamTrainingLoadDrilldownFact } from "@/modules/assignments/db/performance-drilldown-queries";
 
+function formatLoadRow(load: {
+  reps: number | null;
+  load: string | null;
+  loadValue: string | null;
+  loadUnit: "kg" | "lb" | null;
+  normalizedLoadKg: string | null;
+}): string {
+  const entered =
+    load.loadValue !== null && load.loadUnit !== null
+      ? `${load.loadValue} ${load.loadUnit}`
+      : (load.load ?? "no entered load");
+  const normalized =
+    load.normalizedLoadKg === null
+      ? "not normalized"
+      : `${load.normalizedLoadKg} kg normalized`;
+  return `${load.reps ?? "missing"} reps · ${entered} · ${normalized}`;
+}
+
+function SessionFactDetails({ fact }: { fact: TeamTrainingLoadDrilldownFact }) {
+  const unavailable =
+    fact.unavailableStates?.filter((state) => state.state === "unavailable") ??
+    [];
+  return (
+    <details className="rounded-md border border-border/70 p-3 text-xs">
+      <summary className="cursor-pointer font-medium">
+        Raw session facts
+      </summary>
+      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Session response</dt>
+          <dd>
+            Duration {fact.durationMinutes ?? "not recorded"} min · RPE{" "}
+            {fact.sessionRpe ?? "not recorded"} · internal load{" "}
+            {fact.internalLoad ?? "unavailable"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">External-work evidence</dt>
+          <dd>
+            {fact.completedMeasurableRowCount} of {fact.completedRowCount}{" "}
+            result rows measurable · prescribed{" "}
+            {fact.prescribedVolumeKg ?? "unavailable"} kg · completed{" "}
+            {fact.completedVolumeKg ?? "unavailable"} kg
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Individual baseline sample</dt>
+          <dd>
+            {fact.baselineSampleCount ?? "unavailable"} preceding sessions
+          </dd>
+        </div>
+        {unavailable.length > 0 ? (
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">Unavailable data</dt>
+            <dd>{unavailable.map((state) => state.message).join(" ")}</dd>
+          </div>
+        ) : null}
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">Recorded result loads</dt>
+          <dd>
+            {fact.resultLoads?.length
+              ? fact.resultLoads.map(formatLoadRow).join("; ")
+              : "No result rows recorded."}
+          </dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">
+            Effective prescription loads
+          </dt>
+          <dd>
+            {fact.prescriptionLoads?.length
+              ? fact.prescriptionLoads.map(formatLoadRow).join("; ")
+              : "No prescription rows recorded."}
+          </dd>
+        </div>
+      </dl>
+    </details>
+  );
+}
+
 export function TeamTrainingLoadDrilldown({
   teamId,
   teamName,
@@ -115,6 +195,7 @@ export function TeamTrainingLoadDrilldown({
                     {fact.completedMeasurableRowCount} of{" "}
                     {fact.completedRowCount} result rows measurable
                   </p>
+                  <SessionFactDetails fact={fact} />
                   <Link
                     href={`/app/performance/teams/${teamId}/assignments/${fact.assignmentId}/sessions/${fact.sessionId}`}
                     className="font-medium underline-offset-4 hover:underline"
@@ -178,6 +259,9 @@ export function TeamTrainingLoadDrilldown({
                       >
                         Review
                       </Link>
+                      <div className="mt-2">
+                        <SessionFactDetails fact={fact} />
+                      </div>
                     </td>
                   </tr>
                 ))}
