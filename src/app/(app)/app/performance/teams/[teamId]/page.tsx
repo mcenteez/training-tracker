@@ -133,6 +133,14 @@ export default async function TeamPerformancePage({
               {complianceSummary.counts.completed} of{" "}
               {complianceSummary.eligibleDue} due scheduled workouts completed
             </dd>
+            <dd>
+              <Link
+                href={`/app/performance/teams/${teamId}/drilldown?metric=completion&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View completion facts
+              </Link>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
@@ -145,6 +153,14 @@ export default async function TeamPerformancePage({
             </dd>
             <dd className="text-sm text-muted-foreground">
               Unique athletes with overdue work
+            </dd>
+            <dd>
+              <Link
+                href={`/app/performance/teams/${teamId}/drilldown?metric=attention&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View athletes needing attention
+              </Link>
             </dd>
           </CardHeader>
         </Card>
@@ -159,6 +175,14 @@ export default async function TeamPerformancePage({
                 ? `Oldest due ${complianceSummary.oldestOverdueDate}`
                 : "No overdue scheduled workouts"}
             </dd>
+            <dd>
+              <Link
+                href={`/app/performance/teams/${teamId}/drilldown?metric=overdue&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View overdue facts
+              </Link>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
@@ -170,6 +194,14 @@ export default async function TeamPerformancePage({
             <dd className="text-sm text-muted-foreground">
               {complianceSummary.counts.started} started ·{" "}
               {complianceSummary.counts.dueToday} due today
+            </dd>
+            <dd>
+              <Link
+                href={`/app/performance/teams/${teamId}/drilldown?metric=dueNow&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View due now facts
+              </Link>
             </dd>
           </CardHeader>
         </Card>

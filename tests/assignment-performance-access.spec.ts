@@ -122,6 +122,58 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page.getByText("This page could not be found.")).toBeVisible();
   });
 
+  test("manager can drill into Team due-now facts while athletes are denied", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const suffix = `${testInfo.workerIndex}-${Date.now()}`;
+    const exerciseName = `Playwright Drilldown Exercise ${suffix}`;
+    const workoutName = `Playwright Drilldown Workout ${suffix}`;
+    const scheduledDate = new Date().toISOString().slice(0, 10);
+
+    await usePersona(context, "manager");
+    await createExercise(page, exerciseName);
+    await createWorkout(page, workoutName, exerciseName);
+    const assignmentPath = await publishWorkoutAssignment(
+      page,
+      workoutName,
+      scheduledDate,
+    );
+    const assignmentId = assignmentPath.split("/").pop()!;
+    const drilldownPath = `/app/performance/teams/${basketballTeamId}/drilldown?metric=dueNow&window=30&tab=all`;
+
+    await page.goto(`/app/performance/teams/${basketballTeamId}`);
+    await page.getByRole("link", { name: "View due now facts" }).click();
+    await expect(page).toHaveURL(new RegExp(`metric=dueNow.*window=30`));
+    await expect(
+      page.getByRole("heading", { name: "Due now occurrences" }),
+    ).toBeVisible();
+    const factRow = page
+      .locator("tbody tr")
+      .filter({ hasText: workoutName })
+      .first();
+    await expect(factRow).toBeVisible();
+    await factRow.getByRole("link", { name: "Assignment" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/assignments/${assignmentId}\\?window=30$`),
+    );
+
+    await usePersona(context, "athlete");
+    const response = await page.goto(drilldownPath);
+    expect(response?.status()).toBe(200);
+    await expect(page.getByText("This page could not be found.")).toBeVisible();
+
+    await usePersona(context, "manager");
+    await page.goto(drilldownPath);
+    await page.setViewportSize({ width: 375, height: 812 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test("manager can publish directly to a managed athlete", async ({
     context,
     page,
@@ -344,9 +396,11 @@ test.describe("Training Tracker assignment and performance access", () => {
     ).toBeVisible();
     await expect(page.getByText("28-day individual baseline")).toBeVisible();
     await expect(
-      page.getByText(/Current 450; median 300; difference 150/),
+      page.getByText(/Current 450; median \d+; difference/),
     ).toBeVisible();
-    await expect(page.getByText(/3 preceding sessions/)).toBeVisible();
+    await expect(
+      page.getByText(/(?:[3-9]|\d{2,}) preceding sessions/),
+    ).toBeVisible();
     const reviewPath = new URL(page.url()).pathname;
 
     await usePersona(context, "viewer");

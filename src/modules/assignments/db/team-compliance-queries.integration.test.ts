@@ -12,6 +12,7 @@ import {
   getTeamComplianceDashboard,
   listTeamAssignmentCompliance,
 } from "./team-compliance-queries";
+import { listTeamComplianceDrilldownFacts } from "./performance-drilldown-queries";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
@@ -205,6 +206,70 @@ describe("team compliance queries", () => {
     expect(current?.recipients[0]?.email).toBe("athlete@example.com");
     expect(current?.counts.inProgress).toBe(1);
     expect(current?.summary.counts.started).toBe(1);
+  });
+
+  it("returns reconciled Team compliance facts and excludes other scopes", async () => {
+    const now = new Date("2026-08-12T16:00:00.000Z");
+    const [
+      dashboard,
+      completionFacts,
+      overdueFacts,
+      dueNowFacts,
+      otherTeamFacts,
+    ] = await Promise.all([
+      getTeamComplianceDashboard(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        windowDays: null,
+        now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "overdue",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.team,
+        metric: "dueNow",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+      listTeamComplianceDrilldownFacts(database, {
+        organizationId: ids.organization,
+        teamId: ids.otherTeam,
+        metric: "completion",
+        tab: "all",
+        windowDays: null,
+        asOf: now,
+      }),
+    ]);
+
+    expect(completionFacts).toHaveLength(dashboard.summary.eligibleDue);
+    expect(overdueFacts).toHaveLength(dashboard.summary.counts.overdue);
+    expect(dueNowFacts).toHaveLength(
+      dashboard.summary.counts.started + dashboard.summary.counts.dueToday,
+    );
+    expect(
+      completionFacts.every(
+        (fact) => fact.athleteEmail === "athlete@example.com",
+      ),
+    ).toBe(true);
+    expect(
+      otherTeamFacts.every((fact) => fact.athleteEmail === "other@example.com"),
+    ).toBe(true);
   });
 
   it("returns reconciled team totals, attention, coverage, and oldest overdue date", async () => {
