@@ -181,28 +181,28 @@ Explain load capture and descriptive totals through submitted-session facts with
 
 ### Implementation Checklist
 
-- [ ] Extend the Team training-load query with session-level drill-down facts from the existing authorized load read model.
-- [ ] Add a capture coverage drill-down with `available`, `missingDuration`, `missingRpe`, and `missingBoth` tabs.
-- [ ] Add an internal-load drill-down showing duration, RPE, derived internal load, scheduled date, athlete, and assignment.
-- [ ] Add an external-work drill-down with `comparable`, `partial`, and `unavailable` tabs.
-- [ ] Show completed and prescribed volume only for comparable sessions.
-- [ ] Show raw entered load/unit and normalized kilograms on staff rows when measurable.
-- [ ] Show factual unavailable reasons and measurable-row counts for partial/unavailable sessions.
-- [ ] Link every submitted-session row to existing staff session review.
-- [ ] Do not show athlete-to-athlete rankings, thresholds, readiness labels, or injury-risk language.
+- [x] Extend the Team training-load query with session-level drill-down facts from the existing authorized load read model.
+- [x] Add a capture coverage drill-down with `available`, `missingDuration`, `missingRpe`, and `missingBoth` tabs.
+- [x] Add an internal-load drill-down showing duration, RPE, derived internal load, scheduled date, athlete, and assignment.
+- [x] Add an external-work drill-down with `comparable`, `partial`, and `unavailable` tabs.
+- [x] Show completed and prescribed volume only for comparable sessions.
+- [x] Show raw entered load/unit and normalized kilograms on staff rows when measurable.
+- [x] Show factual unavailable reasons and measurable-row counts for partial/unavailable sessions.
+- [x] Link every submitted-session row to existing staff session review.
+- [x] Do not show athlete-to-athlete rankings, thresholds, readiness labels, or injury-risk language.
 
 ### Tests
 
-- [ ] Capture coverage facts reconcile with available and not-captured dashboard counts.
-- [ ] Internal-load total equals the sum of drill-down raw internal loads.
-- [ ] Measurable completed strength volume equals the sum of comparable drill-down volumes.
-- [ ] Partial and unavailable rows remain separate and never contribute fabricated volume.
-- [ ] Team Viewer can read allowed drill-down facts but cannot mutate sessions or prescription overrides.
+- [x] Capture coverage facts reconcile with available and not-captured dashboard counts.
+- [x] Internal-load total equals the sum of drill-down raw internal loads.
+- [x] Measurable completed strength volume equals the sum of comparable drill-down volumes.
+- [x] Partial and unavailable rows remain separate and never contribute fabricated volume.
+- [x] Team Viewer can read allowed drill-down facts but cannot mutate sessions or prescription overrides.
 
 ### Acceptance Criteria
 
-- [ ] A coach can explain each Team training-load total through submitted sessions and their raw values.
-- [ ] Missing capture and unmeasurable external work are visible as data-quality states, not zero work.
+- [x] A coach can explain each Team training-load total through submitted sessions and their raw values.
+- [x] Missing capture and unmeasurable external work are visible as data-quality states, not zero work.
 
 ## Milestone 4: Organization Drill-Downs
 

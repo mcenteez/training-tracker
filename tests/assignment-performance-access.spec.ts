@@ -191,6 +191,20 @@ test.describe("Training Tracker assignment and performance access", () => {
     ).toBeVisible();
   });
 
+  test("manager can drill into Team training-load capture facts", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "manager");
+    await page.goto(`/app/performance/teams/${basketballTeamId}`);
+    await page.getByRole("link", { name: "View capture facts" }).click();
+
+    await expect(page).toHaveURL(/metric=capture.*tab=all/);
+    await expect(
+      page.getByRole("heading", { name: "Load capture facts" }),
+    ).toBeVisible();
+  });
+
   test("manager can publish directly to a managed athlete", async ({
     context,
     page,

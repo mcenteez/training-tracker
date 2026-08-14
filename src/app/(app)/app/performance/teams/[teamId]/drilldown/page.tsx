@@ -19,10 +19,12 @@ import {
 } from "@/modules/assignments/application/performance-drilldowns";
 import {
   listTeamComplianceDrilldownFacts,
+  listTeamTrainingLoadDrilldownFacts,
   listTeamTimelinessDrilldownFacts,
   type TeamComplianceDrilldownFact,
   type TeamTimelinessDrilldownFact,
 } from "@/modules/assignments/db/performance-drilldown-queries";
+import { TeamTrainingLoadDrilldown } from "./team-training-load-drilldown";
 
 interface TeamDrilldownPageProps {
   params: Promise<{ teamId: string }>;
@@ -44,6 +46,16 @@ function isTimelinessMetric(
   metric: string,
 ): metric is "onTime" | "lateCompleted" {
   return metric === "onTime" || metric === "lateCompleted";
+}
+
+function isTrainingLoadMetric(
+  metric: string,
+): metric is "capture" | "internalLoad" | "externalWork" {
+  return (
+    metric === "capture" ||
+    metric === "internalLoad" ||
+    metric === "externalWork"
+  );
 }
 
 function formatDateTime(value: Date | null, timezone: string): string {
@@ -95,7 +107,8 @@ export default async function TeamDrilldownPage({
   const search = parsed.data;
   if (
     !isComplianceMetric(search.metric) &&
-    !isTimelinessMetric(search.metric)
+    !isTimelinessMetric(search.metric) &&
+    !isTrainingLoadMetric(search.metric)
   ) {
     notFound();
   }
@@ -103,6 +116,29 @@ export default async function TeamDrilldownPage({
 
   const context = await loadAuthorizedTeamContext(teamId, "results.read.all");
   const asOf = new Date();
+  if (isTrainingLoadMetric(metric)) {
+    const facts = await withDatabase((database) =>
+      listTeamTrainingLoadDrilldownFacts(database, {
+        organizationId: context.membership.organizationId,
+        teamId,
+        metric,
+        tab: search.tab,
+        windowDays: search.windowDays,
+        asOf,
+      }),
+    );
+    return (
+      <TeamTrainingLoadDrilldown
+        teamId={teamId}
+        teamName={context.team.name}
+        metric={metric}
+        tab={search.tab}
+        window={search.window}
+        facts={facts}
+        asOf={asOf}
+      />
+    );
+  }
   let facts: TeamComplianceDrilldownFact[] | TeamTimelinessDrilldownFact[];
   if (isComplianceMetric(metric)) {
     facts = await withDatabase((database) =>

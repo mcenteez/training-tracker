@@ -1,14 +1,17 @@
 import { Card, CardDescription, CardHeader } from "@/components/ui/card";
+import Link from "next/link";
 import type { TrainingLoadSummary as TrainingLoadSummaryData } from "@/modules/assignments/db/training-load-queries";
 
 interface TrainingLoadSummaryProps {
   summary: TrainingLoadSummaryData;
   label: string;
+  drilldownBaseHref?: string;
 }
 
 export function TrainingLoadSummary({
   summary,
   label,
+  drilldownBaseHref,
 }: TrainingLoadSummaryProps) {
   return (
     <section aria-labelledby={`${label}-heading`} className="space-y-3">
@@ -32,6 +35,14 @@ export function TrainingLoadSummary({
               Submitted sessions with both duration and RPE;{" "}
               {summary.notCapturedCount} not captured
             </CardDescription>
+            {drilldownBaseHref ? (
+              <Link
+                href={`${drilldownBaseHref}&metric=capture&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View capture facts
+              </Link>
+            ) : null}
           </CardHeader>
         </Card>
         <Card>
@@ -46,6 +57,14 @@ export function TrainingLoadSummary({
               {summary.totalDurationMinutes} recorded minutes across{" "}
               {summary.internalLoadAvailableCount} eligible sessions
             </CardDescription>
+            {drilldownBaseHref ? (
+              <Link
+                href={`${drilldownBaseHref}&metric=internalLoad&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View internal load facts
+              </Link>
+            ) : null}
           </CardHeader>
         </Card>
         <Card>
@@ -61,6 +80,14 @@ export function TrainingLoadSummary({
               {summary.externalWorkPartialCount} partial ·{" "}
               {summary.externalWorkUnavailableCount} unavailable sessions
             </CardDescription>
+            {drilldownBaseHref ? (
+              <Link
+                href={`${drilldownBaseHref}&metric=externalWork&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View external work facts
+              </Link>
+            ) : null}
           </CardHeader>
         </Card>
       </dl>

@@ -213,7 +213,11 @@ export default async function TeamPerformancePage({
         drilldownBaseHref={`/app/performance/teams/${teamId}/drilldown?window=${windowDays ?? "all"}`}
       />
 
-      <TrainingLoadSummary summary={loadSummary} label="team-training-load" />
+      <TrainingLoadSummary
+        summary={loadSummary}
+        label="team-training-load"
+        drilldownBaseHref={`/app/performance/teams/${teamId}/drilldown?window=${windowDays ?? "all"}`}
+      />
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">
         <CardHeader>

@@ -325,6 +325,21 @@ function summarize(
   };
 }
 
+export async function listTeamTrainingLoadDetails(
+  database: Database,
+  input: {
+    organizationId: string;
+    teamId: string;
+    asOf: Date;
+    windowDays: number | null;
+  },
+): Promise<SessionTrainingLoadDetail[]> {
+  const sessions = (await listTeamSubmittedSessions(database, input)).filter(
+    (session) => sessionWithinWindow(session, input.asOf, input.windowDays),
+  );
+  return buildSessionDetails(database, sessions);
+}
+
 export async function findAthleteSessionTrainingLoad(
   database: Database,
   input: {
@@ -411,10 +426,7 @@ export async function summarizeTeamTrainingLoad(
     windowDays: number | null;
   },
 ): Promise<TrainingLoadSummary> {
-  const sessions = (await listTeamSubmittedSessions(database, input)).filter(
-    (session) => sessionWithinWindow(session, input.asOf, input.windowDays),
-  );
-  return summarize(await buildSessionDetails(database, sessions));
+  return summarize(await listTeamTrainingLoadDetails(database, input));
 }
 
 export async function summarizeOrganizationTrainingLoad(

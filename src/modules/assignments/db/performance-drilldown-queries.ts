@@ -1,5 +1,7 @@
 import "server-only";
 
+import { inArray } from "drizzle-orm";
+
 import {
   type PerformanceDrilldownMetric,
   type PerformanceDrilldownTab,
@@ -10,6 +12,8 @@ import {
 } from "@/modules/assignments/application/timeliness-summary";
 import { resolveEquivalentMetricWindows } from "@/modules/assignments/application/timeliness-policy";
 import { getTeamComplianceDashboard } from "./team-compliance-queries";
+import { listTeamTrainingLoadDetails } from "./training-load-queries";
+import { users } from "@/modules/users/db/schema";
 
 export interface TeamComplianceDrilldownFact {
   metric: "compliance";
@@ -46,6 +50,26 @@ export interface TeamTimelinessDrilldownFact {
   submittedAt: Date | null;
   latenessMilliseconds: number | null;
   overdueMilliseconds: number | null;
+}
+
+export interface TeamTrainingLoadDrilldownFact {
+  metric: "trainingLoad";
+  athleteName: string;
+  athleteEmail: string;
+  athleteUserId: string;
+  assignmentId: string;
+  sessionId: string;
+  scheduledDate: string;
+  durationMinutes: number | null;
+  sessionRpe: number | null;
+  internalLoad: number | null;
+  captureState: "available" | "missingDuration" | "missingRpe" | "missingBoth";
+  externalWorkState: "comparable" | "partial" | "unavailable";
+  prescribedVolumeKg: number | null;
+  completedVolumeKg: number | null;
+  completedMeasurableRowCount: number;
+  completedRowCount: number;
+  unavailableReason: string | null;
 }
 
 function occurrenceStatusToFactStatus(
@@ -223,5 +247,77 @@ export async function listTeamTimelinessDrilldownFacts(
         (left.latenessMilliseconds ?? left.overdueMilliseconds ?? 0) ||
       left.scheduledDate.localeCompare(right.scheduledDate)
     );
+  });
+}
+
+export async function listTeamTrainingLoadDrilldownFacts(
+  database: Parameters<typeof getTeamComplianceDashboard>[0],
+  input: {
+    organizationId: string;
+    teamId: string;
+    metric: Extract<
+      PerformanceDrilldownMetric,
+      "capture" | "internalLoad" | "externalWork"
+    >;
+    tab: PerformanceDrilldownTab;
+    windowDays: number | null;
+    asOf: Date;
+  },
+): Promise<TeamTrainingLoadDrilldownFact[]> {
+  const details = await listTeamTrainingLoadDetails(database, input);
+  const athleteIds = [
+    ...new Set(details.map((detail) => detail.athleteUserId)),
+  ];
+  const people = athleteIds.length
+    ? await database
+        .select({ id: users.id, email: users.email, fullName: users.fullName })
+        .from(users)
+        .where(inArray(users.id, athleteIds))
+    : [];
+  const personById = new Map(people.map((person) => [person.id, person]));
+  const facts: TeamTrainingLoadDrilldownFact[] = details.map((detail) => {
+    const person = personById.get(detail.athleteUserId);
+    const captureState =
+      detail.durationMinutes === null && detail.sessionRpe === null
+        ? "missingBoth"
+        : detail.durationMinutes === null
+          ? "missingDuration"
+          : detail.sessionRpe === null
+            ? "missingRpe"
+            : "available";
+    const externalWorkState =
+      detail.externalWork.state === "externalWorkComparable"
+        ? "comparable"
+        : detail.externalWork.state === "externalWorkPartial"
+          ? "partial"
+          : "unavailable";
+    return {
+      metric: "trainingLoad",
+      athleteName:
+        person?.fullName?.trim() || person?.email || "Former athlete",
+      athleteEmail: person?.email || "",
+      athleteUserId: detail.athleteUserId,
+      assignmentId: detail.assignmentId,
+      sessionId: detail.id,
+      scheduledDate: detail.scheduledDate,
+      durationMinutes: detail.durationMinutes,
+      sessionRpe: detail.sessionRpe,
+      internalLoad: detail.internalLoad.internalLoad,
+      captureState,
+      externalWorkState,
+      prescribedVolumeKg: detail.externalWork.prescribedVolumeKg,
+      completedVolumeKg: detail.externalWork.completedVolumeKg,
+      completedMeasurableRowCount:
+        detail.externalWork.completedMeasurableRowCount,
+      completedRowCount: detail.externalWork.completedRowCount,
+      unavailableReason: detail.externalWork.unavailableReason,
+    };
+  });
+  return facts.filter((fact) => {
+    if (input.metric === "capture") {
+      return input.tab === "all" || fact.captureState === input.tab;
+    }
+    if (input.metric === "internalLoad") return true;
+    return input.tab === "all" || fact.externalWorkState === input.tab;
   });
 }
