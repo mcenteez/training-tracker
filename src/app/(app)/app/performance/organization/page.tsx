@@ -192,6 +192,14 @@ export default async function OrganizationPerformancePage({
               {compliance.summary.counts.completed} of{" "}
               {compliance.summary.eligibleDue} due scheduled workouts completed
             </dd>
+            <dd>
+              <Link
+                href={`/app/performance/organization/drilldown?metric=completion&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View completion facts
+              </Link>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
@@ -205,6 +213,14 @@ export default async function OrganizationPerformancePage({
             <dd className="text-sm text-muted-foreground">
               Teams with overdue work
             </dd>
+            <dd>
+              <Link
+                href={`/app/performance/organization/drilldown?metric=overdue&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View overdue facts
+              </Link>
+            </dd>
           </CardHeader>
         </Card>
         <Card className="border-border/70 bg-card/95 shadow-md shadow-black/10">
@@ -217,6 +233,14 @@ export default async function OrganizationPerformancePage({
             </dd>
             <dd className="text-sm text-muted-foreground">
               Unique athletes with overdue work
+            </dd>
+            <dd>
+              <Link
+                href={`/app/performance/organization/drilldown?metric=attention&window=${windowDays ?? "all"}&tab=all`}
+                className="text-sm font-medium underline-offset-4 hover:underline"
+              >
+                View athletes needing attention
+              </Link>
             </dd>
           </CardHeader>
         </Card>
@@ -242,11 +266,13 @@ export default async function OrganizationPerformancePage({
       <TimelinessSummary
         timeliness={compliance.timeliness}
         label="Organization timeliness summary"
+        drilldownBaseHref={`/app/performance/organization/drilldown?window=${windowDays ?? "all"}`}
       />
 
       <TrainingLoadSummary
         summary={loadSummary}
         label="organization-training-load"
+        drilldownBaseHref={`/app/performance/organization/drilldown?window=${windowDays ?? "all"}`}
       />
 
       <Card className="border-border/70 bg-card/95 shadow-xl shadow-black/15">

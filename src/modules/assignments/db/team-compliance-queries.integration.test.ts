@@ -14,6 +14,10 @@ import {
 } from "./team-compliance-queries";
 import { listTeamComplianceDrilldownFacts } from "./performance-drilldown-queries";
 import { listTeamTimelinessDrilldownFacts } from "./performance-drilldown-queries";
+import {
+  listOrganizationComplianceDrilldownFacts,
+  listOrganizationTrainingLoadDrilldownFacts,
+} from "./performance-drilldown-queries";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
@@ -295,6 +299,43 @@ describe("team compliance queries", () => {
     expect(facts).toHaveLength(dashboard.timeliness.current.counts.openOverdue);
     expect(facts.every((fact) => fact.state === "openOverdue")).toBe(true);
     expect(facts.every((fact) => fact.dueAt <= now)).toBe(true);
+  });
+
+  it("keeps direct-athlete facts organization-only and excludes foreign organization facts", async () => {
+    const now = new Date("2026-08-12T16:00:00.000Z");
+    const facts = await listOrganizationComplianceDrilldownFacts(database, {
+      organizationId: ids.organization,
+      metric: "completion",
+      tab: "all",
+      windowDays: null,
+      asOf: now,
+    });
+
+    const directFact = facts.find(
+      (fact) => fact.assignmentId === ids.directAssignment,
+    );
+    const teamFact = facts.find(
+      (fact) =>
+        fact.assignmentId === ids.assignment &&
+        fact.athleteUserId === ids.athlete,
+    );
+    expect(directFact).toMatchObject({ teamId: null, teamName: null });
+    expect(teamFact).toMatchObject({ teamId: ids.team, teamName: "Varsity" });
+    expect(
+      facts.some((fact) => fact.assignmentId === ids.foreignAssignment),
+    ).toBe(false);
+  });
+
+  it("returns no organization training-load facts without submitted sessions", async () => {
+    await expect(
+      listOrganizationTrainingLoadDrilldownFacts(database, {
+        organizationId: ids.organization,
+        metric: "capture",
+        tab: "all",
+        windowDays: 30,
+        asOf: new Date("2026-08-12T16:00:00.000Z"),
+      }),
+    ).resolves.toEqual([]);
   });
 
   it("returns reconciled team totals, attention, coverage, and oldest overdue date", async () => {

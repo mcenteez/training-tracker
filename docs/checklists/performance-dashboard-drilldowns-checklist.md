@@ -212,26 +212,26 @@ Provide organization-wide explainability while preserving Team and direct-athlet
 
 ### Implementation Checklist
 
-- [ ] Add the Organization drill-down route and independently authorize it for organization staff/viewer access.
-- [ ] Implement organization completion, attention, overdue, due-now, timeliness, capture, internal-load, and external-work drill-down metrics.
-- [ ] Group organization rows by team when a persisted team scope exists.
-- [ ] Mark direct-athlete assignment rows as organization-only rather than inventing a team association.
-- [ ] Link team-scoped rows to the team drill-down with the same metric, window, and relevant tab when possible.
-- [ ] Link submitted-session rows to existing team session review only when a permitted team scope exists.
+- [x] Add the Organization drill-down route and independently authorize it for organization staff/viewer access.
+- [x] Implement organization completion, attention, overdue, due-now, timeliness, capture, internal-load, and external-work drill-down metrics.
+- [x] Group organization rows by team when a persisted team scope exists.
+- [x] Mark direct-athlete assignment rows as organization-only rather than inventing a team association.
+- [x] Link team-scoped rows to the team drill-down with the same metric, window, and relevant tab when possible.
+- [x] Link submitted-session rows to existing team session review only when a permitted team scope exists.
 - [ ] Link organization operations counts to existing team/admin management surfaces rather than exposing performance facts through administrative mutations.
-- [ ] Add metric links from organization KPI cards, team rows, and training-load cards.
+- [x] Add metric links from organization KPI cards, team rows, and training-load cards.
 
 ### Tests
 
-- [ ] Organization facts reconcile with KPI totals and the sum of permitted team/direct facts.
-- [ ] Direct-athlete assignments appear only in organization drill-downs unless a persisted team scope exists.
-- [ ] Foreign organizations, foreign teams, athletes, and unmanaged Team Managers cannot access or infer drill-down facts.
-- [ ] Organization Viewer behavior remains read-only.
+- [x] Organization facts reconcile with KPI totals and the sum of permitted team/direct facts.
+- [x] Direct-athlete assignments appear only in organization drill-downs unless a persisted team scope exists.
+- [x] Foreign organizations, foreign teams, athletes, and unmanaged Team Managers cannot access or infer drill-down facts.
+- [x] Organization Viewer behavior remains read-only.
 
 ### Acceptance Criteria
 
-- [ ] A director can move from an organization metric to team and athlete facts without losing scope or window context.
-- [ ] Organization drill-downs never imply a peer ranking or expose an unauthorized team.
+- [x] A director can move from an organization metric to team and athlete facts without losing scope or window context.
+- [x] Organization drill-downs never imply a peer ranking or expose an unauthorized team.
 
 ## Milestone 5: Polish, Reconciliation, and Rollout
 

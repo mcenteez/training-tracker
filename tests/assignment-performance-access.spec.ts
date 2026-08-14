@@ -122,6 +122,28 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page.getByText("This page could not be found.")).toBeVisible();
   });
 
+  test("organization viewer can drill into organization facts while athletes are denied", async ({
+    context,
+    page,
+  }) => {
+    await usePersona(context, "viewer");
+    await page.goto("/app/performance/organization");
+    await page.getByRole("link", { name: "View completion facts" }).click();
+    await expect(page).toHaveURL(
+      /\/organization\/drilldown\?metric=completion/,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Completion facts" }),
+    ).toBeVisible();
+
+    await usePersona(context, "athlete");
+    const response = await page.goto(
+      "/app/performance/organization/drilldown?metric=completion&window=30&tab=all",
+    );
+    expect(response?.status()).toBe(200);
+    await expect(page).toHaveURL(/\/app\/athlete$/);
+  });
+
   test("manager can drill into Team due-now facts while athletes are denied", async ({
     context,
     page,

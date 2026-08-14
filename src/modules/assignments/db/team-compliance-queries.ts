@@ -95,6 +95,7 @@ export interface OrganizationTeamComplianceSummary {
 
 export interface OrganizationComplianceDashboard {
   summary: ComplianceSummary;
+  assignments: TeamAssignmentCompliance[];
   teams: OrganizationTeamComplianceSummary[];
   timeliness: TeamTimelinessDashboard;
 }
@@ -708,6 +709,7 @@ export async function getOrganizationComplianceDashboard(
         athletes: [],
         rosteredAthleteIds: rosterRows.map((row) => row.athleteUserId),
       }),
+      assignments: [],
       teams: teamRows.map((team) => ({
         teamId: team.id,
         teamName: team.name,
@@ -857,6 +859,7 @@ export async function getOrganizationComplianceDashboard(
       organizationAssignments,
       rosterRows.map((row) => row.athleteUserId),
     ),
+    assignments: organizationAssignments,
     timeliness: buildTeamTimelinessDashboard({
       assignments: organizationTimelinessAssignments,
       asOf: now,
