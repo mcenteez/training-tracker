@@ -306,6 +306,51 @@ export function createAssignmentUnitOfWork(
                 .values(teamScopes);
             }
           },
+          async listAssignmentRecipients(organizationId, assignmentId) {
+            const rows = await databaseTransaction
+              .select({
+                athleteUserId: assignmentRecipients.athleteUserId,
+                teamId: assignmentRecipientTeamScopes.teamId,
+              })
+              .from(assignmentRecipients)
+              .leftJoin(
+                assignmentRecipientTeamScopes,
+                and(
+                  eq(
+                    assignmentRecipientTeamScopes.organizationId,
+                    assignmentRecipients.organizationId,
+                  ),
+                  eq(
+                    assignmentRecipientTeamScopes.assignmentId,
+                    assignmentRecipients.assignmentId,
+                  ),
+                  eq(
+                    assignmentRecipientTeamScopes.recipientId,
+                    assignmentRecipients.id,
+                  ),
+                ),
+              )
+              .where(
+                and(
+                  eq(assignmentRecipients.organizationId, organizationId),
+                  eq(assignmentRecipients.assignmentId, assignmentId),
+                ),
+              );
+            const teamIdsByAthlete = new Map<string, string[]>();
+
+            for (const row of rows) {
+              const teamIds = teamIdsByAthlete.get(row.athleteUserId) ?? [];
+              if (row.teamId) {
+                teamIds.push(row.teamId);
+              }
+              teamIdsByAthlete.set(row.athleteUserId, teamIds);
+            }
+
+            return [...teamIdsByAthlete].map(([athleteUserId, teamIds]) => ({
+              athleteUserId,
+              teamIds,
+            }));
+          },
           async snapshotAssignmentSource(organizationId, assignmentId, source) {
             let snapshotCount = 0;
             const workoutSources =
@@ -503,6 +548,79 @@ export function createAssignmentUnitOfWork(
 
             return snapshotCount;
           },
+          async markAssignmentPrepared(input) {
+            const now = new Date();
+            const [assignment] = await databaseTransaction
+              .update(assignments)
+              .set({
+                status: "prepared",
+                preparedAt: now,
+                preparedByUserId: input.actorUserId,
+                updatedAt: now,
+                updatedByUserId: input.actorUserId,
+                version: sql`${assignments.version} + 1`,
+              })
+              .where(
+                and(
+                  eq(assignments.organizationId, input.organizationId),
+                  eq(assignments.id, input.assignmentId),
+                  eq(assignments.status, "draft"),
+                  eq(assignments.version, input.expectedVersion),
+                ),
+              )
+              .returning();
+
+            return assignment ?? null;
+          },
+          async resetAssignmentPreparation(input) {
+            await databaseTransaction
+              .delete(assignmentRecipients)
+              .where(
+                and(
+                  eq(assignmentRecipients.organizationId, input.organizationId),
+                  eq(assignmentRecipients.assignmentId, input.assignmentId),
+                ),
+              );
+            await databaseTransaction
+              .delete(assignmentWorkoutSnapshots)
+              .where(
+                and(
+                  eq(
+                    assignmentWorkoutSnapshots.organizationId,
+                    input.organizationId,
+                  ),
+                  eq(
+                    assignmentWorkoutSnapshots.assignmentId,
+                    input.assignmentId,
+                  ),
+                ),
+              );
+
+            const now = new Date();
+            const [assignment] = await databaseTransaction
+              .update(assignments)
+              .set({
+                status: "draft",
+                preparedAt: null,
+                preparedByUserId: null,
+                preparationResetAt: now,
+                preparationResetByUserId: input.actorUserId,
+                updatedAt: now,
+                updatedByUserId: input.actorUserId,
+                version: sql`${assignments.version} + 1`,
+              })
+              .where(
+                and(
+                  eq(assignments.organizationId, input.organizationId),
+                  eq(assignments.id, input.assignmentId),
+                  eq(assignments.status, "prepared"),
+                  eq(assignments.version, input.expectedVersion),
+                ),
+              )
+              .returning();
+
+            return assignment ?? null;
+          },
           async markAssignmentPublished(input) {
             const [assignment] = await databaseTransaction
               .update(assignments)
@@ -517,6 +635,7 @@ export function createAssignmentUnitOfWork(
                 and(
                   eq(assignments.organizationId, input.organizationId),
                   eq(assignments.id, input.assignmentId),
+                  eq(assignments.status, "prepared"),
                   eq(assignments.version, input.expectedVersion),
                 ),
               )

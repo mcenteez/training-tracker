@@ -36,7 +36,12 @@ import {
   strengthLoadUnit,
 } from "@/modules/workouts/db/schema";
 
-export const assignmentStatuses = ["draft", "published", "canceled"] as const;
+export const assignmentStatuses = [
+  "draft",
+  "prepared",
+  "published",
+  "canceled",
+] as const;
 export const assignmentTargetTypes = ["team", "athlete"] as const;
 export const assignmentSessionStatuses = [
   "assigned",
@@ -86,6 +91,17 @@ export const assignments = pgTable(
       .notNull(),
     lateEntryDays: integer("late_entry_days").default(7).notNull(),
     status: assignmentStatus().default("draft").notNull(),
+    preparedAt: timestamp("prepared_at", { withTimezone: true }),
+    preparedByUserId: uuid("prepared_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    preparationResetAt: timestamp("preparation_reset_at", {
+      withTimezone: true,
+    }),
+    preparationResetByUserId: uuid("preparation_reset_by_user_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     canceledAt: timestamp("canceled_at", { withTimezone: true }),
     version: integer("version").default(1).notNull(),

@@ -9,8 +9,12 @@ import type { Database } from "@/db/client";
 import {
   cancelAssignment,
   createAssignment,
+  prepareAssignment,
   publishAssignment,
+  returnPreparedAssignmentToDraft,
+  type AssignmentUnitOfWork,
 } from "@/modules/assignments/application/assignment-service";
+import type { Assignment } from "@/modules/assignments/db/schema";
 import {
   resetAssignmentSession,
   startAssignmentSession,
@@ -56,6 +60,25 @@ async function applyMigrations(database: PGlite) {
       }
     }
   }
+}
+
+async function prepareAndPublishAssignment(
+  unitOfWork: AssignmentUnitOfWork,
+  draft: Assignment,
+): Promise<Assignment> {
+  const prepared = await prepareAssignment(unitOfWork, {
+    organizationId: draft.organizationId,
+    actorUserId: "00000000-0000-4000-8000-000000000001",
+    assignmentId: draft.id,
+    expectedVersion: draft.version,
+  });
+
+  return publishAssignment(unitOfWork, {
+    organizationId: draft.organizationId,
+    actorUserId: "00000000-0000-4000-8000-000000000001",
+    assignmentId: draft.id,
+    expectedVersion: prepared.version,
+  });
 }
 
 describe("assignment unit of work", () => {
@@ -150,6 +173,77 @@ describe("assignment unit of work", () => {
     await client.close();
   });
 
+  it("keeps prepared assignments hidden and clears prepared artifacts on reset", async () => {
+    const unitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(unitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-20",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+
+    const prepared = await prepareAssignment(unitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    const athleteAssignments = await listPublishedAssignmentsForAthlete(
+      database,
+      {
+        organizationId: draft.organizationId,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+      },
+    );
+
+    expect(prepared).toEqual(
+      expect.objectContaining({
+        status: "prepared",
+        preparedByUserId: "00000000-0000-4000-8000-000000000001",
+      }),
+    );
+    expect(prepared.preparedAt).toBeInstanceOf(Date);
+    expect(athleteAssignments).toEqual([]);
+
+    const reset = await returnPreparedAssignmentToDraft(unitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: prepared.version,
+    });
+    const artifacts = await client.query<{
+      recipient_count: number;
+      snapshot_count: number;
+    }>(`
+      SELECT
+        (SELECT count(*)::int FROM assignment_recipients WHERE assignment_id = '${draft.id}') AS recipient_count,
+        (SELECT count(*)::int FROM assignment_workout_snapshots WHERE assignment_id = '${draft.id}') AS snapshot_count;
+    `);
+
+    expect(reset).toEqual(
+      expect.objectContaining({
+        status: "draft",
+        preparedAt: null,
+        preparedByUserId: null,
+        preparationResetByUserId: "00000000-0000-4000-8000-000000000001",
+      }),
+    );
+    expect(reset.preparationResetAt).toBeInstanceOf(Date);
+    expect(artifacts.rows).toEqual([{ recipient_count: 0, snapshot_count: 0 }]);
+  });
+
   it("publishes plan snapshots preserving both scheduling modes", async () => {
     await client.exec(`
       INSERT INTO plans (id, organization_id, name, status)
@@ -181,12 +275,7 @@ describe("assignment unit of work", () => {
       ],
     });
 
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     const recipientScopes = await client.query<{ team_id: string }>(`
       SELECT scope.team_id
@@ -272,12 +361,7 @@ describe("assignment unit of work", () => {
       ],
     });
 
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     const recipientSlots = await listPlanSlotSnapshotsForAthleteAssignment(
       database,
@@ -336,12 +420,7 @@ describe("assignment unit of work", () => {
       ],
     });
 
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     const slotRows = await client.query<{ id: string }>(`
       SELECT id FROM assignment_plan_slot_snapshots
@@ -536,12 +615,7 @@ describe("assignment unit of work", () => {
       ],
     });
 
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     await client.exec(`
       UPDATE workout_items
@@ -661,12 +735,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
     const session = await startAssignmentSession(
       createAssignmentSessionUnitOfWork(database),
       {
@@ -740,12 +809,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
     const recipients = await client.query<{
       id: string;
       athlete_user_id: string;
@@ -859,12 +923,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    const published = await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    const published = await prepareAndPublishAssignment(unitOfWork, draft);
 
     await startAssignmentSession(createAssignmentSessionUnitOfWork(database), {
       organizationId: "10000000-0000-4000-8000-000000000001",
@@ -920,12 +979,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     await client.query(`
       UPDATE assignments
@@ -1064,12 +1118,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
     await client.query(`
       UPDATE assignments
       SET timeliness_policy_effective_at = '2026-08-11T00:00:00.000Z'
@@ -1232,12 +1281,7 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await publishAssignment(unitOfWork, {
-      organizationId: "10000000-0000-4000-8000-000000000001",
-      actorUserId: "00000000-0000-4000-8000-000000000001",
-      assignmentId: draft.id,
-      expectedVersion: draft.version,
-    });
+    await prepareAndPublishAssignment(unitOfWork, draft);
 
     const recipientRows = await client.query<{ id: string }>(`
       SELECT id

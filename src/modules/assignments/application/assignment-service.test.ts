@@ -10,7 +10,9 @@ import type { Assignment } from "@/modules/assignments/db/schema";
 import {
   cancelAssignment,
   createAssignment,
+  prepareAssignment,
   publishAssignment,
+  returnPreparedAssignmentToDraft,
   updateAssignment,
   type AssignmentTransaction,
   type AssignmentUnitOfWork,
@@ -49,6 +51,10 @@ function assignment(overrides: Partial<Assignment> = {}): Assignment {
     weeklyDueLocalMinute: 1440,
     lateEntryDays: 7,
     status: "draft",
+    preparedAt: null,
+    preparedByUserId: null,
+    preparationResetAt: null,
+    preparationResetByUserId: null,
     publishedAt: null,
     canceledAt: null,
     version: 1,
@@ -62,7 +68,9 @@ function assignment(overrides: Partial<Assignment> = {}): Assignment {
 
 function setup(overrides: Partial<AssignmentTransaction> = {}) {
   const transaction: AssignmentTransaction = {
-    findOrganizationRole: vi.fn(async () => "manager" as const),
+    findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+      userId === "user-1" ? ("manager" as const) : ("athlete" as const),
+    ),
     listTeamRoles: vi.fn(async () => [
       { teamId: "team-1", role: "manager" as const },
     ]),
@@ -83,9 +91,18 @@ function setup(overrides: Partial<AssignmentTransaction> = {}) {
     listAthleteUserIdsForTeam: vi.fn(async () => ["athlete-1"]),
     listTeamIdsForAthlete: vi.fn(async () => ["team-1"]),
     replaceAssignmentRecipients: vi.fn(async () => undefined),
+    listAssignmentRecipients: vi.fn(async () => [
+      { athleteUserId: "athlete-1", teamIds: ["team-1"] },
+    ]),
     snapshotAssignmentSource: vi.fn(async () => 1),
+    markAssignmentPrepared: vi.fn(async () =>
+      assignment({ status: "prepared", version: 2 }),
+    ),
+    resetAssignmentPreparation: vi.fn(async () =>
+      assignment({ status: "draft", version: 3 }),
+    ),
     markAssignmentPublished: vi.fn(async () =>
-      assignment({ status: "published", version: 2 }),
+      assignment({ status: "published", version: 3 }),
     ),
     markAssignmentCanceled: vi.fn(async () =>
       assignment({ status: "canceled", version: 2 }),
@@ -189,10 +206,10 @@ describe("assignment service", () => {
     expect(transaction.updateAssignmentDraft).not.toHaveBeenCalled();
   });
 
-  it("publishes eligible assignments and resolves recipients", async () => {
+  it("prepares eligible assignments and resolves recipients", async () => {
     const { transaction, unitOfWork } = setup();
 
-    await publishAssignment(unitOfWork, {
+    await prepareAssignment(unitOfWork, {
       organizationId: "organization-1",
       actorUserId: "user-1",
       assignmentId: "assignment-1",
@@ -209,10 +226,10 @@ describe("assignment service", () => {
       "assignment-1",
       createInput.source,
     );
-    expect(transaction.markAssignmentPublished).toHaveBeenCalledOnce();
+    expect(transaction.markAssignmentPrepared).toHaveBeenCalledOnce();
   });
 
-  it("merges team and direct-athlete scopes for one published recipient", async () => {
+  it("merges team and direct-athlete scopes for one prepared recipient", async () => {
     const { transaction, unitOfWork } = setup({
       findOrganizationRole: vi.fn(async (_organizationId, userId) =>
         userId === "user-1" ? ("manager" as const) : ("athlete" as const),
@@ -234,7 +251,7 @@ describe("assignment service", () => {
       listTeamIdsForAthlete: vi.fn(async () => ["team-1", "team-2"]),
     });
 
-    await publishAssignment(unitOfWork, {
+    await prepareAssignment(unitOfWork, {
       organizationId: "organization-1",
       actorUserId: "user-1",
       assignmentId: "assignment-1",
@@ -248,13 +265,13 @@ describe("assignment service", () => {
     );
   });
 
-  it("rejects publish when source produces no workout snapshots", async () => {
+  it("rejects preparation when source produces no workout snapshots", async () => {
     const { transaction, unitOfWork } = setup({
       snapshotAssignmentSource: vi.fn(async () => 0),
     });
 
     await expect(
-      publishAssignment(unitOfWork, {
+      prepareAssignment(unitOfWork, {
         organizationId: "organization-1",
         actorUserId: "user-1",
         assignmentId: "assignment-1",
@@ -262,16 +279,16 @@ describe("assignment service", () => {
       }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
 
-    expect(transaction.markAssignmentPublished).not.toHaveBeenCalled();
+    expect(transaction.markAssignmentPrepared).not.toHaveBeenCalled();
   });
 
-  it("rejects publish when source workout is inactive", async () => {
+  it("rejects preparation when source workout is inactive", async () => {
     const { unitOfWork } = setup({
       findWorkout: vi.fn(async () => ({ id: "workout-1", status: "draft" })),
     });
 
     await expect(
-      publishAssignment(unitOfWork, {
+      prepareAssignment(unitOfWork, {
         organizationId: "organization-1",
         actorUserId: "user-1",
         assignmentId: "assignment-1",
@@ -280,7 +297,7 @@ describe("assignment service", () => {
     ).rejects.toBeInstanceOf(DomainInvariantError);
   });
 
-  it("rejects publish when a direct target is not an organization athlete", async () => {
+  it("rejects preparation when a direct target is not an organization athlete", async () => {
     const { transaction, unitOfWork } = setup({
       findOrganizationRole: vi.fn(async (_organizationId, userId) =>
         userId === "user-1" ? ("manager" as const) : ("viewer" as const),
@@ -296,7 +313,7 @@ describe("assignment service", () => {
     });
 
     await expect(
-      publishAssignment(unitOfWork, {
+      prepareAssignment(unitOfWork, {
         organizationId: "organization-1",
         actorUserId: "user-1",
         assignmentId: "assignment-1",
@@ -307,7 +324,7 @@ describe("assignment service", () => {
     expect(transaction.replaceAssignmentRecipients).not.toHaveBeenCalled();
   });
 
-  it("rejects publish with no recipients", async () => {
+  it("rejects preparation with no recipients", async () => {
     const { unitOfWork } = setup({
       listAssignmentTargets: vi.fn(async () => [
         {
@@ -321,6 +338,38 @@ describe("assignment service", () => {
     });
 
     await expect(
+      prepareAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 1,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+  });
+
+  it("publishes a prepared assignment without recreating recipients or snapshots", async () => {
+    const { transaction, unitOfWork } = setup({
+      findAssignment: vi.fn(async () =>
+        assignment({ status: "prepared", version: 2 }),
+      ),
+    });
+
+    await publishAssignment(unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      assignmentId: "assignment-1",
+      expectedVersion: 2,
+    });
+
+    expect(transaction.replaceAssignmentRecipients).not.toHaveBeenCalled();
+    expect(transaction.snapshotAssignmentSource).not.toHaveBeenCalled();
+    expect(transaction.markAssignmentPublished).toHaveBeenCalledOnce();
+  });
+
+  it("rejects direct publication of a draft", async () => {
+    const { transaction, unitOfWork } = setup();
+
+    await expect(
       publishAssignment(unitOfWork, {
         organizationId: "organization-1",
         actorUserId: "user-1",
@@ -328,6 +377,81 @@ describe("assignment service", () => {
         expectedVersion: 1,
       }),
     ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.markAssignmentPublished).not.toHaveBeenCalled();
+  });
+
+  it.each(["prepared", "published", "canceled"] as const)(
+    "rejects preparation from %s status",
+    async (status) => {
+      const { transaction, unitOfWork } = setup({
+        findAssignment: vi.fn(async () => assignment({ status })),
+      });
+
+      await expect(
+        prepareAssignment(unitOfWork, {
+          organizationId: "organization-1",
+          actorUserId: "user-1",
+          assignmentId: "assignment-1",
+          expectedVersion: 1,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(transaction.markAssignmentPrepared).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns a prepared assignment to draft", async () => {
+    const { transaction, unitOfWork } = setup({
+      findAssignment: vi.fn(async () =>
+        assignment({ status: "prepared", version: 2 }),
+      ),
+    });
+
+    const reset = await returnPreparedAssignmentToDraft(unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      assignmentId: "assignment-1",
+      expectedVersion: 2,
+    });
+
+    expect(reset.status).toBe("draft");
+    expect(transaction.resetAssignmentPreparation).toHaveBeenCalledOnce();
+  });
+
+  it.each(["draft", "published", "canceled"] as const)(
+    "rejects returning a %s assignment to draft",
+    async (status) => {
+      const { transaction, unitOfWork } = setup({
+        findAssignment: vi.fn(async () => assignment({ status })),
+      });
+
+      await expect(
+        returnPreparedAssignmentToDraft(unitOfWork, {
+          organizationId: "organization-1",
+          actorUserId: "user-1",
+          assignmentId: "assignment-1",
+          expectedVersion: 1,
+        }),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+
+      expect(transaction.resetAssignmentPreparation).not.toHaveBeenCalled();
+    },
+  );
+
+  it("cancels prepared assignments", async () => {
+    const { unitOfWork } = setup({
+      findAssignment: vi.fn(async () => assignment({ status: "prepared" })),
+    });
+
+    const canceled = await cancelAssignment(unitOfWork, {
+      organizationId: "organization-1",
+      actorUserId: "user-1",
+      assignmentId: "assignment-1",
+      expectedVersion: 1,
+    });
+
+    expect(canceled.status).toBe("canceled");
   });
 
   it("cancels published assignments", async () => {

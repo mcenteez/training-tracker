@@ -89,11 +89,27 @@ export interface AssignmentTransaction {
       teamIds: readonly string[];
     }[],
   ): Promise<void>;
+  listAssignmentRecipients(
+    organizationId: string,
+    assignmentId: string,
+  ): Promise<readonly { athleteUserId: string; teamIds: readonly string[] }[]>;
   snapshotAssignmentSource(
     organizationId: string,
     assignmentId: string,
     source: AssignmentSourceInput,
   ): Promise<number>;
+  markAssignmentPrepared(input: {
+    organizationId: string;
+    assignmentId: string;
+    expectedVersion: number;
+    actorUserId: string;
+  }): Promise<Assignment | null>;
+  resetAssignmentPreparation(input: {
+    organizationId: string;
+    assignmentId: string;
+    expectedVersion: number;
+    actorUserId: string;
+  }): Promise<Assignment | null>;
   markAssignmentPublished(input: {
     organizationId: string;
     assignmentId: string;
@@ -165,13 +181,31 @@ async function resolveActorAccess(
   };
 }
 
-function assertDraft(
+function assertAssignmentStatus(
   assignment: Assignment,
-  message = "Only draft assignments can be changed.",
+  expectedStatus: Assignment["status"],
+  message: string,
 ): void {
-  if (assignment.status !== "draft") {
+  if (assignment.status !== expectedStatus) {
     throw new DomainInvariantError(message);
   }
+}
+
+function sourceFromAssignment(assignment: Assignment): AssignmentSourceInput {
+  return assignment.sourcePlanId !== null
+    ? {
+        sourceType: "plan",
+        sourcePlanId: assignment.sourcePlanId,
+        startDate: assignment.startDate!,
+        endDate: assignment.endDate!,
+      }
+    : {
+        sourceType: "workout",
+        sourceWorkoutId: assignment.sourceWorkoutId!,
+        scheduledDate: assignment.scheduledDate!,
+        availableFrom: assignment.availableFrom?.toISOString() ?? null,
+        availableUntil: assignment.availableUntil?.toISOString() ?? null,
+      };
 }
 
 function assertVersion(actualVersion: number, expectedVersion: number): void {
@@ -381,7 +415,11 @@ export async function updateAssignment(
       throw new ResourceNotFoundError("Assignment");
     }
 
-    assertDraft(current);
+    assertAssignmentStatus(
+      current,
+      "draft",
+      "Only draft assignments can be changed.",
+    );
     assertVersion(current.version, input.expectedVersion);
 
     await assertDirectTargetsAreAthletes(transaction, input);
@@ -410,7 +448,7 @@ export async function updateAssignment(
   });
 }
 
-export async function publishAssignment(
+export async function prepareAssignment(
   unitOfWork: AssignmentUnitOfWork,
   input: {
     organizationId: string;
@@ -431,24 +469,14 @@ export async function publishAssignment(
       throw new ResourceNotFoundError("Assignment");
     }
 
-    assertDraft(current, "Only draft assignments can be published.");
+    assertAssignmentStatus(
+      current,
+      "draft",
+      "Only draft assignments can be prepared.",
+    );
     assertVersion(current.version, input.expectedVersion);
 
-    const source: AssignmentSourceInput =
-      current.sourcePlanId !== null
-        ? {
-            sourceType: "plan",
-            sourcePlanId: current.sourcePlanId,
-            startDate: current.startDate!,
-            endDate: current.endDate!,
-          }
-        : {
-            sourceType: "workout",
-            sourceWorkoutId: current.sourceWorkoutId!,
-            scheduledDate: current.scheduledDate!,
-            availableFrom: current.availableFrom?.toISOString() ?? null,
-            availableUntil: current.availableUntil?.toISOString() ?? null,
-          };
+    const source = sourceFromAssignment(current);
 
     await assertSourceIsActive(transaction, {
       organizationId: input.organizationId,
@@ -486,7 +514,7 @@ export async function publishAssignment(
 
     if (recipients.length === 0) {
       throw new DomainInvariantError(
-        "Add at least one eligible athlete before publishing.",
+        "Add at least one eligible athlete before preparing.",
       );
     }
 
@@ -508,8 +536,110 @@ export async function publishAssignment(
       );
     }
 
-    const published = await transaction.markAssignmentPublished(input);
+    const prepared = await transaction.markAssignmentPrepared(input);
 
+    if (!prepared) {
+      throw new DomainInvariantError(
+        "This assignment was updated by someone else. Reload and try again.",
+      );
+    }
+
+    return prepared;
+  });
+}
+
+export async function publishAssignment(
+  unitOfWork: AssignmentUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    assignmentId: string;
+    expectedVersion: number;
+  },
+): Promise<Assignment> {
+  return unitOfWork.transaction(async (transaction) => {
+    const access = await resolveActorAccess(transaction, input);
+    const current = await transaction.findAssignment(
+      input.organizationId,
+      input.assignmentId,
+    );
+
+    if (!current) {
+      throw new ResourceNotFoundError("Assignment");
+    }
+
+    assertAssignmentStatus(
+      current,
+      "prepared",
+      "Only prepared assignments can be published.",
+    );
+    assertVersion(current.version, input.expectedVersion);
+
+    await assertSourceIsActive(transaction, {
+      organizationId: input.organizationId,
+      source: sourceFromAssignment(current),
+    });
+
+    const targets = await transaction.listAssignmentTargets(
+      input.organizationId,
+      input.assignmentId,
+    );
+    const normalizedTargets = targets.map((target) =>
+      target.targetType === "team"
+        ? { targetType: "team" as const, teamId: target.teamId! }
+        : {
+            targetType: "athlete" as const,
+            athleteUserId: target.athleteUserId!,
+          },
+    );
+
+    await assertDirectTargetsAreAthletes(transaction, {
+      organizationId: input.organizationId,
+      targets: normalizedTargets,
+    });
+    await assertTargetsAllowedForTeamManagerScope(transaction, {
+      organizationId: input.organizationId,
+      targets: normalizedTargets,
+      canAssignOrganization: access.canAssignOrganization,
+      managedTeamIds: access.managedTeamIds,
+    });
+
+    const recipients = await transaction.listAssignmentRecipients(
+      input.organizationId,
+      input.assignmentId,
+    );
+
+    if (recipients.length === 0) {
+      throw new DomainInvariantError(
+        "Prepare at least one eligible athlete before publishing.",
+      );
+    }
+
+    for (const recipient of recipients) {
+      const role = await transaction.findOrganizationRole(
+        input.organizationId,
+        recipient.athleteUserId,
+      );
+      if (role !== "athlete") {
+        throw new DomainInvariantError(
+          "A prepared recipient is no longer an eligible organization athlete.",
+        );
+      }
+
+      if (!access.canAssignOrganization) {
+        const currentTeamIds = await transaction.listTeamIdsForAthlete(
+          input.organizationId,
+          recipient.athleteUserId,
+        );
+        if (
+          !currentTeamIds.some((teamId) => access.managedTeamIds.has(teamId))
+        ) {
+          throw new AuthorizationError();
+        }
+      }
+    }
+
+    const published = await transaction.markAssignmentPublished(input);
     if (!published) {
       throw new DomainInvariantError(
         "This assignment was updated by someone else. Reload and try again.",
@@ -517,6 +647,62 @@ export async function publishAssignment(
     }
 
     return published;
+  });
+}
+
+export async function returnPreparedAssignmentToDraft(
+  unitOfWork: AssignmentUnitOfWork,
+  input: {
+    organizationId: string;
+    actorUserId: string;
+    assignmentId: string;
+    expectedVersion: number;
+  },
+): Promise<Assignment> {
+  return unitOfWork.transaction(async (transaction) => {
+    const access = await resolveActorAccess(transaction, input);
+    const current = await transaction.findAssignment(
+      input.organizationId,
+      input.assignmentId,
+    );
+
+    if (!current) {
+      throw new ResourceNotFoundError("Assignment");
+    }
+
+    assertAssignmentStatus(
+      current,
+      "prepared",
+      "Only prepared assignments can return to draft.",
+    );
+    assertVersion(current.version, input.expectedVersion);
+
+    const targets = await transaction.listAssignmentTargets(
+      input.organizationId,
+      input.assignmentId,
+    );
+    await assertTargetsAllowedForTeamManagerScope(transaction, {
+      organizationId: input.organizationId,
+      targets: targets.map((target) =>
+        target.targetType === "team"
+          ? { targetType: "team" as const, teamId: target.teamId! }
+          : {
+              targetType: "athlete" as const,
+              athleteUserId: target.athleteUserId!,
+            },
+      ),
+      canAssignOrganization: access.canAssignOrganization,
+      managedTeamIds: access.managedTeamIds,
+    });
+
+    const reset = await transaction.resetAssignmentPreparation(input);
+    if (!reset) {
+      throw new DomainInvariantError(
+        "This assignment was updated by someone else. Reload and try again.",
+      );
+    }
+
+    return reset;
   });
 }
 

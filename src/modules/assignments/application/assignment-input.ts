@@ -70,10 +70,17 @@ export const updateAssignmentInputSchema = createAssignmentInputSchema.extend({
   version: z.number().int().positive(),
 });
 
-export const publishAssignmentInputSchema = z.object({
+const assignmentTransitionInputSchema = z.object({
   assignmentId: z.uuid(),
   version: z.number().int().positive(),
 });
+
+export const prepareAssignmentInputSchema = assignmentTransitionInputSchema;
+
+export const publishAssignmentInputSchema = assignmentTransitionInputSchema;
+
+export const returnAssignmentToDraftInputSchema =
+  assignmentTransitionInputSchema;
 
 export const cancelAssignmentInputSchema = z.object({
   assignmentId: z.uuid(),

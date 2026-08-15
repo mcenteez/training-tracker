@@ -34,7 +34,7 @@ export interface AthletePrescriptionOverrideInput {
 }
 
 interface OverrideTarget {
-  assignmentStatus: "published" | "canceled" | "draft";
+  assignmentStatus: "draft" | "prepared" | "published" | "canceled";
   recipientId: string;
   athleteUserId: string;
 }

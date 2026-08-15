@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
@@ -205,7 +205,7 @@ async function loadTeamComplianceData(
         eq(assignmentRecipientTeamScopes.organizationId, input.organizationId),
         eq(assignmentRecipientTeamScopes.teamId, input.teamId),
         input.assignmentId ? eq(assignments.id, input.assignmentId) : undefined,
-        ne(assignments.status, "draft"),
+        inArray(assignments.status, ["published", "canceled"]),
       ),
     )
     .orderBy(asc(assignments.publishedAt), asc(assignments.id));
@@ -630,7 +630,7 @@ export async function getOrganizationComplianceDashboard(
         .where(
           and(
             eq(assignments.organizationId, input.organizationId),
-            ne(assignments.status, "draft"),
+            inArray(assignments.status, ["published", "canceled"]),
           ),
         )
         .orderBy(asc(assignments.publishedAt), asc(assignments.id)),
