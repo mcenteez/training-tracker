@@ -8,6 +8,7 @@ const base = {
   loadValue: "135",
   loadUnit: "lb" as const,
   normalizedLoadKg: "61.23496995",
+  resistance: null,
   durationSeconds: null,
   distanceMeters: null,
   restSeconds: 120,
@@ -73,6 +74,33 @@ describe("resolveEffectivePrescription", () => {
     });
   });
 
+  it("replaces the complete structured resistance while inheriting other fields", () => {
+    expect(
+      resolveEffectivePrescription(
+        { ...base, resistance: { type: "percent_1rm", percentage: 80 } },
+        {
+          id: "override-resistance",
+          overriddenFields: ["resistance"],
+          reps: null,
+          load: null,
+          loadValue: null,
+          loadUnit: null,
+          normalizedLoadKg: null,
+          resistance: { type: "fixed_weight", value: 135, unit: "lb" },
+          durationSeconds: null,
+          distanceMeters: null,
+          restSeconds: null,
+          tempo: null,
+          notes: null,
+        },
+      ),
+    ).toMatchObject({
+      reps: 10,
+      resistance: { type: "fixed_weight", value: 135, unit: "lb" },
+      sourceOverrideId: "override-resistance",
+    });
+  });
+
   it("resolves every supported field from an individual prescription", () => {
     expect(
       resolveEffectivePrescription(base, {
@@ -103,6 +131,7 @@ describe("resolveEffectivePrescription", () => {
       loadValue: "100",
       loadUnit: "kg",
       normalizedLoadKg: "100",
+      resistance: null,
       durationSeconds: 60,
       distanceMeters: 400,
       restSeconds: 90,

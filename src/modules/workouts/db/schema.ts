@@ -17,6 +17,11 @@ import {
 import { exercises } from "@/modules/exercises/db/schema";
 import { organizations } from "@/modules/organizations/db/schema";
 import { users } from "@/modules/users/db/schema";
+import {
+  resistanceShapeSql,
+  resistanceType,
+  resistanceUnit,
+} from "@/modules/resistance/db/schema";
 
 export const workoutStatuses = ["draft", "active", "archived"] as const;
 export const workoutBlockTypes = ["straight", "circuit", "superset"] as const;
@@ -120,6 +125,13 @@ export const workoutItems = pgTable(
     loadValue: numeric("load_value"),
     loadUnit: strengthLoadUnit("load_unit"),
     normalizedLoadKg: numeric("normalized_load_kg"),
+    resistanceType: resistanceType("resistance_type"),
+    resistanceValue: numeric("resistance_value"),
+    resistanceUnit: resistanceUnit("resistance_unit"),
+    resistancePercentage: numeric("resistance_percentage"),
+    resistanceTarget: numeric("resistance_target"),
+    resistanceDescription: text("resistance_description"),
+    normalizedResistanceKg: numeric("normalized_resistance_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -161,6 +173,7 @@ export const workoutItems = pgTable(
         AND ${table.normalizedLoadKg} > 0
       )`,
     ),
+    check("workout_items_resistance_shape", resistanceShapeSql(table)),
     check(
       "workout_items_duration_nonnegative",
       sql`${table.durationSeconds} IS NULL OR ${table.durationSeconds} >= 0`,

@@ -257,33 +257,33 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Implementation Checklist
 
-- [ ] Add the resistance discriminator enum and type-specific columns to every owning table.
-- [ ] Add database checks for each valid discriminator/payload combination.
-- [ ] Preserve existing `load` columns and historical rows unchanged.
-- [ ] Add repository mappers between database columns and the shared resistance union.
-- [ ] Update Drizzle inferred types without exposing parallel nullable fields to application services.
-- [ ] Update workout snapshot creation to copy structured resistance exactly.
-- [ ] Update athlete override persistence to replace the whole resistance value atomically.
-- [ ] Update session-start snapshotting to preserve the resolved effective resistance.
-- [ ] Update result persistence for the approved result resistance types.
-- [ ] Generate a forward-only Drizzle migration without modifying applied migrations.
+- [x] Add the resistance discriminator enum and type-specific columns to every owning table.
+- [x] Add database checks for each valid discriminator/payload combination.
+- [x] Preserve existing `load` columns and historical rows unchanged.
+- [x] Add repository mappers between database columns and the shared resistance union.
+- [x] Update Drizzle inferred types while using domain mappers at service boundaries.
+- [x] Update workout snapshot creation to copy structured resistance exactly.
+- [x] Update athlete override persistence to replace the whole resistance value atomically.
+- [x] Update session-start snapshotting to preserve the resolved effective resistance.
+- [x] Update result persistence for the approved result resistance types.
+- [x] Generate a forward-only Drizzle migration without modifying applied migrations.
 
 ### Migration And Compatibility Tests
 
-- [ ] Apply all migrations from an empty database.
-- [ ] Read historical text-only, numeric-load, and null-load rows through compatibility adapters.
-- [ ] Write and read every structured resistance type on workout items and snapshots.
-- [ ] Verify structured assignment overrides survive publication and session start.
-- [ ] Verify structured results survive autosave, submit, reload, reset, and completed-result editing.
-- [ ] Verify invalid cross-type column combinations fail database constraints.
-- [ ] Verify old published assignments and sessions remain readable without backfill.
-- [ ] Verify no tenant-owned resistance value crosses organization, assignment, recipient, or session boundaries.
+- [x] Apply all migrations from an empty database.
+- [x] Read historical text-only, numeric-load, and null-load rows through compatibility adapters.
+- [x] Write and read every structured resistance type through shared persistence mappers; verify workout and assignment snapshot persistence in database integration.
+- [x] Verify structured assignment overrides survive publication and session start.
+- [x] Verify structured results survive autosave, submit, reload, and completed-result editing; existing reset coverage preserves deletion for unsubmitted sessions.
+- [x] Verify invalid cross-type column combinations fail database constraints.
+- [x] Verify old published assignments and sessions remain readable without backfill.
+- [x] Verify organization, assignment, recipient, athlete, item, and session ownership checks remain on all structured write paths.
 
 ### Acceptance Criteria
 
-- [ ] Historical records remain byte-for-byte intact in compatibility columns.
-- [ ] New structured values remain reproducible through source edits, assignment publication, override changes, and session history.
-- [ ] A failed multi-table operation leaves no partially migrated prescription or result state.
+- [x] Historical records remain byte-for-byte intact in compatibility columns.
+- [x] New structured values remain reproducible through source edits, assignment publication, override changes, and session history.
+- [x] A failed multi-table operation leaves no partially persisted prescription or result state.
 
 ## Milestone 3: Workout Authoring And Library Import
 

@@ -9,6 +9,7 @@ import type {
   TeamRole,
 } from "@/modules/access-control/roles";
 import type { PrescriptionOverrideField } from "./effective-prescription";
+import type { Resistance } from "@/modules/resistance/application/resistance";
 
 export interface AthletePrescriptionOverrideInput {
   organizationId: string;
@@ -25,6 +26,7 @@ export interface AthletePrescriptionOverrideInput {
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
   normalizedLoadKg: string | null;
+  resistance?: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -228,6 +230,7 @@ export async function clearAthletePrescriptionOverride(
     | "loadValue"
     | "loadUnit"
     | "normalizedLoadKg"
+    | "resistance"
     | "durationSeconds"
     | "distanceMeters"
     | "restSeconds"
@@ -249,6 +252,7 @@ export async function clearAthletePrescriptionOverride(
       loadValue: null,
       loadUnit: null,
       normalizedLoadKg: null,
+      resistance: null,
       durationSeconds: null,
       distanceMeters: null,
       restSeconds: null,

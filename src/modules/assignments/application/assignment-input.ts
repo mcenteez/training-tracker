@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isValidIanaTimezone } from "./timeliness-policy";
+import { resultResistanceSchema } from "@/modules/resistance/application/resistance";
 
 const dateStringSchema = z
   .string()
@@ -104,6 +105,7 @@ export const autosaveSessionResultsInputSchema = z.object({
           load: z.string().trim().max(80).nullable(),
           loadValue: z.number().finite().positive().nullable().optional(),
           loadUnit: z.enum(["kg", "lb"]).nullable().optional(),
+          resistance: resultResistanceSchema.nullable().optional(),
           durationSeconds: z.number().int().nonnegative().nullable(),
           distanceMeters: z.number().int().nonnegative().nullable(),
           notes: z.string().trim().max(2000).nullable(),

@@ -5,7 +5,9 @@ import {
   formatResistance,
   normalizeFixedWeightResistance,
   resistanceMetricEligibility,
+  resistanceFromPersistence,
   resistanceSchema,
+  resistanceToPersistence,
   resultResistanceSchema,
 } from "./resistance";
 
@@ -122,5 +124,19 @@ describe("structured resistance", () => {
       normalizedWeightKg: null,
       source: "structured",
     });
+  });
+
+  it.each([
+    { type: "fixed_weight", value: 135, unit: "lb" },
+    { type: "percent_1rm", percentage: 80 },
+    { type: "bodyweight" },
+    { type: "band", description: "Heavy band" },
+    { type: "rpe", target: 7.5 },
+    { type: "rir", target: 2 },
+    { type: "free_text", description: "Moderate sled" },
+  ] as const)("round-trips %j through persistence fields", (resistance) => {
+    expect(
+      resistanceFromPersistence(resistanceToPersistence(resistance)),
+    ).toEqual(resistance);
   });
 });

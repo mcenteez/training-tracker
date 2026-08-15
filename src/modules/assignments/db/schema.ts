@@ -30,6 +30,11 @@ import {
 import { teams } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import {
+  resistanceShapeSql,
+  resistanceType,
+  resistanceUnit,
+} from "@/modules/resistance/db/schema";
+import {
   workoutBlocks,
   workoutItems,
   workouts,
@@ -442,6 +447,13 @@ export const assignmentWorkoutItemSnapshots = pgTable(
     loadValue: numeric("load_value"),
     loadUnit: strengthLoadUnit("load_unit"),
     normalizedLoadKg: numeric("normalized_load_kg"),
+    resistanceType: resistanceType("resistance_type"),
+    resistanceValue: numeric("resistance_value"),
+    resistanceUnit: resistanceUnit("resistance_unit"),
+    resistancePercentage: numeric("resistance_percentage"),
+    resistanceTarget: numeric("resistance_target"),
+    resistanceDescription: text("resistance_description"),
+    normalizedResistanceKg: numeric("normalized_resistance_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -490,6 +502,10 @@ export const assignmentWorkoutItemSnapshots = pgTable(
         AND ${table.loadUnit} IS NOT NULL
         AND ${table.normalizedLoadKg} > 0
       )`,
+    ),
+    check(
+      "assignment_workout_item_snapshots_resistance_shape",
+      resistanceShapeSql(table),
     ),
     check(
       "assignment_workout_item_snapshots_duration_nonnegative",
@@ -719,6 +735,13 @@ export const assignmentSessionItemResults = pgTable(
     loadValue: numeric("load_value"),
     loadUnit: strengthLoadUnit("load_unit"),
     normalizedLoadKg: numeric("normalized_load_kg"),
+    resistanceType: resistanceType("resistance_type"),
+    resistanceValue: numeric("resistance_value"),
+    resistanceUnit: resistanceUnit("resistance_unit"),
+    resistancePercentage: numeric("resistance_percentage"),
+    resistanceTarget: numeric("resistance_target"),
+    resistanceDescription: text("resistance_description"),
+    normalizedResistanceKg: numeric("normalized_resistance_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     notes: text(),
@@ -769,6 +792,10 @@ export const assignmentSessionItemResults = pgTable(
       )`,
     ),
     check(
+      "assignment_session_item_results_resistance_shape",
+      resistanceShapeSql(table),
+    ),
+    check(
       "assignment_session_item_results_duration_nonnegative",
       sql`${table.durationSeconds} IS NULL OR ${table.durationSeconds} >= 0`,
     ),
@@ -802,6 +829,13 @@ export const assignmentAthleteItemOverrides = pgTable(
     loadValue: numeric("load_value"),
     loadUnit: strengthLoadUnit("load_unit"),
     normalizedLoadKg: numeric("normalized_load_kg"),
+    resistanceType: resistanceType("resistance_type"),
+    resistanceValue: numeric("resistance_value"),
+    resistanceUnit: resistanceUnit("resistance_unit"),
+    resistancePercentage: numeric("resistance_percentage"),
+    resistanceTarget: numeric("resistance_target"),
+    resistanceDescription: text("resistance_description"),
+    normalizedResistanceKg: numeric("normalized_resistance_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -884,12 +918,16 @@ export const assignmentAthleteItemOverrides = pgTable(
       )`,
     ),
     check(
+      "assignment_athlete_item_overrides_resistance_shape",
+      resistanceShapeSql(table),
+    ),
+    check(
       "assignment_athlete_item_overrides_version_positive",
       sql`${table.version} > 0`,
     ),
     check(
       "assignment_athlete_item_overrides_fields_supported",
-      sql`${table.overriddenFields} <@ ARRAY['reps', 'load', 'durationSeconds', 'distanceMeters', 'restSeconds', 'tempo', 'notes']::text[]`,
+      sql`${table.overriddenFields} <@ ARRAY['reps', 'load', 'resistance', 'durationSeconds', 'distanceMeters', 'restSeconds', 'tempo', 'notes']::text[]`,
     ),
     uniqueIndex(
       "assignment_athlete_item_overrides_recipient_item_slot_unique",
@@ -919,6 +957,13 @@ export const assignmentSessionEffectiveItemPrescriptions = pgTable(
     loadValue: numeric("load_value"),
     loadUnit: strengthLoadUnit("load_unit"),
     normalizedLoadKg: numeric("normalized_load_kg"),
+    resistanceType: resistanceType("resistance_type"),
+    resistanceValue: numeric("resistance_value"),
+    resistanceUnit: resistanceUnit("resistance_unit"),
+    resistancePercentage: numeric("resistance_percentage"),
+    resistanceTarget: numeric("resistance_target"),
+    resistanceDescription: text("resistance_description"),
+    normalizedResistanceKg: numeric("normalized_resistance_kg"),
     durationSeconds: integer("duration_seconds"),
     distanceMeters: integer("distance_meters"),
     restSeconds: integer("rest_seconds"),
@@ -979,6 +1024,10 @@ export const assignmentSessionEffectiveItemPrescriptions = pgTable(
         AND ${table.loadUnit} IS NOT NULL
         AND ${table.normalizedLoadKg} > 0
       )`,
+    ),
+    check(
+      "assignment_session_effective_item_prescriptions_resistance_shape",
+      resistanceShapeSql(table),
     ),
     unique(
       "assignment_session_effective_item_prescriptions_session_item_unique",

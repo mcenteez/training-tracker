@@ -265,6 +265,194 @@ describe("assignment unit of work", () => {
     expect(artifacts.rows).toEqual([{ recipient_count: 0, snapshot_count: 0 }]);
   });
 
+  it("persists structured resistance through snapshots, overrides, sessions, and results", async () => {
+    await client.exec(`
+      UPDATE workout_items
+      SET resistance_type = 'percent_1rm', resistance_percentage = 80
+      WHERE id = '50000000-0000-4000-8000-000000000001';
+    `);
+    await expect(
+      client.exec(`
+        UPDATE workout_items
+        SET resistance_type = 'fixed_weight', resistance_percentage = 80
+        WHERE id = '50000000-0000-4000-8000-000000000001';
+      `),
+    ).rejects.toThrow(/workout_items_resistance_shape/);
+
+    const assignmentUnitOfWork = createAssignmentUnitOfWork(database);
+    const draft = await createAssignment(assignmentUnitOfWork, {
+      organizationId: "10000000-0000-4000-8000-000000000001",
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      timezone: "UTC",
+      source: {
+        sourceType: "workout",
+        sourceWorkoutId: "30000000-0000-4000-8000-000000000001",
+        scheduledDate: "2026-08-20",
+        availableFrom: null,
+        availableUntil: null,
+      },
+      targets: [
+        {
+          targetType: "athlete",
+          athleteUserId: "00000000-0000-4000-8000-000000000002",
+        },
+      ],
+    });
+    const prepared = await prepareAssignment(assignmentUnitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    const snapshotRows = await client.query<{
+      id: string;
+      resistance_type: string;
+      resistance_percentage: string;
+      load: string;
+    }>(`
+      SELECT id, resistance_type, resistance_percentage, load
+      FROM assignment_workout_item_snapshots
+      WHERE assignment_id = '${draft.id}';
+    `);
+    expect(snapshotRows.rows).toEqual([
+      expect.objectContaining({
+        resistance_type: "percent_1rm",
+        resistance_percentage: "80",
+        load: "75%",
+      }),
+    ]);
+
+    const recipientRows = await client.query<{ id: string }>(`
+      SELECT id FROM assignment_recipients WHERE assignment_id = '${draft.id}';
+    `);
+    await saveAthletePrescriptionOverride(
+      createAthletePrescriptionUnitOfWork(database),
+      {
+        organizationId: draft.organizationId,
+        actorUserId: "00000000-0000-4000-8000-000000000001",
+        assignmentId: draft.id,
+        recipientId: recipientRows.rows[0]!.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        itemSnapshotId: snapshotRows.rows[0]!.id,
+        planSlotSnapshotId: null,
+        expectedVersion: null,
+        overriddenFields: ["resistance"],
+        reps: null,
+        load: null,
+        loadValue: null,
+        loadUnit: null,
+        normalizedLoadKg: null,
+        resistance: { type: "fixed_weight", value: 135, unit: "lb" },
+        durationSeconds: null,
+        distanceMeters: null,
+        restSeconds: null,
+        tempo: null,
+        notes: null,
+        reason: null,
+      },
+    );
+    await publishAssignment(assignmentUnitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: prepared.version,
+    });
+
+    const sessionUnitOfWork = createAssignmentSessionUnitOfWork(database);
+    const session = await startAssignmentSession(sessionUnitOfWork, {
+      organizationId: draft.organizationId,
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      now: new Date("2026-08-20T12:00:00.000Z"),
+    });
+    const saved = await autosaveAssignmentSessionResults(sessionUnitOfWork, {
+      organizationId: draft.organizationId,
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: session.id,
+      expectedVersion: session.version,
+      mutationId: "11111111-1111-4111-8111-111111111111",
+      now: new Date("2026-08-20T12:30:00.000Z"),
+      results: [
+        {
+          itemSnapshotId: snapshotRows.rows[0]!.id,
+          completedAt: new Date("2026-08-20T12:30:00.000Z"),
+          roundNumber: 1,
+          reps: 5,
+          load: null,
+          resistance: { type: "bodyweight" },
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+    const submitted = await submitAssignmentSession(sessionUnitOfWork, {
+      organizationId: draft.organizationId,
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: session.id,
+      expectedVersion: saved.version,
+      now: new Date("2026-08-20T12:40:00.000Z"),
+    });
+    await autosaveAssignmentSessionResults(sessionUnitOfWork, {
+      organizationId: draft.organizationId,
+      assignmentId: draft.id,
+      athleteUserId: "00000000-0000-4000-8000-000000000002",
+      sessionId: session.id,
+      expectedVersion: submitted.version,
+      mutationId: "22222222-2222-4222-8222-222222222222",
+      now: new Date("2026-08-20T12:50:00.000Z"),
+      allowSubmittedEdit: true,
+      results: [
+        {
+          itemSnapshotId: snapshotRows.rows[0]!.id,
+          completedAt: new Date("2026-08-20T12:30:00.000Z"),
+          roundNumber: 1,
+          reps: 5,
+          load: null,
+          resistance: { type: "band", description: "Heavy band" },
+          durationSeconds: null,
+          distanceMeters: null,
+          notes: null,
+        },
+      ],
+    });
+
+    const effectiveRows = await client.query<{
+      resistance_type: string;
+      resistance_value: string;
+      resistance_unit: string;
+      normalized_resistance_kg: string;
+    }>(`
+      SELECT resistance_type, resistance_value, resistance_unit, normalized_resistance_kg
+      FROM assignment_session_effective_item_prescriptions
+      WHERE session_id = '${session.id}';
+    `);
+    const reloadedResults = await listSessionResultsForAthleteAssignment(
+      database,
+      {
+        organizationId: draft.organizationId,
+        assignmentId: draft.id,
+        athleteUserId: "00000000-0000-4000-8000-000000000002",
+        sessionId: session.id,
+      },
+    );
+    expect(effectiveRows.rows).toEqual([
+      {
+        resistance_type: "fixed_weight",
+        resistance_value: "135",
+        resistance_unit: "lb",
+        normalized_resistance_kg: "61.23496995",
+      },
+    ]);
+    expect(reloadedResults).toEqual([
+      expect.objectContaining({
+        resistance: { type: "band", description: "Heavy band" },
+      }),
+    ]);
+  });
+
   it("publishes plan snapshots preserving both scheduling modes", async () => {
     await client.exec(`
       INSERT INTO plans (id, organization_id, name, status)

@@ -1,9 +1,12 @@
+import type { Resistance } from "@/modules/resistance/application/resistance";
+
 export interface PrescriptionFields {
   reps: number | null;
   load: string | null;
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
   normalizedLoadKg: string | null;
+  resistance?: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -19,6 +22,7 @@ export interface PrescriptionOverride extends PrescriptionFields {
 export const prescriptionOverrideFields = [
   "reps",
   "load",
+  "resistance",
   "durationSeconds",
   "distanceMeters",
   "restSeconds",
@@ -59,6 +63,9 @@ export function resolveEffectivePrescription(
     normalizedLoadKg: overrides.has("load")
       ? override.normalizedLoadKg
       : base.normalizedLoadKg,
+    resistance: overrides.has("resistance")
+      ? (override.resistance ?? null)
+      : (base.resistance ?? null),
     durationSeconds: overrides.has("durationSeconds")
       ? override.durationSeconds
       : base.durationSeconds,

@@ -111,6 +111,16 @@ export interface AdaptedResistance {
   source: ResistanceSource | null;
 }
 
+export interface ResistancePersistenceFields {
+  resistanceType: Resistance["type"] | null;
+  resistanceValue: string | null;
+  resistanceUnit: ResistanceUnit | null;
+  resistancePercentage: string | null;
+  resistanceTarget: string | null;
+  resistanceDescription: string | null;
+  normalizedResistanceKg: string | null;
+}
+
 const POUNDS_TO_KILOGRAMS = 0.45359237;
 
 export function normalizeFixedWeightResistance(
@@ -140,6 +150,89 @@ export function formatResistance(resistance: Resistance): string {
       return `RPE ${resistance.target}`;
     case "rir":
       return `${resistance.target} RIR`;
+  }
+}
+
+export function resistanceToPersistence(
+  resistance: Resistance | null,
+): ResistancePersistenceFields {
+  const empty = {
+    resistanceValue: null,
+    resistanceUnit: null,
+    resistancePercentage: null,
+    resistanceTarget: null,
+    resistanceDescription: null,
+    normalizedResistanceKg: null,
+  };
+  if (!resistance) return { resistanceType: null, ...empty };
+
+  switch (resistance.type) {
+    case "fixed_weight": {
+      const normalized = normalizeFixedWeightResistance(resistance);
+      return {
+        ...empty,
+        resistanceType: resistance.type,
+        resistanceValue: resistance.value.toString(),
+        resistanceUnit: resistance.unit,
+        normalizedResistanceKg: normalized.normalizedWeightKg.toString(),
+      };
+    }
+    case "percent_1rm":
+      return {
+        ...empty,
+        resistanceType: resistance.type,
+        resistancePercentage: resistance.percentage.toString(),
+      };
+    case "bodyweight":
+      return { ...empty, resistanceType: resistance.type };
+    case "band":
+    case "free_text":
+      return {
+        ...empty,
+        resistanceType: resistance.type,
+        resistanceDescription: resistance.description,
+      };
+    case "rpe":
+    case "rir":
+      return {
+        ...empty,
+        resistanceType: resistance.type,
+        resistanceTarget: resistance.target.toString(),
+      };
+  }
+}
+
+export function resistanceFromPersistence(
+  fields: ResistancePersistenceFields,
+): Resistance | null {
+  switch (fields.resistanceType) {
+    case null:
+      return null;
+    case "fixed_weight":
+      return resistanceSchema.parse({
+        type: fields.resistanceType,
+        value: Number(fields.resistanceValue),
+        unit: fields.resistanceUnit,
+      });
+    case "percent_1rm":
+      return resistanceSchema.parse({
+        type: fields.resistanceType,
+        percentage: Number(fields.resistancePercentage),
+      });
+    case "bodyweight":
+      return { type: fields.resistanceType };
+    case "band":
+    case "free_text":
+      return resistanceSchema.parse({
+        type: fields.resistanceType,
+        description: fields.resistanceDescription,
+      });
+    case "rpe":
+    case "rir":
+      return resistanceSchema.parse({
+        type: fields.resistanceType,
+        target: Number(fields.resistanceTarget),
+      });
   }
 }
 

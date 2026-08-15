@@ -6,6 +6,10 @@ import type { Database } from "@/db/client";
 import { exercises } from "@/modules/exercises/db/schema";
 import { organizationMemberships } from "@/modules/organizations/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
+import {
+  resistanceFromPersistence,
+  resistanceToPersistence,
+} from "@/modules/resistance/application/resistance";
 import type {
   WorkoutTransaction,
   WorkoutUnitOfWork,
@@ -38,13 +42,17 @@ export function createWorkoutUnitOfWork(database: Database): WorkoutUnitOfWork {
 
             if (block.items.length) {
               await databaseTransaction.insert(workoutItems).values(
-                block.items.map((item, itemPosition) => ({
-                  organizationId,
-                  workoutId,
-                  blockId: createdBlock.id,
-                  position: itemPosition,
-                  ...item,
-                })),
+                block.items.map((item, itemPosition) => {
+                  const { resistance, ...legacyItem } = item;
+                  return {
+                    organizationId,
+                    workoutId,
+                    blockId: createdBlock.id,
+                    position: itemPosition,
+                    ...legacyItem,
+                    ...resistanceToPersistence(resistance ?? null),
+                  };
+                }),
               );
             }
           }
@@ -208,6 +216,7 @@ export function createWorkoutUnitOfWork(database: Database): WorkoutUnitOfWork {
                     exerciseId: item.exerciseId,
                     reps: item.reps,
                     load: item.load,
+                    resistance: resistanceFromPersistence(item),
                     durationSeconds: item.durationSeconds,
                     distanceMeters: item.distanceMeters,
                     restSeconds: item.restSeconds,

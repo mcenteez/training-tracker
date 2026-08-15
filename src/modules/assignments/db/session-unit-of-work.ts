@@ -24,6 +24,10 @@ import type {
   AssignmentSessionTransaction,
   AssignmentSessionUnitOfWork,
 } from "@/modules/assignments/application/assignment-session-service";
+import {
+  resistanceFromPersistence,
+  resistanceToPersistence,
+} from "@/modules/resistance/application/resistance";
 
 export function createAssignmentSessionUnitOfWork(
   database: Database,
@@ -219,6 +223,17 @@ export function createAssignmentSessionUnitOfWork(
                 loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
                 normalizedLoadKg:
                   assignmentWorkoutItemSnapshots.normalizedLoadKg,
+                resistanceType: assignmentWorkoutItemSnapshots.resistanceType,
+                resistanceValue: assignmentWorkoutItemSnapshots.resistanceValue,
+                resistanceUnit: assignmentWorkoutItemSnapshots.resistanceUnit,
+                resistancePercentage:
+                  assignmentWorkoutItemSnapshots.resistancePercentage,
+                resistanceTarget:
+                  assignmentWorkoutItemSnapshots.resistanceTarget,
+                resistanceDescription:
+                  assignmentWorkoutItemSnapshots.resistanceDescription,
+                normalizedResistanceKg:
+                  assignmentWorkoutItemSnapshots.normalizedResistanceKg,
                 durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
                 distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
                 restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
@@ -282,6 +297,17 @@ export function createAssignmentSessionUnitOfWork(
                 loadUnit: assignmentAthleteItemOverrides.loadUnit,
                 normalizedLoadKg:
                   assignmentAthleteItemOverrides.normalizedLoadKg,
+                resistanceType: assignmentAthleteItemOverrides.resistanceType,
+                resistanceValue: assignmentAthleteItemOverrides.resistanceValue,
+                resistanceUnit: assignmentAthleteItemOverrides.resistanceUnit,
+                resistancePercentage:
+                  assignmentAthleteItemOverrides.resistancePercentage,
+                resistanceTarget:
+                  assignmentAthleteItemOverrides.resistanceTarget,
+                resistanceDescription:
+                  assignmentAthleteItemOverrides.resistanceDescription,
+                normalizedResistanceKg:
+                  assignmentAthleteItemOverrides.normalizedResistanceKg,
                 durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
                 distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
                 restSeconds: assignmentAthleteItemOverrides.restSeconds,
@@ -341,10 +367,16 @@ export function createAssignmentSessionUnitOfWork(
               .values(
                 itemSnapshots.map((item) => {
                   const effective = resolveEffectivePrescription(
-                    item,
+                    {
+                      ...item,
+                      resistance: resistanceFromPersistence(item),
+                    },
                     overrideByItem.has(item.id)
                       ? {
                           ...overrideByItem.get(item.id)!,
+                          resistance: resistanceFromPersistence(
+                            overrideByItem.get(item.id)!,
+                          ),
                           overriddenFields: overrideByItem
                             .get(item.id)!
                             .overriddenFields.filter(
@@ -365,6 +397,7 @@ export function createAssignmentSessionUnitOfWork(
                     loadValue: effective.loadValue,
                     loadUnit: effective.loadUnit,
                     normalizedLoadKg: effective.normalizedLoadKg,
+                    ...resistanceToPersistence(effective.resistance ?? null),
                     durationSeconds: effective.durationSeconds,
                     distanceMeters: effective.distanceMeters,
                     restSeconds: effective.restSeconds,
@@ -482,6 +515,7 @@ export function createAssignmentSessionUnitOfWork(
                   loadValue: result.loadValue,
                   loadUnit: result.loadUnit,
                   normalizedLoadKg: result.normalizedLoadKg,
+                  ...resistanceToPersistence(result.resistance ?? null),
                   durationSeconds: result.durationSeconds,
                   distanceMeters: result.distanceMeters,
                   notes: result.notes,

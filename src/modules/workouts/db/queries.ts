@@ -14,6 +14,12 @@ import {
   type WorkoutStatus,
 } from "@/modules/workouts/db/schema";
 
+import {
+  adaptResistance,
+  resistanceFromPersistence,
+  type Resistance,
+  type ResistanceSource,
+} from "@/modules/resistance/application/resistance";
 export interface WorkoutListItem extends Workout {
   blockCount: number;
   itemCount: number;
@@ -64,6 +70,8 @@ export async function listWorkoutsForOrganization(
 export interface WorkoutItemDetail extends WorkoutItem {
   exerciseName: string;
   exerciseStatus: "active" | "archived";
+  resistance: Resistance | null;
+  resistanceSource: ResistanceSource | null;
 }
 
 export interface WorkoutBlockDetail extends WorkoutBlock {
@@ -113,6 +121,13 @@ export async function findWorkoutWithStructure(
       loadValue: workoutItems.loadValue,
       loadUnit: workoutItems.loadUnit,
       normalizedLoadKg: workoutItems.normalizedLoadKg,
+      resistanceType: workoutItems.resistanceType,
+      resistanceValue: workoutItems.resistanceValue,
+      resistanceUnit: workoutItems.resistanceUnit,
+      resistancePercentage: workoutItems.resistancePercentage,
+      resistanceTarget: workoutItems.resistanceTarget,
+      resistanceDescription: workoutItems.resistanceDescription,
+      normalizedResistanceKg: workoutItems.normalizedResistanceKg,
       durationSeconds: workoutItems.durationSeconds,
       distanceMeters: workoutItems.distanceMeters,
       restSeconds: workoutItems.restSeconds,
@@ -141,7 +156,22 @@ export async function findWorkoutWithStructure(
     ...workout,
     blocks: blocks.map((block) => ({
       ...block,
-      items: items.filter((item) => item.blockId === block.id),
+      items: items
+        .filter((item) => item.blockId === block.id)
+        .map((item) => {
+          const adapted = adaptResistance({
+            resistance: resistanceFromPersistence(item),
+            legacyLoad: item.load,
+            legacyLoadValue: item.loadValue,
+            legacyLoadUnit: item.loadUnit,
+            legacyNormalizedLoadKg: item.normalizedLoadKg,
+          });
+          return {
+            ...item,
+            resistance: adapted.resistance,
+            resistanceSource: adapted.source,
+          };
+        }),
     })),
   };
 }

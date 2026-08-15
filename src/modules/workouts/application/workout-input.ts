@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 import { workoutBlockTypes } from "@/modules/workouts/db/schema";
+import { resistanceSchema } from "@/modules/resistance/application/resistance";
 
 export const workoutItemInputSchema = z
   .object({
     exerciseId: z.uuid(),
     reps: z.number().int().nonnegative().nullable(),
     load: z.string().trim().max(80).nullable(),
+    resistance: resistanceSchema.nullable().optional(),
     durationSeconds: z.number().int().nonnegative().nullable(),
     distanceMeters: z.number().int().nonnegative().nullable(),
     restSeconds: z.number().int().nonnegative().nullable(),
@@ -17,6 +19,7 @@ export const workoutItemInputSchema = z
     (item) =>
       item.reps !== null ||
       Boolean(item.load) ||
+      (item.resistance !== undefined && item.resistance !== null) ||
       item.durationSeconds !== null ||
       item.distanceMeters !== null ||
       item.restSeconds !== null ||

@@ -19,6 +19,7 @@ import {
 } from "@/modules/assignments/db/schema";
 import { organizationMemberships } from "@/modules/organizations/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
+import { resistanceToPersistence } from "@/modules/resistance/application/resistance";
 
 export function createAthletePrescriptionUnitOfWork(
   database: Database,
@@ -265,6 +266,7 @@ export function createAthletePrescriptionUnitOfWork(
                 loadValue: input.loadValue,
                 loadUnit: input.loadUnit,
                 normalizedLoadKg: input.normalizedLoadKg,
+                ...resistanceToPersistence(input.resistance ?? null),
                 durationSeconds: input.durationSeconds,
                 distanceMeters: input.distanceMeters,
                 restSeconds: input.restSeconds,
@@ -292,6 +294,7 @@ export function createAthletePrescriptionUnitOfWork(
                 loadValue: input.loadValue,
                 loadUnit: input.loadUnit,
                 normalizedLoadKg: input.normalizedLoadKg,
+                ...resistanceToPersistence(input.resistance ?? null),
                 durationSeconds: input.durationSeconds,
                 distanceMeters: input.distanceMeters,
                 restSeconds: input.restSeconds,

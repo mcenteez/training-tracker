@@ -26,6 +26,7 @@ import type {
   AssignmentSessionItemResult,
 } from "@/modules/assignments/db/schema";
 import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
+import type { ResultResistance } from "@/modules/resistance/application/resistance";
 import { normalizeStrengthLoad } from "./training-load";
 
 interface AssignmentRecipientRecord {
@@ -88,6 +89,7 @@ interface AssignmentSessionResultInput {
   load: string | null;
   loadValue?: number | null;
   loadUnit?: "kg" | "lb" | null;
+  resistance?: ResultResistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;

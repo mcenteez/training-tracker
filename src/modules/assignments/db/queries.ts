@@ -23,6 +23,10 @@ import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
 import { teams } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
+import {
+  resistanceFromPersistence,
+  type Resistance,
+} from "@/modules/resistance/application/resistance";
 
 export interface AssignmentListItem extends Assignment {
   sourceName: string;
@@ -126,6 +130,7 @@ export interface AthleteSessionResultItem {
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
   normalizedLoadKg: string | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
@@ -563,7 +568,7 @@ export async function listPlanSlotSnapshotsForAthleteAssignment(
     return [];
   }
 
-  return database
+  const results = await database
     .select({
       id: assignmentPlanSlotSnapshots.id,
       workoutSnapshotId: assignmentPlanSlotSnapshots.workoutSnapshotId,
@@ -599,6 +604,8 @@ export async function listPlanSlotSnapshotsForAthleteAssignment(
       ),
     )
     .orderBy(asc(assignmentPlanSlotSnapshots.position));
+
+  return results;
 }
 
 export async function listSessionsForAthleteAssignment(
@@ -609,7 +616,7 @@ export async function listSessionsForAthleteAssignment(
     athleteUserId: string;
   },
 ): Promise<AthletePlanSessionSummary[]> {
-  return database
+  const results = await database
     .select({
       id: assignmentSessions.id,
       workoutSnapshotId: assignmentSessions.workoutSnapshotId,
@@ -631,6 +638,8 @@ export async function listSessionsForAthleteAssignment(
       ),
     )
     .orderBy(asc(assignmentSessions.scheduledDate));
+
+  return results;
 }
 
 export async function listWorkoutItemsForSnapshot(
@@ -953,7 +962,7 @@ export async function listSessionResultsForAthleteAssignment(
     return [];
   }
 
-  return database
+  const results = await database
     .select({
       itemSnapshotId: assignmentSessionItemResults.itemSnapshotId,
       completedAt: assignmentSessionItemResults.completedAt,
@@ -963,6 +972,14 @@ export async function listSessionResultsForAthleteAssignment(
       loadValue: assignmentSessionItemResults.loadValue,
       loadUnit: assignmentSessionItemResults.loadUnit,
       normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+      resistanceType: assignmentSessionItemResults.resistanceType,
+      resistanceValue: assignmentSessionItemResults.resistanceValue,
+      resistanceUnit: assignmentSessionItemResults.resistanceUnit,
+      resistancePercentage: assignmentSessionItemResults.resistancePercentage,
+      resistanceTarget: assignmentSessionItemResults.resistanceTarget,
+      resistanceDescription: assignmentSessionItemResults.resistanceDescription,
+      normalizedResistanceKg:
+        assignmentSessionItemResults.normalizedResistanceKg,
       durationSeconds: assignmentSessionItemResults.durationSeconds,
       distanceMeters: assignmentSessionItemResults.distanceMeters,
       notes: assignmentSessionItemResults.notes,
@@ -975,4 +992,9 @@ export async function listSessionResultsForAthleteAssignment(
         eq(assignmentSessionItemResults.sessionId, input.sessionId),
       ),
     );
+
+  return results.map((result) => ({
+    ...result,
+    resistance: resistanceFromPersistence(result),
+  }));
 }

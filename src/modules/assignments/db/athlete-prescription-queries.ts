@@ -17,6 +17,10 @@ import { organizationMemberships } from "@/modules/organizations/db/schema";
 import { teams } from "@/modules/teams/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
+import {
+  resistanceFromPersistence,
+  type Resistance,
+} from "@/modules/resistance/application/resistance";
 
 export interface AssignmentPrescriptionRecipient {
   recipientId: string;
@@ -54,6 +58,7 @@ export interface TeamAthletePrescriptionItem {
   restSeconds: number | null;
   tempo: string | null;
   notes: string | null;
+  resistance: Resistance | null;
   overrideId: string | null;
   overrideVersion: number | null;
   overriddenFields: string[] | null;
@@ -66,6 +71,7 @@ export interface TeamAthletePrescriptionItem {
   overrideRestSeconds: number | null;
   overrideTempo: string | null;
   overrideNotes: string | null;
+  overrideResistance: Resistance | null;
 }
 
 async function listAthletePrescriptionItems(
@@ -90,6 +96,15 @@ async function listAthletePrescriptionItems(
       restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
       tempo: assignmentWorkoutItemSnapshots.tempo,
       notes: assignmentWorkoutItemSnapshots.notes,
+      resistanceType: assignmentWorkoutItemSnapshots.resistanceType,
+      resistanceValue: assignmentWorkoutItemSnapshots.resistanceValue,
+      resistanceUnit: assignmentWorkoutItemSnapshots.resistanceUnit,
+      resistancePercentage: assignmentWorkoutItemSnapshots.resistancePercentage,
+      resistanceTarget: assignmentWorkoutItemSnapshots.resistanceTarget,
+      resistanceDescription:
+        assignmentWorkoutItemSnapshots.resistanceDescription,
+      normalizedResistanceKg:
+        assignmentWorkoutItemSnapshots.normalizedResistanceKg,
     })
     .from(assignmentRecipients)
     .innerJoin(
@@ -190,6 +205,16 @@ async function listAthletePrescriptionItems(
         restSeconds: assignmentAthleteItemOverrides.restSeconds,
         tempo: assignmentAthleteItemOverrides.tempo,
         notes: assignmentAthleteItemOverrides.notes,
+        resistanceType: assignmentAthleteItemOverrides.resistanceType,
+        resistanceValue: assignmentAthleteItemOverrides.resistanceValue,
+        resistanceUnit: assignmentAthleteItemOverrides.resistanceUnit,
+        resistancePercentage:
+          assignmentAthleteItemOverrides.resistancePercentage,
+        resistanceTarget: assignmentAthleteItemOverrides.resistanceTarget,
+        resistanceDescription:
+          assignmentAthleteItemOverrides.resistanceDescription,
+        normalizedResistanceKg:
+          assignmentAthleteItemOverrides.normalizedResistanceKg,
       })
       .from(assignmentAthleteItemOverrides)
       .where(
@@ -235,6 +260,10 @@ async function listAthletePrescriptionItems(
         overrideRestSeconds: override?.restSeconds ?? null,
         overrideTempo: override?.tempo ?? null,
         overrideNotes: override?.notes ?? null,
+        resistance: resistanceFromPersistence(item),
+        overrideResistance: override
+          ? resistanceFromPersistence(override)
+          : null,
       };
     });
   });
