@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 
 import { withDatabase } from "@/db/client";
 import { AssignmentSourceFields } from "@/components/assignments/assignment-source-fields";
@@ -58,6 +59,7 @@ export default async function AssignmentDetailPage({
   searchParams,
 }: AssignmentDetailPageProps) {
   const { assignmentId } = await params;
+  if (!z.uuid().safeParse(assignmentId).success) notFound();
   const feedback = await searchParams;
   const context = await loadActiveAppContext();
 

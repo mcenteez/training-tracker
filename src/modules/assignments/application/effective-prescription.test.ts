@@ -72,4 +72,43 @@ describe("resolveEffectivePrescription", () => {
       sourceOverrideId: "override-2",
     });
   });
+
+  it("resolves every supported field from an individual prescription", () => {
+    expect(
+      resolveEffectivePrescription(base, {
+        id: "override-all",
+        overriddenFields: [
+          "reps",
+          "load",
+          "durationSeconds",
+          "distanceMeters",
+          "restSeconds",
+          "tempo",
+          "notes",
+        ],
+        reps: 8,
+        load: "100 kg",
+        loadValue: "100",
+        loadUnit: "kg",
+        normalizedLoadKg: "100",
+        durationSeconds: 60,
+        distanceMeters: 400,
+        restSeconds: 90,
+        tempo: "20X1",
+        notes: "Individualized",
+      }),
+    ).toEqual({
+      reps: 8,
+      load: "100 kg",
+      loadValue: "100",
+      loadUnit: "kg",
+      normalizedLoadKg: "100",
+      durationSeconds: 60,
+      distanceMeters: 400,
+      restSeconds: 90,
+      tempo: "20X1",
+      notes: "Individualized",
+      sourceOverrideId: "override-all",
+    });
+  });
 });

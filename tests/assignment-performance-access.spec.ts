@@ -7,6 +7,7 @@ import {
   createExercise,
   createWorkout,
   markCompletedAssignmentLate,
+  prepareWorkoutAssignment,
   publishWorkoutAssignment,
   readAssignmentSessionCapture,
   readPublishedPlanPolicy,
@@ -272,6 +273,9 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Save Draft and Review" }).click();
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?created=1$/);
+    await page.getByRole("button", { name: "Prepare assignment" }).click();
+    await page.getByRole("button", { name: "Confirm preparation" }).click();
+    await expect(page).toHaveURL(/\?prepared=1$/);
     await page.getByRole("button", { name: "Publish Assignment" }).click();
     await page.getByRole("button", { name: "Confirm Publication" }).click();
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
@@ -301,7 +305,7 @@ test.describe("Training Tracker assignment and performance access", () => {
     await usePersona(context, "manager");
     await createExercise(page, exerciseName);
     await createWorkout(page, workoutName, exerciseName, "5");
-    const assignmentPath = await publishWorkoutAssignment(
+    const assignmentPath = await prepareWorkoutAssignment(
       page,
       workoutName,
       scheduledDate,
@@ -309,11 +313,9 @@ test.describe("Training Tracker assignment and performance access", () => {
     const assignmentId = assignmentPath.split("/").pop()!;
     const performancePath = `/app/performance/teams/${basketballTeamId}/assignments/${assignmentId}`;
 
-    await page.goto(performancePath);
     const athleteCard = page
       .locator('[data-slot="card"]')
       .filter({ hasText: "athlete@local.test" });
-    await athleteCard.getByText("Individual prescription").click();
     const prescriptionForm = athleteCard
       .locator("form")
       .filter({ hasText: exerciseName });
@@ -326,9 +328,7 @@ test.describe("Training Tracker assignment and performance access", () => {
       .click();
     await expect(page).toHaveURL(/\?prescription=saved$/);
     await expect(
-      page.getByText(
-        "Individual prescription saved for future unstarted sessions.",
-      ),
+      page.getByText("Individual prescription saved."),
     ).toBeVisible();
     await page.setViewportSize({ width: 375, height: 812 });
     expect(
@@ -337,6 +337,10 @@ test.describe("Training Tracker assignment and performance access", () => {
       ),
     ).toBe(true);
     await page.setViewportSize({ width: 1280, height: 720 });
+
+    await page.getByRole("button", { name: "Publish Assignment" }).click();
+    await page.getByRole("button", { name: "Confirm Publication" }).click();
+    await expect(page).toHaveURL(/\?published=1$/);
 
     await usePersona(context, "viewer");
     await page.goto(performancePath);
@@ -624,6 +628,8 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.getByRole("option", { name: "Basketball" }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Save Draft and Review" }).click();
+    await page.getByRole("button", { name: "Prepare assignment" }).click();
+    await page.getByRole("button", { name: "Confirm preparation" }).click();
     await page.getByRole("button", { name: "Publish Assignment" }).click();
     await page.getByRole("button", { name: "Confirm Publication" }).click();
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
@@ -678,6 +684,8 @@ test.describe("Training Tracker assignment and performance access", () => {
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?created=1$/);
     await expect(page.getByText("Draft created.")).toBeVisible();
 
+    await page.getByRole("button", { name: "Prepare assignment" }).click();
+    await page.getByRole("button", { name: "Confirm preparation" }).click();
     await page.getByRole("button", { name: "Publish Assignment" }).click();
     await page.getByRole("button", { name: "Confirm Publication" }).click();
     await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);

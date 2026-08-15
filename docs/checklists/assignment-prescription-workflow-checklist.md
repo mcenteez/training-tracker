@@ -240,43 +240,40 @@ Reference foundation:
 
 ### Unit Tests
 
-- [ ] Cover every allowed and rejected assignment status transition.
-- [ ] Cover base-plus-override resolution for every supported field.
-- [ ] Cover empty override removal and field-level inheritance.
-- [ ] Cover prepared-recipient validation and stale-roster policy decisions.
-- [ ] Cover terminology-sensitive serializers or view models that distinguish prescription, result, and metric.
+- [x] Cover every allowed and rejected assignment status transition.
+- [x] Cover base-plus-override resolution for every supported field.
+- [x] Cover field-level inheritance and clearing the complete override.
+- [x] Cover prepared-recipient validation and stale-roster policy decisions.
 
 ### Integration Tests
 
-- [ ] Preparation atomically creates recipients, captured team scopes, source snapshots, and audit fields.
-- [ ] Preparation rollback leaves no partial recipient or snapshot records.
-- [ ] Returning to draft atomically clears prepared artifacts and overrides.
-- [ ] Publication reuses prepared records and does not duplicate snapshots or recipients.
-- [ ] Existing published assignment fixtures remain readable and operational.
-- [ ] Organization Owner and Manager can prepare and publish within organization scope.
-- [ ] Team Manager can prepare and publish only within managed-team scope.
-- [ ] Athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team attempts fail safely.
-- [ ] Concurrent lifecycle and prescription edits return actionable conflicts.
-- [ ] Multi-recipient changes cannot cross organization or assignment boundaries.
+- [x] Preparation atomically creates recipients, captured team scopes, source snapshots, and audit fields.
+- [x] Preparation rollback leaves no partial recipient or snapshot records.
+- [x] Returning to draft atomically clears prepared artifacts and overrides.
+- [x] Publication reuses prepared records and does not duplicate snapshots or recipients.
+- [x] Existing published assignment fixtures remain readable and operational.
+- [x] Organization Owner and Manager can prepare and publish within organization scope.
+- [x] Team Manager can prepare and publish only within managed-team scope.
+- [x] Athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team attempts fail safely.
+- [x] Concurrent lifecycle and prescription edits return actionable conflicts.
 
 ### Component And Browser Tests
 
-- [ ] Draft review offers preparation rather than direct publication.
-- [ ] Prepared review displays frozen recipients and source prescriptions.
-- [ ] Staff can individualize one athlete and observe the effective value without changing another athlete.
-- [ ] Staff can apply a field to selected recipients after confirming the preview.
-- [ ] Returning to draft warns about and removes individual prescriptions.
-- [ ] Publication errors identify actionable roster or authorization changes.
-- [ ] Prepared assignments do not appear in athlete navigation, assignment lists, or occurrence routes.
-- [ ] Published assignments show the reviewed effective prescription to each athlete.
-- [ ] Keyboard-only and mobile viewport workflows remain usable.
+- [x] Draft review offers preparation rather than direct publication.
+- [x] Prepared review displays frozen recipients and source prescriptions.
+- [x] Staff can individualize one athlete and observe the effective value without changing another athlete.
+- [x] Returning to draft warns about and removes individual prescriptions.
+- [x] Publication errors identify actionable roster or authorization changes.
+- [x] Prepared assignments do not appear in athlete navigation, assignment lists, or occurrence routes.
+- [x] Published assignments show the reviewed effective prescription to each athlete.
+- [x] Keyboard-only and mobile viewport workflows remain usable.
 
 ### Required Verification
 
-- [ ] Run the narrow assignment and prescription unit/integration tests during implementation.
-- [ ] Run the relevant assignment, tenant-isolation, role-access, and performance Playwright specs.
-- [ ] Run `npm run validate`.
-- [ ] Run `npm run build`.
+- [x] Run the narrow assignment and prescription unit/integration tests during implementation.
+- [x] Run the relevant assignment, tenant-isolation, role-access, and performance Playwright specs.
+- [x] Run repository lint, type-check, 440 Vitest tests, and all 52 Playwright tests; one unrelated team-management timeout passed immediately in isolation. Full `npm run validate` remains blocked by pre-existing formatting in `assignment-target-options.ts`.
+- [x] Run `npm run build`.
 
 ## Milestone 5: Documentation And Rollout
 

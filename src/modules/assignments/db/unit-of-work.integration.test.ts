@@ -36,6 +36,7 @@ import {
   listSessionsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
 import {
+  findPreparedRecipientRosterChanges,
   listAssignmentAthletePrescriptionItems,
   listAssignmentPrescriptionRecipients,
 } from "@/modules/assignments/db/athlete-prescription-queries";
@@ -192,8 +193,8 @@ describe("assignment unit of work", () => {
       },
       targets: [
         {
-          targetType: "athlete",
-          athleteUserId: "00000000-0000-4000-8000-000000000002",
+          targetType: "team",
+          teamId: "80000000-0000-4000-8000-000000000001",
         },
       ],
     });
@@ -220,6 +221,22 @@ describe("assignment unit of work", () => {
     );
     expect(prepared.preparedAt).toBeInstanceOf(Date);
     expect(athleteAssignments).toEqual([]);
+
+    await client.exec(`
+      INSERT INTO users (id, clerk_user_id, email)
+      VALUES ('00000000-0000-4000-8000-000000000004', 'later-athlete', 'later-athlete@example.com');
+      INSERT INTO organization_memberships (organization_id, user_id, role)
+      VALUES ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'athlete');
+      INSERT INTO team_memberships (organization_id, team_id, user_id, role)
+      VALUES ('10000000-0000-4000-8000-000000000001', '80000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'athlete');
+    `);
+    const rosterChanges = await findPreparedRecipientRosterChanges(database, {
+      organizationId: draft.organizationId,
+      assignmentId: draft.id,
+    });
+    expect(rosterChanges.addedAthleteUserIds).toEqual([
+      "00000000-0000-4000-8000-000000000004",
+    ]);
 
     const reset = await returnPreparedAssignmentToDraft(unitOfWork, {
       organizationId: draft.organizationId,

@@ -252,7 +252,7 @@ export async function createWorkoutDraft(
   return new URL(page.url()).pathname;
 }
 
-export async function publishWorkoutAssignment(
+export async function prepareWorkoutAssignment(
   page: Page,
   workoutName: string,
   scheduledDate: string,
@@ -269,6 +269,19 @@ export async function publishWorkoutAssignment(
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Save Draft and Review" }).click();
   await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?created=1$/);
+  await page.getByRole("button", { name: "Prepare assignment" }).click();
+  await page.getByRole("button", { name: "Confirm preparation" }).click();
+  await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?prepared=1$/);
+  return new URL(page.url()).pathname;
+}
+
+export async function publishWorkoutAssignment(
+  page: Page,
+  workoutName: string,
+  scheduledDate: string,
+  teamName = "Basketball",
+): Promise<string> {
+  await prepareWorkoutAssignment(page, workoutName, scheduledDate, teamName);
   await page.getByRole("button", { name: "Publish Assignment" }).click();
   await page.getByRole("button", { name: "Confirm Publication" }).click();
   await expect(page).toHaveURL(/\/app\/assignments\/[^/]+\?published=1$/);
