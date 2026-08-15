@@ -73,6 +73,52 @@ describe("athlete prescription overrides", () => {
     expect(transaction.createOverride).toHaveBeenCalledWith(input);
   });
 
+  it("creates and clears overrides while an assignment is prepared", async () => {
+    const { transaction, unitOfWork } = setup({
+      findOverrideTarget: vi.fn(async () => ({
+        assignmentStatus: "prepared" as const,
+        recipientId: input.recipientId,
+        athleteUserId: input.athleteUserId,
+      })),
+      findOverride: vi.fn(async () => ({ id: "override-1", version: 1 })),
+    });
+
+    await saveAthletePrescriptionOverride(unitOfWork, {
+      ...input,
+      expectedVersion: 1,
+    });
+    await clearAthletePrescriptionOverride(unitOfWork, {
+      organizationId: input.organizationId,
+      actorUserId: input.actorUserId,
+      assignmentId: input.assignmentId,
+      recipientId: input.recipientId,
+      athleteUserId: input.athleteUserId,
+      itemSnapshotId: input.itemSnapshotId,
+      planSlotSnapshotId: null,
+      expectedVersion: 1,
+    });
+
+    expect(transaction.updateOverride).toHaveBeenCalled();
+    expect(transaction.deleteOverride).toHaveBeenCalled();
+  });
+
+  it.each(["draft", "canceled"] as const)(
+    "rejects prescription writes for %s assignments",
+    async (assignmentStatus) => {
+      const { unitOfWork } = setup({
+        findOverrideTarget: vi.fn(async () => ({
+          assignmentStatus,
+          recipientId: input.recipientId,
+          athleteUserId: input.athleteUserId,
+        })),
+      });
+
+      await expect(
+        saveAthletePrescriptionOverride(unitOfWork, input),
+      ).rejects.toBeInstanceOf(DomainInvariantError);
+    },
+  );
+
   it("allows a Team Manager only for a recipient in their persisted team scope", async () => {
     const { transaction, unitOfWork } = setup({
       findOrganizationRole: vi.fn(async () => "athlete" as const),

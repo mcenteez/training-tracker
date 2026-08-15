@@ -16,60 +16,13 @@ import {
   saveAthletePrescriptionOverride,
 } from "@/modules/assignments/application/athlete-prescription-service";
 import {
-  prescriptionOverrideFields,
-  type PrescriptionOverrideField,
-} from "@/modules/assignments/application/effective-prescription";
+  athletePrescriptionFormData,
+  athletePrescriptionOverrideFormSchema,
+  clearAthletePrescriptionFormSchema,
+} from "@/modules/assignments/application/athlete-prescription-input";
+import { type PrescriptionOverrideField } from "@/modules/assignments/application/effective-prescription";
 import { normalizeStrengthLoad } from "@/modules/assignments/application/training-load";
 import { createAthletePrescriptionUnitOfWork } from "@/modules/assignments/db/athlete-prescription-unit-of-work";
-
-const optionalInteger = z.preprocess(
-  (value) => (value === "" || value === null ? null : Number(value)),
-  z.number().int().nonnegative().nullable(),
-);
-const optionalText = (maxLength: number) =>
-  z.preprocess(
-    (value) =>
-      typeof value === "string" && value.trim() ? value.trim() : null,
-    z.string().max(maxLength).nullable(),
-  );
-
-const overrideInputSchema = z
-  .object({
-    teamId: z.uuid(),
-    assignmentId: z.uuid(),
-    recipientId: z.uuid(),
-    athleteUserId: z.uuid(),
-    itemSnapshotId: z.uuid(),
-    planSlotSnapshotId: z.uuid().nullable(),
-    expectedVersion: z.number().int().positive().nullable(),
-    overriddenFields: z.array(z.enum(prescriptionOverrideFields)).min(1),
-    reps: optionalInteger,
-    load: optionalText(80),
-    loadValue: z.preprocess(
-      (value) => (value === "" || value === null ? null : Number(value)),
-      z.number().finite().positive().nullable(),
-    ),
-    loadUnit: z.enum(["kg", "lb"]).nullable(),
-    durationSeconds: optionalInteger,
-    distanceMeters: optionalInteger,
-    restSeconds: optionalInteger,
-    tempo: optionalText(80),
-    notes: optionalText(2000),
-    reason: optionalText(500),
-  })
-  .superRefine((input, context) => {
-    const overridesLoad = input.overriddenFields.includes("load");
-    if (
-      overridesLoad &&
-      (input.loadValue === null) !== (input.loadUnit === null)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["loadValue"],
-        message: "Enter both a numeric load and its unit.",
-      });
-    }
-  });
 
 function feedbackPath(
   input: { teamId: string; assignmentId: string },
@@ -106,30 +59,12 @@ function revalidatePrescriptionPaths(input: {
 export async function saveAthletePrescriptionOverrideAction(
   formData: FormData,
 ): Promise<void> {
-  const parsed = overrideInputSchema.safeParse({
-    teamId: formData.get("teamId"),
-    assignmentId: formData.get("assignmentId"),
-    recipientId: formData.get("recipientId"),
-    athleteUserId: formData.get("athleteUserId"),
-    itemSnapshotId: formData.get("itemSnapshotId"),
-    planSlotSnapshotId: formData.get("planSlotSnapshotId") || null,
-    expectedVersion: formData.get("expectedVersion")
-      ? Number(formData.get("expectedVersion"))
-      : null,
-    overriddenFields: formData.getAll("overriddenFields"),
-    reps: formData.get("reps"),
-    load: formData.get("load"),
-    loadValue: formData.get("loadValue"),
-    loadUnit: formData.get("loadUnit") || null,
-    durationSeconds: formData.get("durationSeconds"),
-    distanceMeters: formData.get("distanceMeters"),
-    restSeconds: formData.get("restSeconds"),
-    tempo: formData.get("tempo"),
-    notes: formData.get("notes"),
-    reason: formData.get("reason"),
-  });
+  const parsed = athletePrescriptionOverrideFormSchema.safeParse(
+    athletePrescriptionFormData(formData),
+  );
+  const teamId = z.uuid().safeParse(formData.get("teamId"));
 
-  if (!parsed.success) {
+  if (!parsed.success || !teamId.success) {
     throw new Error("Prescription fields are invalid.");
   }
 
@@ -173,36 +108,31 @@ export async function saveAthletePrescriptionOverrideAction(
     );
   } catch (error) {
     const status = mutationFailureStatus(error);
-    if (status) redirect(feedbackPath(parsed.data, status));
+    if (status)
+      redirect(
+        feedbackPath(
+          { teamId: teamId.data, assignmentId: parsed.data.assignmentId },
+          status,
+        ),
+      );
     throw error;
   }
 
-  revalidatePrescriptionPaths(parsed.data);
-  redirect(feedbackPath(parsed.data, "saved"));
+  const pathInput = {
+    teamId: teamId.data,
+    assignmentId: parsed.data.assignmentId,
+  };
+  revalidatePrescriptionPaths(pathInput);
+  redirect(feedbackPath(pathInput, "saved"));
 }
 
 export async function clearAthletePrescriptionOverrideAction(
   formData: FormData,
 ): Promise<void> {
-  const parsed = z
-    .object({
-      teamId: z.uuid(),
-      assignmentId: z.uuid(),
-      recipientId: z.uuid(),
-      athleteUserId: z.uuid(),
-      itemSnapshotId: z.uuid(),
-      planSlotSnapshotId: z.uuid().nullable(),
-      expectedVersion: z.coerce.number().int().positive(),
-    })
-    .parse({
-      teamId: formData.get("teamId"),
-      assignmentId: formData.get("assignmentId"),
-      recipientId: formData.get("recipientId"),
-      athleteUserId: formData.get("athleteUserId"),
-      itemSnapshotId: formData.get("itemSnapshotId"),
-      planSlotSnapshotId: formData.get("planSlotSnapshotId") || null,
-      expectedVersion: formData.get("expectedVersion"),
-    });
+  const parsed = clearAthletePrescriptionFormSchema.parse(
+    athletePrescriptionFormData(formData),
+  );
+  const teamId = z.uuid().parse(formData.get("teamId"));
   const context = await loadActiveAppContext();
 
   try {
@@ -223,10 +153,14 @@ export async function clearAthletePrescriptionOverrideAction(
     );
   } catch (error) {
     const status = mutationFailureStatus(error);
-    if (status) redirect(feedbackPath(parsed, status));
+    if (status)
+      redirect(
+        feedbackPath({ teamId, assignmentId: parsed.assignmentId }, status),
+      );
     throw error;
   }
 
-  revalidatePrescriptionPaths(parsed);
-  redirect(feedbackPath(parsed, "cleared"));
+  const pathInput = { teamId, assignmentId: parsed.assignmentId };
+  revalidatePrescriptionPaths(pathInput);
+  redirect(feedbackPath(pathInput, "cleared"));
 }

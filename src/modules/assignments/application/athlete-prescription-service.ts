@@ -171,9 +171,12 @@ export async function saveAthletePrescriptionOverride(
     if (!target) {
       throw new ResourceNotFoundError("Assignment workout item");
     }
-    if (target.assignmentStatus !== "published") {
+    if (
+      target.assignmentStatus !== "prepared" &&
+      target.assignmentStatus !== "published"
+    ) {
       throw new DomainInvariantError(
-        "Only published assignments can have athlete prescriptions.",
+        "Only prepared or published assignments can have athlete prescriptions.",
       );
     }
     if (
@@ -254,6 +257,18 @@ export async function clearAthletePrescriptionOverride(
       reason: null,
     } as const;
     await assertActorCanManageTarget(transaction, authorizationInput);
+    const target = await transaction.findOverrideTarget(authorizationInput);
+    if (!target) {
+      throw new ResourceNotFoundError("Assignment workout item");
+    }
+    if (
+      target.assignmentStatus !== "prepared" &&
+      target.assignmentStatus !== "published"
+    ) {
+      throw new DomainInvariantError(
+        "Only prepared or published assignments can have athlete prescriptions.",
+      );
+    }
     if (
       input.planSlotSnapshotId === null &&
       (await transaction.hasLockedSession(authorizationInput))

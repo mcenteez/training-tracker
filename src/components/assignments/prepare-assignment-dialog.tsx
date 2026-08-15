@@ -1,6 +1,6 @@
 "use client";
 
-import { publishAssignmentAction } from "@/app/(app)/app/assignments/actions";
+import { prepareAssignmentAction } from "@/app/(app)/app/assignments/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,45 +13,43 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-interface PublishAssignmentDialogProps {
-  assignmentId: string;
-  version: number;
-  recipientEstimate: number;
-}
-
-export function PublishAssignmentDialog({
+export function PrepareAssignmentDialog({
   assignmentId,
   version,
   recipientEstimate,
-}: PublishAssignmentDialogProps) {
+}: {
+  assignmentId: string;
+  version: number;
+  recipientEstimate: number;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button">Publish Assignment</Button>
+        <Button type="button">Prepare assignment</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Publish this assignment?</DialogTitle>
+          <DialogTitle>Prepare for individualization?</DialogTitle>
           <DialogDescription>
-            This will deliver the assignment to {recipientEstimate} unique
-            {recipientEstimate === 1 ? " athlete" : " athletes"} using the
-            effective prescriptions reviewed here.
+            Freeze the source, schedule, and {recipientEstimate} resolved
+            {recipientEstimate === 1 ? " recipient" : " recipients"} for review.
+            Athletes cannot see a prepared assignment.
           </DialogDescription>
         </DialogHeader>
         <p className="text-sm">
-          Athletes will be able to see the assignment after publication. Its
-          prepared recipients and shared programming will remain frozen.
+          You can individualize prescriptions before publishing. Returning to
+          draft later discards those prescriptions and the frozen snapshots.
         </p>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              Keep reviewing
+              Keep editing
             </Button>
           </DialogClose>
-          <form action={publishAssignmentAction}>
+          <form action={prepareAssignmentAction}>
             <input type="hidden" name="assignmentId" value={assignmentId} />
             <input type="hidden" name="version" value={version} />
-            <Button type="submit">Confirm Publication</Button>
+            <Button type="submit">Confirm preparation</Button>
           </form>
         </DialogFooter>
       </DialogContent>

@@ -19,12 +19,14 @@ describe("PublishAssignmentDialog", () => {
       />,
     );
 
-    expect(screen.queryByText(/immutable snapshot/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/effective prescriptions/i),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Publish Assignment" }));
 
     expect(screen.getByText(/24 unique athletes/i)).toBeVisible();
-    expect(screen.getByText(/immutable snapshot/i)).toBeVisible();
+    expect(screen.getByText(/effective prescriptions/i)).toBeVisible();
     expect(screen.getByText(/athletes will be able to see/i)).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Confirm Publication" }),

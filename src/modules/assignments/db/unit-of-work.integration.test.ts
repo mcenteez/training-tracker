@@ -35,6 +35,10 @@ import {
   listSessionResultsForAthleteAssignment,
   listSessionsForAthleteAssignment,
 } from "@/modules/assignments/db/queries";
+import {
+  listAssignmentAthletePrescriptionItems,
+  listAssignmentPrescriptionRecipients,
+} from "@/modules/assignments/db/athlete-prescription-queries";
 import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
 import { createAssignmentUnitOfWork } from "@/modules/assignments/db/unit-of-work";
 
@@ -809,7 +813,32 @@ describe("assignment unit of work", () => {
         },
       ],
     });
-    await prepareAndPublishAssignment(unitOfWork, draft);
+    const prepared = await prepareAssignment(unitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: draft.version,
+    });
+    const [reviewRecipients, reviewItems] = await Promise.all([
+      listAssignmentPrescriptionRecipients(database, {
+        organizationId: draft.organizationId,
+        assignmentId: draft.id,
+      }),
+      listAssignmentAthletePrescriptionItems(database, {
+        organizationId: draft.organizationId,
+        assignmentId: draft.id,
+      }),
+    ]);
+    expect(reviewRecipients).toHaveLength(2);
+    expect(reviewRecipients).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          athleteUserId: "00000000-0000-4000-8000-000000000003",
+          teamIds: [],
+        }),
+      ]),
+    );
+    expect(reviewItems).toHaveLength(2);
     const recipients = await client.query<{
       id: string;
       athlete_user_id: string;
@@ -850,6 +879,13 @@ describe("assignment unit of work", () => {
         reason: null,
       });
     }
+
+    await publishAssignment(unitOfWork, {
+      organizationId: draft.organizationId,
+      actorUserId: "00000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      expectedVersion: prepared.version,
+    });
 
     const overrideRows = await client.query<{
       athlete_user_id: string;

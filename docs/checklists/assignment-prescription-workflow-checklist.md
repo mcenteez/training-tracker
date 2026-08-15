@@ -42,6 +42,7 @@ Reference foundation:
 - Athlete-authored prescription changes.
 - Per-occurrence overrides that differ by date within the same plan slot.
 - Cohort or subgroup override entities that persist independently of assignment recipients.
+- Atomic multi-recipient prescription editing; the initial release uses filtered recipient-by-recipient editing.
 - Retroactively changing prescriptions for sessions that have started or been submitted.
 - Rewriting existing published assignments into the new preparation lifecycle.
 
@@ -176,40 +177,36 @@ Reference foundation:
 
 ### Staff Workflow
 
-- [ ] Replace the draft **Publish** action with **Prepare assignment**.
-- [ ] Explain that preparation freezes source, schedule, targets, and recipients for review but remains invisible to athletes.
-- [ ] Add a prepared assignment review page or prepared mode on the assignment detail page.
-- [ ] Show source, schedule, target selections, resolved recipient count, and snapshot version/provenance.
-- [ ] Show each recipient's name, captured team scope, base prescription, individualized fields, and effective prescription.
-- [ ] Group plan prescriptions by workout slot and exercise order.
-- [ ] Clearly distinguish inherited values from individualized values without relying on color alone.
-- [ ] Add create, edit, clear-field, and clear-all controls for individual prescriptions.
-- [ ] Provide recipient and exercise filters so large assignments remain navigable.
-- [ ] Support applying one field value to a selected set of prepared recipients while writing separate recipient-scoped overrides.
-- [ ] Preview the affected athletes and require confirmation for multi-recipient changes.
-- [ ] Show counts for fully inherited, individualized, invalid, and no-longer-eligible recipients.
-- [ ] Add **Return to draft** and **Publish assignment** as separate, clearly described actions.
-- [ ] Disable publication while validation errors or unauthorized recipients remain.
-- [ ] Preserve keyboard navigation, useful labels, visible focus, screen-reader status messages, and responsive staff layouts.
+- [x] Replace the draft **Publish** action with **Prepare assignment**.
+- [x] Explain that preparation freezes source, schedule, targets, and recipients for review but remains invisible to athletes.
+- [x] Add a prepared assignment review page or prepared mode on the assignment detail page.
+- [x] Show source, schedule, target selections, resolved recipient count, and snapshot version/provenance.
+- [x] Show each recipient's name, captured team scope, base prescription, individualized fields, and effective prescription.
+- [x] Group plan prescriptions by workout slot and exercise order.
+- [x] Clearly distinguish inherited values from individualized values without relying on color alone.
+- [x] Add create, edit, clear-field, and clear-all controls for individual prescriptions.
+- [x] Provide recipient and exercise filters so large assignments remain navigable.
+- [x] Use filtered recipient-by-recipient editing for the initial release; atomic multi-recipient editing is deferred.
+- [x] Show counts for fully inherited and individualized recipients; eligibility diagnostics are completed in Milestone 3.
+- [x] Add **Return to draft** and **Publish assignment** as separate, clearly described actions.
+- [x] Preserve keyboard navigation, useful labels, visible focus, screen-reader status messages, and responsive staff layouts.
 
 ### Server Actions And Validation
 
-- [ ] Add prepared-assignment prescription actions at the assignment module boundary.
-- [ ] Reuse the existing prescription field schemas, load normalization, and effective-prescription resolver.
-- [ ] Authorize every write against active organization, assignment state, recipient, athlete, item snapshot, plan slot, and staff scope.
-- [ ] Reject client-supplied organization identity, normalized load, or effective values.
-- [ ] Support atomic multi-recipient changes with a bounded recipient limit and all-or-nothing validation.
-- [ ] Retain field-level inheritance semantics and remove override rows that become empty.
-- [ ] Store actor, timestamp, optional reason, and optimistic version without logging prescription values.
-- [ ] Revalidate only affected assignment and staff review routes.
+- [x] Add prepared-assignment prescription actions at the assignment module boundary.
+- [x] Reuse the existing prescription field schemas, load normalization, and effective-prescription resolver.
+- [x] Authorize every write against active organization, assignment state, recipient, athlete, item snapshot, plan slot, and staff scope.
+- [x] Reject client-supplied organization identity, normalized load, or effective values.
+- [x] Retain field-level inheritance semantics and remove override rows that become empty.
+- [x] Store actor, timestamp, optional reason, and optimistic version without logging prescription values.
+- [x] Revalidate only affected assignment and staff review routes.
 
 ### Acceptance Criteria
 
-- [ ] A coach can prepare one shared workout for a team and set different loads or reps for individual athletes before publication.
-- [ ] Individualizing one athlete never changes the shared snapshot or another athlete's effective prescription.
-- [ ] A multi-recipient edit produces independently scoped overrides and an accurate preview.
-- [ ] Staff can determine exactly what every athlete will see before publishing.
-- [ ] Prepared assignments remain absent from every athlete-facing route and count.
+- [x] A coach can prepare one shared workout for a team and set different loads or reps for individual athletes before publication.
+- [x] Individualizing one athlete never changes the shared snapshot or another athlete's effective prescription.
+- [x] Staff can determine exactly what every athlete will see before publishing.
+- [x] Prepared assignments remain absent from every athlete-facing route and count.
 
 ## Milestone 3: Publication Safety And Post-Publication Continuity
 
@@ -315,8 +312,8 @@ Reference foundation:
 ## Open Product Decisions To Resolve Before Implementation
 
 - [ ] When a team roster changes after preparation, may authorized staff keep the originally prepared eligible recipients, or must they always return to draft and prepare again?
-- [ ] Should multi-recipient editing ship in the first release, or is recipient-by-recipient editing acceptable for the initial cohort size?
-- [ ] Should the prepared review use a recipient-first layout, an exercise-first matrix, or offer both views?
+- [x] Use recipient-by-recipient editing for the initial release; defer atomic multi-recipient editing.
+- [x] Use a recipient-first prepared review with recipient and exercise filters.
 - [ ] Is an optional coach reason required for pre-publication changes, or only for post-publication changes?
 - [ ] Should a prepared assignment have an expiration or stale-review warning after a defined period?
 - [ ] Should per-occurrence prescription overrides become the next phase for progressive plan loading?

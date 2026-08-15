@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
@@ -10,13 +10,27 @@ import {
   assignmentRecipientTeamScopes,
   assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
+  assignmentWorkoutSnapshots,
 } from "@/modules/assignments/db/schema";
+import { teams } from "@/modules/teams/db/schema";
+import { users } from "@/modules/users/db/schema";
+
+export interface AssignmentPrescriptionRecipient {
+  recipientId: string;
+  athleteUserId: string;
+  fullName: string | null;
+  email: string;
+  teamIds: string[];
+  teamNames: string[];
+}
 
 export interface TeamAthletePrescriptionItem {
   recipientId: string;
   athleteUserId: string;
   itemSnapshotId: string;
   workoutSnapshotId: string;
+  workoutName: string;
+  sourceWorkoutVersion: number | null;
   planSlotSnapshotId: string | null;
   planSlotLabel: string | null;
   scheduleType: "fixed_day" | "weekly_frequency" | null;
@@ -44,9 +58,9 @@ export interface TeamAthletePrescriptionItem {
   overrideNotes: string | null;
 }
 
-export async function listTeamAthletePrescriptionItems(
+async function listAthletePrescriptionItems(
   database: Database,
-  input: { organizationId: string; teamId: string; assignmentId: string },
+  input: { organizationId: string; assignmentId: string; teamId?: string },
 ): Promise<TeamAthletePrescriptionItem[]> {
   const baseItems = await database
     .select({
@@ -54,6 +68,8 @@ export async function listTeamAthletePrescriptionItems(
       athleteUserId: assignmentRecipients.athleteUserId,
       itemSnapshotId: assignmentWorkoutItemSnapshots.id,
       workoutSnapshotId: assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+      workoutName: assignmentWorkoutSnapshots.name,
+      sourceWorkoutVersion: assignmentWorkoutSnapshots.sourceWorkoutVersion,
       exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
       reps: assignmentWorkoutItemSnapshots.reps,
       load: assignmentWorkoutItemSnapshots.load,
@@ -65,21 +81,7 @@ export async function listTeamAthletePrescriptionItems(
       tempo: assignmentWorkoutItemSnapshots.tempo,
       notes: assignmentWorkoutItemSnapshots.notes,
     })
-    .from(assignmentRecipientTeamScopes)
-    .innerJoin(
-      assignmentRecipients,
-      and(
-        eq(
-          assignmentRecipients.organizationId,
-          assignmentRecipientTeamScopes.organizationId,
-        ),
-        eq(
-          assignmentRecipients.assignmentId,
-          assignmentRecipientTeamScopes.assignmentId,
-        ),
-        eq(assignmentRecipients.id, assignmentRecipientTeamScopes.recipientId),
-      ),
-    )
+    .from(assignmentRecipients)
     .innerJoin(
       assignmentWorkoutItemSnapshots,
       and(
@@ -110,11 +112,36 @@ export async function listTeamAthletePrescriptionItems(
         ),
       ),
     )
+    .innerJoin(
+      assignmentWorkoutSnapshots,
+      and(
+        eq(
+          assignmentWorkoutSnapshots.organizationId,
+          assignmentWorkoutBlockSnapshots.organizationId,
+        ),
+        eq(
+          assignmentWorkoutSnapshots.assignmentId,
+          assignmentWorkoutBlockSnapshots.assignmentId,
+        ),
+        eq(
+          assignmentWorkoutSnapshots.id,
+          assignmentWorkoutBlockSnapshots.workoutSnapshotId,
+        ),
+      ),
+    )
     .where(
       and(
-        eq(assignmentRecipientTeamScopes.organizationId, input.organizationId),
-        eq(assignmentRecipientTeamScopes.teamId, input.teamId),
-        eq(assignmentRecipientTeamScopes.assignmentId, input.assignmentId),
+        eq(assignmentRecipients.organizationId, input.organizationId),
+        eq(assignmentRecipients.assignmentId, input.assignmentId),
+        input.teamId
+          ? sql`exists (
+              select 1 from ${assignmentRecipientTeamScopes} scope
+              where scope.organization_id = ${assignmentRecipients.organizationId}
+                and scope.assignment_id = ${assignmentRecipients.assignmentId}
+                and scope.recipient_id = ${assignmentRecipients.id}
+                and scope.team_id = ${input.teamId}
+            )`
+          : undefined,
       ),
     );
 
@@ -201,4 +228,80 @@ export async function listTeamAthletePrescriptionItems(
       };
     });
   });
+}
+
+export function listTeamAthletePrescriptionItems(
+  database: Database,
+  input: { organizationId: string; teamId: string; assignmentId: string },
+): Promise<TeamAthletePrescriptionItem[]> {
+  return listAthletePrescriptionItems(database, input);
+}
+
+export function listAssignmentAthletePrescriptionItems(
+  database: Database,
+  input: { organizationId: string; assignmentId: string },
+): Promise<TeamAthletePrescriptionItem[]> {
+  return listAthletePrescriptionItems(database, input);
+}
+
+export async function listAssignmentPrescriptionRecipients(
+  database: Database,
+  input: { organizationId: string; assignmentId: string },
+): Promise<AssignmentPrescriptionRecipient[]> {
+  const rows = await database
+    .select({
+      recipientId: assignmentRecipients.id,
+      athleteUserId: assignmentRecipients.athleteUserId,
+      fullName: users.fullName,
+      email: users.email,
+      teamId: assignmentRecipientTeamScopes.teamId,
+      teamName: teams.name,
+    })
+    .from(assignmentRecipients)
+    .innerJoin(users, eq(users.id, assignmentRecipients.athleteUserId))
+    .leftJoin(
+      assignmentRecipientTeamScopes,
+      and(
+        eq(
+          assignmentRecipientTeamScopes.organizationId,
+          assignmentRecipients.organizationId,
+        ),
+        eq(
+          assignmentRecipientTeamScopes.assignmentId,
+          assignmentRecipients.assignmentId,
+        ),
+        eq(assignmentRecipientTeamScopes.recipientId, assignmentRecipients.id),
+      ),
+    )
+    .leftJoin(
+      teams,
+      and(
+        eq(teams.organizationId, assignmentRecipientTeamScopes.organizationId),
+        eq(teams.id, assignmentRecipientTeamScopes.teamId),
+      ),
+    )
+    .where(
+      and(
+        eq(assignmentRecipients.organizationId, input.organizationId),
+        eq(assignmentRecipients.assignmentId, input.assignmentId),
+      ),
+    )
+    .orderBy(asc(users.fullName), asc(users.email), asc(teams.name));
+  const recipients = new Map<string, AssignmentPrescriptionRecipient>();
+
+  for (const row of rows) {
+    const recipient = recipients.get(row.recipientId) ?? {
+      recipientId: row.recipientId,
+      athleteUserId: row.athleteUserId,
+      fullName: row.fullName,
+      email: row.email,
+      teamIds: [],
+      teamNames: [],
+    };
+    if (row.teamId) recipient.teamIds.push(row.teamId);
+    if (row.teamName) recipient.teamNames.push(row.teamName);
+    recipients.set(row.recipientId, recipient);
+  }
+
+  return [...recipients.values()];
 }
