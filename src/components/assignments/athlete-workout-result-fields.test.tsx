@@ -19,6 +19,7 @@ const item: AthleteWorkoutItemSnapshot = {
   load: null,
   loadValue: null,
   loadUnit: null,
+  resistance: null,
   durationSeconds: null,
   distanceMeters: null,
   restSeconds: null,
@@ -121,7 +122,7 @@ describe("AthleteWorkoutResultFields", () => {
     expect(screen.getByRole("button", { name: "Completed" })).toBeVisible();
   });
 
-  it("uses numeric value and unit controls for a measurable prescription", () => {
+  it("does not confirm a fixed-weight prescription as the athlete result", () => {
     render(
       <AthleteWorkoutResultFields
         item={{
@@ -134,11 +135,14 @@ describe("AthleteWorkoutResultFields", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Actual load value")).toHaveValue(135);
-    expect(screen.getByLabelText("Actual load unit")).toHaveValue("lb");
+    expect(screen.getByText("Resistance 135 lb")).toBeVisible();
+    expect(screen.getByLabelText("Resistance used type")).toHaveTextContent(
+      "Not recorded",
+    );
+    expect(screen.queryByLabelText("Resistance used weight value")).toBeNull();
   });
 
-  it("keeps legacy non-measurable loads as free text", () => {
+  it("keeps legacy non-measurable prescriptions readable", () => {
     render(
       <AthleteWorkoutResultFields
         item={{ ...item, load: "bodyweight" }}
@@ -146,8 +150,10 @@ describe("AthleteWorkoutResultFields", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Actual load")).toHaveValue("bodyweight");
-    expect(screen.queryByLabelText("Actual load unit")).toBeNull();
+    expect(screen.getByText("Resistance bodyweight")).toBeVisible();
+    expect(screen.getByLabelText("Resistance used type")).toHaveTextContent(
+      "Not recorded",
+    );
   });
 
   it("disables measurable controls when the session is not editable", () => {
@@ -163,8 +169,7 @@ describe("AthleteWorkoutResultFields", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Actual load value")).toBeDisabled();
-    expect(screen.getByLabelText("Actual load unit")).toBeDisabled();
+    expect(screen.getByLabelText("Resistance used type")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Complete" })).toBeDisabled();
   });
 });

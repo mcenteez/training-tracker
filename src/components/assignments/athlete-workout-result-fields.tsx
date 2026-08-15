@@ -4,10 +4,21 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type {
   AthleteSessionResultItem,
   AthleteWorkoutItemSnapshot,
 } from "@/modules/assignments/db/queries";
+import {
+  formatResistance,
+  type ResultResistance,
+} from "@/modules/resistance/application/resistance";
 
 interface AthleteWorkoutResultFieldsProps {
   item: AthleteWorkoutItemSnapshot;
@@ -23,10 +34,10 @@ export function AthleteWorkoutResultFields({
   const [completedAt, setCompletedAt] = useState<Date | null>(
     result?.completedAt ?? null,
   );
-  const hasMeasurableLoad = item.loadValue !== null && item.loadUnit !== null;
   const hasPrescribedMetrics =
     item.reps !== null ||
     item.load !== null ||
+    item.resistance !== null ||
     item.durationSeconds !== null ||
     item.distanceMeters !== null ||
     item.restSeconds !== null ||
@@ -35,6 +46,7 @@ export function AthleteWorkoutResultFields({
   const hasStoredActuals =
     (result !== undefined && item.reps !== null && result.reps !== null) ||
     (result !== undefined && item.load !== null && result.load !== null) ||
+    result?.resistance != null ||
     (result !== undefined &&
       item.durationSeconds !== null &&
       result.durationSeconds !== null) ||
@@ -52,7 +64,11 @@ export function AthleteWorkoutResultFields({
           <p className="font-medium text-foreground/80">Target</p>
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
             {item.reps !== null ? <span>Reps {item.reps}</span> : null}
-            {item.load !== null ? <span>Load {item.load}</span> : null}
+            {item.resistance !== null ? (
+              <span>Resistance {formatResistance(item.resistance)}</span>
+            ) : item.load !== null ? (
+              <span>Resistance {item.load}</span>
+            ) : null}
             {item.durationSeconds !== null ? (
               <span>Duration {item.durationSeconds}s</span>
             ) : null}
@@ -109,40 +125,12 @@ export function AthleteWorkoutResultFields({
                   />
                 </label>
               ) : null}
-              {hasMeasurableLoad ? (
-                <fieldset className="grid gap-1 text-xs">
-                  <legend>Actual load</legend>
-                  <div className="flex gap-2">
-                    <Input
-                      name={`result:${item.id}:loadValue`}
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      defaultValue={result?.loadValue ?? item.loadValue ?? ""}
-                      aria-label="Actual load value"
-                      disabled={disabled}
-                    />
-                    <select
-                      name={`result:${item.id}:loadUnit`}
-                      defaultValue={result?.loadUnit ?? item.loadUnit ?? ""}
-                      aria-label="Actual load unit"
-                      className="h-9 rounded-md border bg-background px-2"
-                      disabled={disabled}
-                    >
-                      <option value="kg">kg</option>
-                      <option value="lb">lb</option>
-                    </select>
-                  </div>
-                </fieldset>
-              ) : item.load !== null ? (
-                <label className="grid gap-1 text-xs">
-                  Actual load
-                  <Input
-                    name={`result:${item.id}:load`}
-                    defaultValue={result?.load ?? item.load ?? ""}
-                    disabled={disabled}
-                  />
-                </label>
+              {item.resistance !== null || item.load !== null ? (
+                <ResultResistanceFields
+                  itemSnapshotId={item.id}
+                  result={result?.resistance ?? null}
+                  disabled={disabled}
+                />
               ) : null}
               {item.durationSeconds !== null ? (
                 <label className="grid gap-1 text-xs">
@@ -196,5 +184,124 @@ export function AthleteWorkoutResultFields({
         )}
       </div>
     </div>
+  );
+}
+
+function ResultResistanceFields({
+  itemSnapshotId,
+  result,
+  disabled,
+}: {
+  itemSnapshotId: string;
+  result: ResultResistance | null;
+  disabled: boolean;
+}) {
+  const [resistance, setResistance] = useState<ResultResistance | null>(result);
+  const prefix = `result:${itemSnapshotId}`;
+
+  function changeType(type: string) {
+    switch (type) {
+      case "fixed_weight":
+        setResistance({ type, value: 1, unit: "lb" });
+        break;
+      case "bodyweight":
+        setResistance({ type });
+        break;
+      case "band":
+        setResistance({ type, description: "Band" });
+        break;
+      case "free_text":
+        setResistance({ type, description: "Resistance" });
+        break;
+      default:
+        setResistance(null);
+    }
+  }
+
+  return (
+    <fieldset className="grid gap-2 text-xs sm:col-span-2">
+      <legend>Resistance used</legend>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <label className="grid gap-1">
+          Type
+          <Select
+            name={`${prefix}:resistanceType`}
+            value={resistance?.type ?? "none"}
+            onValueChange={changeType}
+            disabled={disabled}
+          >
+            <SelectTrigger aria-label="Resistance used type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Not recorded</SelectItem>
+              <SelectItem value="fixed_weight">Fixed weight</SelectItem>
+              <SelectItem value="bodyweight">Bodyweight</SelectItem>
+              <SelectItem value="band">Band</SelectItem>
+              <SelectItem value="free_text">Free text</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+        {resistance?.type === "fixed_weight" ? (
+          <>
+            <label className="grid gap-1">
+              Weight value
+              <Input
+                name={`${prefix}:resistanceValue`}
+                aria-label="Resistance used weight value"
+                type="number"
+                min="0.01"
+                step="any"
+                value={resistance.value}
+                onChange={(event) =>
+                  setResistance({
+                    ...resistance,
+                    value: Number(event.target.value),
+                  })
+                }
+                disabled={disabled}
+              />
+            </label>
+            <label className="grid gap-1">
+              Weight unit
+              <Select
+                name={`${prefix}:resistanceUnit`}
+                value={resistance.unit}
+                onValueChange={(unit: "kg" | "lb") =>
+                  setResistance({ ...resistance, unit })
+                }
+                disabled={disabled}
+              >
+                <SelectTrigger aria-label="Resistance used weight unit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lb">lb</SelectItem>
+                  <SelectItem value="kg">kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+          </>
+        ) : null}
+        {resistance?.type === "band" || resistance?.type === "free_text" ? (
+          <label className="grid gap-1 sm:col-span-2">
+            Description
+            <Input
+              name={`${prefix}:resistanceDescription`}
+              aria-label="Resistance used description"
+              maxLength={80}
+              value={resistance.description}
+              onChange={(event) =>
+                setResistance({
+                  ...resistance,
+                  description: event.target.value,
+                })
+              }
+              disabled={disabled}
+            />
+          </label>
+        ) : null}
+      </div>
+    </fieldset>
   );
 }

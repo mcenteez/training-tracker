@@ -361,31 +361,31 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Implementation Checklist
 
-- [ ] Rename athlete result **Load** controls and summaries to **Resistance used**.
-- [ ] Keep prescribed resistance visually distinct from athlete-entered result resistance.
-- [ ] Add result resistance type controls for the approved initial result types.
-- [ ] Require value and unit together for fixed-weight results.
-- [ ] Keep descriptive result methods unmeasurable without substituting zero.
-- [ ] Extend FormData parsing, autosave payloads, idempotency handling, and server-side Zod validation.
-- [ ] Preserve offline-safe drafts and mutation identifiers.
-- [ ] Preserve first submission time and timeliness classification during completed-result edits.
-- [ ] Keep athletes scoped to their own assignment sessions and results.
-- [ ] Never accept normalized kilograms from the client.
+- [x] Rename athlete result **Load** controls and summaries to **Resistance used**.
+- [x] Keep prescribed resistance visually distinct from athlete-entered result resistance.
+- [x] Add result resistance type controls for fixed weight, bodyweight, band, and free text.
+- [x] Require value and unit together for fixed-weight results.
+- [x] Keep descriptive result methods unmeasurable without substituting zero.
+- [x] Extend FormData parsing, autosave payloads, idempotency handling, and server-side Zod validation.
+- [x] Preserve offline-safe drafts and mutation identifiers.
+- [x] Preserve first submission time and timeliness classification during completed-result edits.
+- [x] Keep athletes scoped to their own assignment sessions and results.
+- [x] Never accept normalized kilograms from the client.
 
 ### Tests
 
-- [ ] Fixed-weight results persist and normalize through save, submit, reload, and edit.
-- [ ] Bodyweight, band, and free-text results persist without fabricated kilograms.
-- [ ] Empty resistance remains valid when the athlete completes a session.
-- [ ] Invalid type/payload combinations return actionable errors without losing other result data.
-- [ ] Retried autosaves remain idempotent.
-- [ ] Athlete ownership, tenant isolation, and session-state locks remain enforced.
+- [x] Fixed-weight results persist and normalize through save, submit, reload, and edit.
+- [x] Bodyweight, band, and free-text results persist without fabricated kilograms.
+- [x] Empty resistance remains valid when the athlete completes a session.
+- [x] Invalid type/payload combinations return actionable errors without losing persisted result data.
+- [x] Retried autosaves remain idempotent.
+- [x] Athlete ownership, tenant isolation, and session-state locks remain enforced.
 
 ### Acceptance Criteria
 
-- [ ] Athletes can accurately record what they used without confirming the prescription by default.
-- [ ] Offline and retry behavior remains equivalent to current result capture.
-- [ ] Result resistance never mutates the effective prescription snapshot.
+- [x] Athletes can accurately record what they used without confirming the prescription by default.
+- [x] Offline and retry behavior remains equivalent to current result capture.
+- [x] Result resistance never mutates the effective prescription snapshot.
 
 ## Milestone 6: Performance Metrics And Reporting
 

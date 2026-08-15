@@ -24,8 +24,11 @@ import { teams } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import { workouts } from "@/modules/workouts/db/schema";
 import {
+  adaptResistance,
   resistanceFromPersistence,
+  resultResistanceSchema,
   type Resistance,
+  type ResultResistance,
 } from "@/modules/resistance/application/resistance";
 
 export interface AssignmentListItem extends Assignment {
@@ -114,6 +117,7 @@ export interface AthleteWorkoutItemSnapshot {
   load: string | null;
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -130,7 +134,7 @@ export interface AthleteSessionResultItem {
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
   normalizedLoadKg: string | null;
-  resistance: Resistance | null;
+  resistance: ResultResistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
@@ -650,7 +654,7 @@ export async function listWorkoutItemsForSnapshot(
     workoutSnapshotId: string;
   },
 ): Promise<AthleteWorkoutItemSnapshot[]> {
-  return database
+  const rows = await database
     .select({
       id: assignmentWorkoutItemSnapshots.id,
       exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
@@ -661,6 +665,16 @@ export async function listWorkoutItemsForSnapshot(
       load: assignmentWorkoutItemSnapshots.load,
       loadValue: assignmentWorkoutItemSnapshots.loadValue,
       loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
+      normalizedLoadKg: assignmentWorkoutItemSnapshots.normalizedLoadKg,
+      resistanceType: assignmentWorkoutItemSnapshots.resistanceType,
+      resistanceValue: assignmentWorkoutItemSnapshots.resistanceValue,
+      resistanceUnit: assignmentWorkoutItemSnapshots.resistanceUnit,
+      resistancePercentage: assignmentWorkoutItemSnapshots.resistancePercentage,
+      resistanceTarget: assignmentWorkoutItemSnapshots.resistanceTarget,
+      resistanceDescription:
+        assignmentWorkoutItemSnapshots.resistanceDescription,
+      normalizedResistanceKg:
+        assignmentWorkoutItemSnapshots.normalizedResistanceKg,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
       restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
@@ -699,6 +713,17 @@ export async function listWorkoutItemsForSnapshot(
       asc(assignmentWorkoutBlockSnapshots.position),
       asc(assignmentWorkoutItemSnapshots.position),
     );
+
+  return rows.map((row) => ({
+    ...row,
+    resistance: adaptResistance({
+      resistance: resistanceFromPersistence(row),
+      legacyLoad: row.load,
+      legacyLoadValue: row.loadValue,
+      legacyLoadUnit: row.loadUnit,
+      legacyNormalizedLoadKg: row.normalizedLoadKg,
+    }).resistance,
+  }));
 }
 
 export async function listEffectiveWorkoutItemsForAthleteOccurrence(
@@ -738,6 +763,22 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
         load: assignmentSessionEffectiveItemPrescriptions.load,
         loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
         loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
+        normalizedLoadKg:
+          assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+        resistanceType:
+          assignmentSessionEffectiveItemPrescriptions.resistanceType,
+        resistanceValue:
+          assignmentSessionEffectiveItemPrescriptions.resistanceValue,
+        resistanceUnit:
+          assignmentSessionEffectiveItemPrescriptions.resistanceUnit,
+        resistancePercentage:
+          assignmentSessionEffectiveItemPrescriptions.resistancePercentage,
+        resistanceTarget:
+          assignmentSessionEffectiveItemPrescriptions.resistanceTarget,
+        resistanceDescription:
+          assignmentSessionEffectiveItemPrescriptions.resistanceDescription,
+        normalizedResistanceKg:
+          assignmentSessionEffectiveItemPrescriptions.normalizedResistanceKg,
         durationSeconds:
           assignmentSessionEffectiveItemPrescriptions.durationSeconds,
         distanceMeters:
@@ -785,11 +826,23 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
       effectiveRows.map((row) => [row.itemSnapshotId, row]),
     );
 
-    return baseItems.map((item) => ({
-      ...item,
-      ...effectiveByItem.get(item.id),
-      id: item.id,
-    }));
+    return baseItems.map((item) => {
+      const effective = effectiveByItem.get(item.id);
+      return {
+        ...item,
+        ...effective,
+        id: item.id,
+        resistance: effective
+          ? adaptResistance({
+              resistance: resistanceFromPersistence(effective),
+              legacyLoad: effective.load,
+              legacyLoadValue: effective.loadValue,
+              legacyLoadUnit: effective.loadUnit,
+              legacyNormalizedLoadKg: effective.normalizedLoadKg,
+            }).resistance
+          : item.resistance,
+      };
+    });
   }
 
   const overrideRows = await database
@@ -801,6 +854,16 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
       load: assignmentAthleteItemOverrides.load,
       loadValue: assignmentAthleteItemOverrides.loadValue,
       loadUnit: assignmentAthleteItemOverrides.loadUnit,
+      normalizedLoadKg: assignmentAthleteItemOverrides.normalizedLoadKg,
+      resistanceType: assignmentAthleteItemOverrides.resistanceType,
+      resistanceValue: assignmentAthleteItemOverrides.resistanceValue,
+      resistanceUnit: assignmentAthleteItemOverrides.resistanceUnit,
+      resistancePercentage: assignmentAthleteItemOverrides.resistancePercentage,
+      resistanceTarget: assignmentAthleteItemOverrides.resistanceTarget,
+      resistanceDescription:
+        assignmentAthleteItemOverrides.resistanceDescription,
+      normalizedResistanceKg:
+        assignmentAthleteItemOverrides.normalizedResistanceKg,
       durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
       distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
       restSeconds: assignmentAthleteItemOverrides.restSeconds,
@@ -847,6 +910,15 @@ export async function listEffectiveWorkoutItemsForAthleteOccurrence(
       loadUnit: overriddenFields.has("load")
         ? override.loadUnit
         : item.loadUnit,
+      resistance: overriddenFields.has("resistance")
+        ? adaptResistance({
+            resistance: resistanceFromPersistence(override),
+            legacyLoad: override.load,
+            legacyLoadValue: override.loadValue,
+            legacyLoadUnit: override.loadUnit,
+            legacyNormalizedLoadKg: override.normalizedLoadKg,
+          }).resistance
+        : item.resistance,
       durationSeconds: overriddenFields.has("durationSeconds")
         ? override.durationSeconds
         : item.durationSeconds,
@@ -885,55 +957,10 @@ export async function listPrimaryWorkoutItemsForAssignment(
     return [];
   }
 
-  return database
-    .select({
-      id: assignmentWorkoutItemSnapshots.id,
-      exerciseName: assignmentWorkoutItemSnapshots.exerciseName,
-      blockLabel: assignmentWorkoutBlockSnapshots.label,
-      blockPosition: assignmentWorkoutBlockSnapshots.position,
-      itemPosition: assignmentWorkoutItemSnapshots.position,
-      reps: assignmentWorkoutItemSnapshots.reps,
-      load: assignmentWorkoutItemSnapshots.load,
-      loadValue: assignmentWorkoutItemSnapshots.loadValue,
-      loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
-      durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
-      distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
-      restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
-      tempo: assignmentWorkoutItemSnapshots.tempo,
-      notes: assignmentWorkoutItemSnapshots.notes,
-    })
-    .from(assignmentWorkoutItemSnapshots)
-    .innerJoin(
-      assignmentWorkoutBlockSnapshots,
-      and(
-        eq(
-          assignmentWorkoutBlockSnapshots.organizationId,
-          assignmentWorkoutItemSnapshots.organizationId,
-        ),
-        eq(
-          assignmentWorkoutBlockSnapshots.assignmentId,
-          assignmentWorkoutItemSnapshots.assignmentId,
-        ),
-        eq(
-          assignmentWorkoutBlockSnapshots.id,
-          assignmentWorkoutItemSnapshots.blockSnapshotId,
-        ),
-      ),
-    )
-    .where(
-      and(
-        eq(assignmentWorkoutItemSnapshots.organizationId, input.organizationId),
-        eq(assignmentWorkoutItemSnapshots.assignmentId, input.assignmentId),
-        eq(
-          assignmentWorkoutBlockSnapshots.workoutSnapshotId,
-          workoutSnapshot.id,
-        ),
-      ),
-    )
-    .orderBy(
-      asc(assignmentWorkoutBlockSnapshots.position),
-      asc(assignmentWorkoutItemSnapshots.position),
-    );
+  return listWorkoutItemsForSnapshot(database, {
+    ...input,
+    workoutSnapshotId: workoutSnapshot.id,
+  });
 }
 
 export async function listSessionResultsForAthleteAssignment(
@@ -993,8 +1020,18 @@ export async function listSessionResultsForAthleteAssignment(
       ),
     );
 
-  return results.map((result) => ({
-    ...result,
-    resistance: resistanceFromPersistence(result),
-  }));
+  return results.map((result) => {
+    const adapted = adaptResistance({
+      resistance: resistanceFromPersistence(result),
+      legacyLoad: result.load,
+      legacyLoadValue: result.loadValue,
+      legacyLoadUnit: result.loadUnit,
+      legacyNormalizedLoadKg: result.normalizedLoadKg,
+    }).resistance;
+    const resistance = resultResistanceSchema.safeParse(adapted);
+    return {
+      ...result,
+      resistance: resistance.success ? resistance.data : null,
+    };
+  });
 }

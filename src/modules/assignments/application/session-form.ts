@@ -1,6 +1,7 @@
 import "server-only";
 
 import { DomainInvariantError } from "@/modules/access-control/errors";
+import type { ResultResistance } from "@/modules/resistance/application/resistance";
 
 function parseOptionalInt(value: FormDataEntryValue | null): number | null {
   if (typeof value !== "string") {
@@ -73,6 +74,45 @@ function isNonNullable<T>(value: T): value is NonNullable<T> {
   return value !== null;
 }
 
+function parseResultResistance(
+  formData: FormData,
+  itemSnapshotId: string,
+): ResultResistance | null {
+  const prefix = `result:${itemSnapshotId}`;
+  const type = formData.get(`${prefix}:resistanceType`);
+  if (typeof type !== "string" || type === "none" || !type) return null;
+
+  switch (type) {
+    case "fixed_weight": {
+      const value = parseOptionalNumber(
+        formData.get(`${prefix}:resistanceValue`),
+      );
+      const unit = parseOptionalLoadUnit(
+        formData.get(`${prefix}:resistanceUnit`),
+      );
+      if (value === null || unit === null) {
+        throw new DomainInvariantError("Enter both weight value and unit.");
+      }
+      return { type, value, unit };
+    }
+    case "bodyweight":
+      return { type };
+    case "band":
+    case "free_text": {
+      const description = parseOptionalText(
+        formData.get(`${prefix}:resistanceDescription`),
+        80,
+      );
+      if (!description) {
+        throw new DomainInvariantError("Enter a resistance description.");
+      }
+      return { type, description };
+    }
+    default:
+      throw new DomainInvariantError("Choose a supported resistance type.");
+  }
+}
+
 export function parseAssignmentSessionResults(formData: FormData) {
   const itemSnapshotIds = formData
     .getAll("itemSnapshotIds")
@@ -98,6 +138,7 @@ export function parseAssignmentSessionResults(formData: FormData) {
       loadUnit: parseOptionalLoadUnit(
         formData.get(`result:${itemSnapshotId}:loadUnit`),
       ),
+      resistance: parseResultResistance(formData, itemSnapshotId),
       durationSeconds: parseOptionalInt(
         formData.get(`result:${itemSnapshotId}:durationSeconds`),
       ),
@@ -117,6 +158,7 @@ export function parseAssignmentSessionResults(formData: FormData) {
         result.load !== null ||
         result.loadValue !== null ||
         result.loadUnit !== null ||
+        result.resistance !== null ||
         result.durationSeconds !== null ||
         result.distanceMeters !== null ||
         result.notes !== null;
@@ -133,6 +175,7 @@ export function parseAssignmentSessionResults(formData: FormData) {
         load: result.load,
         loadValue: result.loadValue,
         loadUnit: result.loadUnit,
+        resistance: result.resistance,
         durationSeconds: result.durationSeconds,
         distanceMeters: result.distanceMeters,
         notes: result.notes,
