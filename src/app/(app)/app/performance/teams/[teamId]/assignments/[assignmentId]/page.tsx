@@ -15,6 +15,7 @@ import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { saveAthletePrescriptionOverrideAction } from "./prescription-actions";
 import { ClearOverrideButton } from "./clear-override-button";
+import { LoadUnitSelect } from "@/components/assignments/load-unit-select";
 import { listTeamAthletePrescriptionItems } from "@/modules/assignments/db/athlete-prescription-queries";
 import { findTeamAssignmentCompliance } from "@/modules/assignments/db/team-compliance-queries";
 
@@ -346,15 +347,9 @@ export default async function TeamAssignmentPerformancePage({
                                     step="any"
                                     defaultValue={item.overrideLoadValue ?? ""}
                                   />
-                                  <select
-                                    className="h-8 rounded-md border bg-background px-2 text-sm"
-                                    name="loadUnit"
-                                    defaultValue={item.overrideLoadUnit ?? ""}
-                                  >
-                                    <option value="">Unit</option>
-                                    <option value="lb">lb</option>
-                                    <option value="kg">kg</option>
-                                  </select>
+                                  <LoadUnitSelect
+                                    defaultValue={item.overrideLoadUnit}
+                                  />
                                 </div>
                                 <input
                                   type="hidden"

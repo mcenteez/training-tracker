@@ -1,5 +1,6 @@
 import { savePreparedPrescriptionAction } from "@/app/(app)/app/assignments/actions";
 import { ClearPreparedPrescriptionButton } from "@/components/assignments/clear-prepared-prescription-button";
+import { LoadUnitSelect } from "@/components/assignments/load-unit-select";
 import { Button } from "@/components/ui/button";
 import type { TeamAthletePrescriptionItem } from "@/modules/assignments/db/athlete-prescription-queries";
 
@@ -84,15 +85,10 @@ export function PreparedPrescriptionEditor({
                   step="any"
                   defaultValue={item.overrideLoadValue ?? ""}
                 />
-                <select
-                  className="h-9 rounded-md border bg-background px-2 text-sm"
-                  name="loadUnit"
-                  defaultValue={item.overrideLoadUnit ?? ""}
-                >
-                  <option value="">Unit</option>
-                  <option value="lb">lb</option>
-                  <option value="kg">kg</option>
-                </select>
+                <LoadUnitSelect
+                  defaultValue={item.overrideLoadUnit}
+                  triggerClassName="data-[size=default]:h-9"
+                />
               </span>
               <input
                 type="hidden"
