@@ -38,7 +38,8 @@ export function buildAthleteTargetOptions(input: {
   return input.members
     .filter(
       (member) =>
-        member.organizationRole === "athlete" && athleteUserIds.has(member.userId),
+        member.organizationRole === "athlete" &&
+        athleteUserIds.has(member.userId),
     )
     .map((member) => {
       const teamIds = teamIdsByUserId.get(member.userId) ?? [];
