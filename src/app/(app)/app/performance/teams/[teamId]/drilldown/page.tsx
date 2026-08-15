@@ -24,6 +24,7 @@ import {
   type TeamComplianceDrilldownFact,
   type TeamTimelinessDrilldownFact,
 } from "@/modules/assignments/db/performance-drilldown-queries";
+import { buildOccurrenceRowKey } from "@/app/(app)/app/performance/shared/drilldown-keys";
 import { TeamTrainingLoadDrilldown } from "./team-training-load-drilldown";
 
 interface TeamDrilldownPageProps {
@@ -300,7 +301,7 @@ export default async function TeamDrilldownPage({
             <div className="space-y-3 md:hidden">
               {rows.map((fact) => (
                 <article
-                  key={`${fact.assignmentId}:${fact.athleteUserId}:${fact.scheduledDate}:${fact.workoutName}`}
+                  key={buildOccurrenceRowKey(fact)}
                   className="min-w-0 space-y-2 rounded-md border p-3 text-sm"
                 >
                   <div className="min-w-0">
@@ -366,7 +367,15 @@ export default async function TeamDrilldownPage({
               <tbody className="divide-y">
                 {rows.map((fact) => (
                   <tr
-                    key={`${fact.assignmentId}:${fact.athleteUserId}:${fact.scheduledDate}:${fact.workoutName}`}
+                    key={buildOccurrenceRowKey({
+                      assignmentId: fact.assignmentId,
+                      athleteUserId: fact.athleteUserId,
+                      scheduledDate: fact.scheduledDate,
+                      workoutName: fact.workoutName,
+                      label: fact.label,
+                      sessionId: fact.sessionId,
+                      dueAt: fact.dueAt,
+                    })}
                   >
                     <td className="px-3 py-3">
                       <span className="block font-medium">

@@ -25,6 +25,7 @@ import {
   type OrganizationTimelinessDrilldownFact,
   type OrganizationTrainingLoadDrilldownFact,
 } from "@/modules/assignments/db/performance-drilldown-queries";
+import { buildOccurrenceRowKey } from "@/app/(app)/app/performance/shared/drilldown-keys";
 
 interface OrganizationDrilldownPageProps {
   searchParams: Promise<{ metric?: string; window?: string; tab?: string }>;
@@ -286,7 +287,16 @@ export default async function OrganizationDrilldownPage({
                         fact.state === "lateCompleted")));
                 return (
                   <article
-                    key={`${fact.assignmentId}:${fact.sessionId ?? fact.scheduledDate}:${fact.athleteUserId}`}
+                    key={buildOccurrenceRowKey({
+                      assignmentId: fact.assignmentId,
+                      athleteUserId: fact.athleteUserId,
+                      scheduledDate: fact.scheduledDate,
+                      workoutName:
+                        "workoutName" in fact ? fact.workoutName : null,
+                      label: "label" in fact ? fact.label : null,
+                      sessionId: fact.sessionId ?? null,
+                      dueAt: "dueAt" in fact ? fact.dueAt : null,
+                    })}
                     className="space-y-2 rounded-md border p-3 text-sm"
                   >
                     <p className="font-medium">{fact.athleteName}</p>
@@ -360,7 +370,16 @@ export default async function OrganizationDrilldownPage({
                           fact.state === "lateCompleted")));
                   return (
                     <tr
-                      key={`${fact.assignmentId}:${fact.sessionId ?? fact.scheduledDate}:${fact.athleteUserId}`}
+                      key={buildOccurrenceRowKey({
+                        assignmentId: fact.assignmentId,
+                        athleteUserId: fact.athleteUserId,
+                        scheduledDate: fact.scheduledDate,
+                        workoutName:
+                          "workoutName" in fact ? fact.workoutName : null,
+                        label: "label" in fact ? fact.label : null,
+                        sessionId: fact.sessionId ?? null,
+                        dueAt: "dueAt" in fact ? fact.dueAt : null,
+                      })}
                     >
                       <td className="px-3 py-3">
                         {teamName ?? "Organization only"}
