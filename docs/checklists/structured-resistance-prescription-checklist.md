@@ -227,31 +227,31 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Implementation Checklist
 
-- [ ] Confirm the initial resistance type set and approved labels with representative coaching workflows.
-- [ ] Decide whether exercise-level RPE permits half steps.
-- [ ] Confirm that result resistance initially excludes `%1RM`, RPE, and RIR.
-- [ ] Add the shared discriminated `Resistance` type and narrower prescription/result variants.
-- [ ] Add Zod discriminated unions for trusted application input and untrusted boundary input.
-- [ ] Add exhaustive canonical display formatting for every type.
-- [ ] Add fixed-weight normalization using the existing exact pounds-to-kilograms conversion.
-- [ ] Add metric-eligibility helpers that return structured unavailable reasons.
-- [ ] Add adapters for existing numeric load rows and legacy free-text rows.
-- [ ] Keep session RPE types and exercise resistance-target types explicitly separate.
+- [x] Confirm the initial resistance type set and approved labels with representative coaching workflows.
+- [x] Support half-step exercise-level RPE targets from 1 through 10.
+- [x] Confirm that result resistance initially excludes `%1RM`, RPE, and RIR.
+- [x] Add the shared discriminated `Resistance` type and narrower prescription/result variants.
+- [x] Add strict Zod discriminated unions for application and untrusted boundary input.
+- [x] Add exhaustive canonical display formatting for every type.
+- [x] Add fixed-weight normalization using the existing exact pounds-to-kilograms conversion.
+- [x] Add metric-eligibility helpers that return structured unavailable reasons.
+- [x] Add adapters for existing numeric load rows and legacy free-text rows.
+- [x] Keep session RPE types and exercise resistance-target types explicitly separate.
 
 ### Tests
 
-- [ ] Accept every valid resistance type and reject every invalid payload combination.
-- [ ] Reject non-finite, zero, negative, out-of-range, and unsupported-unit values.
-- [ ] Verify canonical labels for every resistance type.
-- [ ] Verify exact `lb` to `kg` normalization for fixed weight.
-- [ ] Verify only fixed weight is measurable for strength volume.
-- [ ] Verify legacy numeric and free-text adapters do not fabricate structured values.
+- [x] Accept every valid resistance type and reject every invalid payload combination.
+- [x] Reject non-finite, zero, negative, out-of-range, and unsupported-unit values.
+- [x] Verify canonical labels for every resistance type.
+- [x] Verify exact `lb` to `kg` normalization for fixed weight.
+- [x] Verify only fixed weight is measurable for strength volume.
+- [x] Verify legacy numeric and free-text adapters do not fabricate structured values.
 
 ### Acceptance Criteria
 
-- [ ] One shared domain contract represents resistance across modules.
-- [ ] Relative and descriptive resistance cannot be mistaken for normalized weight.
-- [ ] Adding a resistance type requires explicit handling in validation, display, persistence mapping, and metric eligibility.
+- [x] One shared domain contract represents resistance across modules.
+- [x] Relative and descriptive resistance cannot be mistaken for normalized weight.
+- [x] Adding a resistance type requires explicit handling in validation, display, persistence mapping, and metric eligibility.
 
 ## Milestone 2: Schema And Migration
 
@@ -458,10 +458,10 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ## Open Product Decisions To Resolve Before Implementation
 
-- [ ] Should exercise-level RPE targets support half steps such as `7.5`, or integers only?
-- [ ] Should result resistance support `%1RM`, RPE, or RIR in the first release, and what would each mean after completion?
-- [ ] Is `bodyweight` sufficient initially, or must the first version support added and assisted weight?
-- [ ] Should band resistance use controlled organization-defined labels or free text in the first release?
-- [ ] Is the `%1RM` upper bound of 200 appropriate for every supported training method?
-- [ ] Must rolling deployment support old application instances through fixed-weight dual writes, or can release orchestration guarantee migration-first coordinated deployment?
+- [x] Exercise-level RPE targets support half steps such as `7.5`.
+- [x] Result resistance excludes `%1RM`, RPE, and RIR in the first release.
+- [x] Unmodified `bodyweight` is sufficient initially; added and assisted weight are deferred.
+- [x] Band resistance uses bounded free text in the first release.
+- [x] The initial `%1RM` upper bound is 200.
+- [x] Use migration-first coordinated deployment; fixed-weight dual writes remain a compatibility safeguard until cleanup.
 - [ ] When athlete max records are introduced, which record and rounding policy should resolve `%1RM` for a scheduled session?

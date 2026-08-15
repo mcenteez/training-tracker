@@ -1,4 +1,5 @@
 import { addDays, compareDates, toLocalDateString } from "./schedule-dates";
+import { normalizeFixedWeightResistance } from "@/modules/resistance/application/resistance";
 
 export type StrengthLoadUnit = "kg" | "lb";
 
@@ -66,18 +67,17 @@ export interface BaselineSessionInput {
   sessionRpe: number | null;
 }
 
-const POUNDS_TO_KILOGRAMS = 0.45359237;
-
 export function normalizeStrengthLoad(
   load: StructuredStrengthLoad | null,
 ): NormalizedStrengthLoad | null {
   if (!load || !Number.isFinite(load.value) || load.value <= 0) return null;
 
-  return {
+  const normalized = normalizeFixedWeightResistance({
+    type: "fixed_weight",
     ...load,
-    normalizedKg:
-      load.unit === "lb" ? load.value * POUNDS_TO_KILOGRAMS : load.value,
-  };
+  });
+
+  return { ...load, normalizedKg: normalized.normalizedWeightKg };
 }
 
 export function calculateInternalLoad(
