@@ -366,6 +366,51 @@ describe("assignment service", () => {
     expect(transaction.markAssignmentPublished).toHaveBeenCalledOnce();
   });
 
+  it("rejects publication when a prepared recipient is no longer an athlete", async () => {
+    const { transaction, unitOfWork } = setup({
+      findAssignment: vi.fn(async () =>
+        assignment({ status: "prepared", version: 2 }),
+      ),
+      findOrganizationRole: vi.fn(async (_organizationId, userId) =>
+        userId === "user-1" ? ("manager" as const) : ("viewer" as const),
+      ),
+    });
+
+    await expect(
+      publishAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 2,
+      }),
+    ).rejects.toBeInstanceOf(DomainInvariantError);
+
+    expect(transaction.markAssignmentPublished).not.toHaveBeenCalled();
+  });
+
+  it("rejects publication when a Team Manager loses current recipient scope", async () => {
+    const { transaction, unitOfWork } = setup({
+      findAssignment: vi.fn(async () =>
+        assignment({ status: "prepared", version: 2 }),
+      ),
+      findOrganizationRole: vi.fn(async () => "athlete" as const),
+      listTeamIdsForAthlete: vi.fn(async (_organizationId, athleteUserId) =>
+        athleteUserId === "athlete-1" ? [] : ["team-1"],
+      ),
+    });
+
+    await expect(
+      publishAssignment(unitOfWork, {
+        organizationId: "organization-1",
+        actorUserId: "user-1",
+        assignmentId: "assignment-1",
+        expectedVersion: 2,
+      }),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+
+    expect(transaction.markAssignmentPublished).not.toHaveBeenCalled();
+  });
+
   it("rejects direct publication of a draft", async () => {
     const { transaction, unitOfWork } = setup();
 

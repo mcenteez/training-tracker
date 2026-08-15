@@ -20,6 +20,7 @@ import {
 import { listAssignmentTargetData } from "@/modules/assignments/application/assignment-target-data";
 import { findAssignmentByOrganization } from "@/modules/assignments/db/queries";
 import {
+  findPreparedRecipientRosterChanges,
   listAssignmentAthletePrescriptionItems,
   listAssignmentPrescriptionRecipients,
 } from "@/modules/assignments/db/athlete-prescription-queries";
@@ -95,6 +96,7 @@ export default async function AssignmentDetailPage({
     targetData,
     prescriptionRecipients,
     prescriptionItems,
+    rosterChanges,
   ] = await Promise.all([
     withDatabase((database) =>
       findAssignmentByOrganization(database, {
@@ -129,6 +131,12 @@ export default async function AssignmentDetailPage({
     ),
     withDatabase((database) =>
       listAssignmentAthletePrescriptionItems(database, {
+        organizationId: context.membership.organizationId,
+        assignmentId,
+      }),
+    ),
+    withDatabase((database) =>
+      findPreparedRecipientRosterChanges(database, {
         organizationId: context.membership.organizationId,
         assignmentId,
       }),
@@ -203,6 +211,12 @@ export default async function AssignmentDetailPage({
       .filter((item) => item.overrideId)
       .map((item) => item.recipientId),
   ).size;
+  const recipientName = (athleteUserId: string) => {
+    const recipient = prescriptionRecipients.find(
+      (candidate) => candidate.athleteUserId === athleteUserId,
+    );
+    return recipient?.fullName?.trim() || recipient?.email || athleteUserId;
+  };
   const visibleRecipients = prescriptionRecipients.filter((recipient) => {
     const matchesRecipient = `${recipient.fullName ?? ""} ${recipient.email}`
       .toLowerCase()
@@ -366,6 +380,43 @@ export default async function AssignmentDetailPage({
               {formatDate(assignment.preparedAt)}
             </p>
           </div>
+          {rosterChanges.addedAthleteUserIds.length > 0 ||
+          rosterChanges.removedAthleteUserIds.length > 0 ? (
+            <div className="border-l-4 border-amber-500 bg-muted px-4 py-3 text-sm">
+              <p className="font-medium">
+                The target roster changed after preparation.
+              </p>
+              {rosterChanges.addedAthleteUserIds.length > 0 ? (
+                <p>
+                  {rosterChanges.addedAthleteUserIds.length} newly eligible
+                  athletes are not included. Return to draft to include them.
+                </p>
+              ) : null}
+              {rosterChanges.removedAthleteUserIds.length > 0 ? (
+                <p>
+                  Reviewed recipients no longer in the target roster remain
+                  included while eligible:{" "}
+                  {rosterChanges.removedAthleteUserIds
+                    .map(recipientName)
+                    .join(", ")}
+                  .
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {rosterChanges.ineligibleAthleteUserIds.length > 0 ? (
+            <div
+              role="alert"
+              className="border-l-4 border-destructive bg-muted px-4 py-3 text-sm"
+            >
+              Publication is blocked because these recipients are no longer
+              organization athletes:{" "}
+              {rosterChanges.ineligibleAthleteUserIds
+                .map(recipientName)
+                .join(", ")}
+              . Return to draft and review the targets.
+            </div>
+          ) : null}
           <form className="grid gap-3 border-y py-4 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
               Find recipient
@@ -422,8 +473,13 @@ export default async function AssignmentDetailPage({
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {recipient.email} ·{" "}
-                      {recipient.teamNames.join(", ") || "Direct recipient"} ·{" "}
-                      {overrideCount} individualized
+                      {recipient.isDirectTarget
+                        ? "Direct target"
+                        : "Team target"}
+                      {recipient.teamNames.length > 0
+                        ? ` · ${recipient.teamNames.join(", ")}`
+                        : ""}{" "}
+                      · {overrideCount} individualized
                     </p>
                   </CardHeader>
                   <CardContent>
@@ -455,6 +511,7 @@ export default async function AssignmentDetailPage({
               assignmentId={assignment.id}
               version={assignment.version}
               recipientEstimate={assignment.recipientCount}
+              disabled={rosterChanges.ineligibleAthleteUserIds.length > 0}
             />
             <ReturnAssignmentToDraftButton
               assignmentId={assignment.id}

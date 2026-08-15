@@ -17,17 +17,21 @@ interface PublishAssignmentDialogProps {
   assignmentId: string;
   version: number;
   recipientEstimate: number;
+  disabled?: boolean;
 }
 
 export function PublishAssignmentDialog({
   assignmentId,
   version,
   recipientEstimate,
+  disabled = false,
 }: PublishAssignmentDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button">Publish Assignment</Button>
+        <Button type="button" disabled={disabled}>
+          Publish Assignment
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

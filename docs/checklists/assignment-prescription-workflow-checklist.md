@@ -212,29 +212,29 @@ Reference foundation:
 
 ### Recipient And Roster Validation
 
-- [ ] Compare prepared recipient eligibility and actor scope with current organization/team state at publication.
-- [ ] Define and implement the approved stale-roster policy without silently adding athletes.
-- [ ] Identify ineligible recipients by name to authorized staff without exposing unrelated organization members.
-- [ ] Prevent a Team Manager from publishing to an athlete outside the manager's current team scope.
-- [ ] Preserve the prepared captured-team scope as historical delivery scope after successful publication.
-- [ ] Keep direct-athlete recipients distinct from team-derived recipients in review and historical scope.
+- [x] Compare prepared recipient eligibility and actor scope with current organization/team state at publication.
+- [x] Define and implement the approved stale-roster policy without silently adding athletes.
+- [x] Identify ineligible recipients by name to authorized staff without exposing unrelated organization members.
+- [x] Prevent a Team Manager from publishing to an athlete outside the manager's current team scope.
+- [x] Preserve the prepared captured-team scope as historical delivery scope after successful publication.
+- [x] Keep direct-athlete recipients distinct from team-derived recipients in review and historical scope.
 
 ### Session Behavior
 
-- [ ] Verify athletes receive the prepared effective prescription after publication.
-- [ ] Preserve current effective-prescription snapshot creation when a session starts.
-- [ ] Preserve current locking behavior for in-progress and submitted sessions.
-- [ ] Keep post-publication changes limited to future unstarted sessions.
-- [ ] Keep athlete result entry separate from prescribed values and never prefill results as completed work.
-- [ ] Preserve assignment cancellation, occurrence generation, compliance, timeliness, and training-load calculations.
+- [x] Verify athletes receive the prepared effective prescription after publication.
+- [x] Preserve current effective-prescription snapshot creation when a session starts.
+- [x] Preserve current locking behavior for in-progress and submitted sessions.
+- [x] Keep post-publication changes limited to future unstarted sessions.
+- [x] Keep athlete result entry separate from prescribed values and never prefill results as completed work.
+- [x] Preserve assignment cancellation, occurrence generation, compliance, timeliness, and training-load calculations.
 
 ### Acceptance Criteria
 
-- [ ] Publication is blocked when the actor or any recipient no longer satisfies authorization policy.
-- [ ] Team roster changes never silently expand a prepared assignment.
-- [ ] The prescription reviewed before publication matches the prescription initially shown to each athlete.
-- [ ] Later overrides affect only allowed future unstarted sessions.
-- [ ] Historical comparisons continue to use the effective prescription captured at session start.
+- [x] Publication is blocked when the actor or any recipient no longer satisfies authorization policy.
+- [x] Team roster changes never silently expand a prepared assignment.
+- [x] The prescription reviewed before publication matches the prescription initially shown to each athlete.
+- [x] Later overrides affect only allowed future unstarted sessions.
+- [x] Historical comparisons continue to use the effective prescription captured at session start.
 
 ## Milestone 4: Tests And Verification
 
@@ -311,7 +311,7 @@ Reference foundation:
 
 ## Open Product Decisions To Resolve Before Implementation
 
-- [ ] When a team roster changes after preparation, may authorized staff keep the originally prepared eligible recipients, or must they always return to draft and prepare again?
+- [x] Keep originally prepared recipients who remain organization athletes; never auto-add later roster additions, and revalidate Team Manager scope at publication.
 - [x] Use recipient-by-recipient editing for the initial release; defer atomic multi-recipient editing.
 - [x] Use a recipient-first prepared review with recipient and exercise filters.
 - [ ] Is an optional coach reason required for pre-publication changes, or only for post-publication changes?

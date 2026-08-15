@@ -8,11 +8,14 @@ import {
   assignmentPlanSlotSnapshots,
   assignmentRecipients,
   assignmentRecipientTeamScopes,
+  assignmentTargets,
   assignmentWorkoutBlockSnapshots,
   assignmentWorkoutItemSnapshots,
   assignmentWorkoutSnapshots,
 } from "@/modules/assignments/db/schema";
+import { organizationMemberships } from "@/modules/organizations/db/schema";
 import { teams } from "@/modules/teams/db/schema";
+import { teamMemberships } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 
 export interface AssignmentPrescriptionRecipient {
@@ -22,6 +25,13 @@ export interface AssignmentPrescriptionRecipient {
   email: string;
   teamIds: string[];
   teamNames: string[];
+  isDirectTarget: boolean;
+}
+
+export interface PreparedRecipientRosterChanges {
+  addedAthleteUserIds: string[];
+  removedAthleteUserIds: string[];
+  ineligibleAthleteUserIds: string[];
 }
 
 export interface TeamAthletePrescriptionItem {
@@ -256,6 +266,13 @@ export async function listAssignmentPrescriptionRecipients(
       email: users.email,
       teamId: assignmentRecipientTeamScopes.teamId,
       teamName: teams.name,
+      isDirectTarget: sql<boolean>`exists (
+        select 1 from ${assignmentTargets} direct_target
+        where direct_target.organization_id = ${assignmentRecipients.organizationId}
+          and direct_target.assignment_id = ${assignmentRecipients.assignmentId}
+          and direct_target.target_type = 'athlete'
+          and direct_target.athlete_user_id = ${assignmentRecipients.athleteUserId}
+      )`,
     })
     .from(assignmentRecipients)
     .innerJoin(users, eq(users.id, assignmentRecipients.athleteUserId))
@@ -297,6 +314,7 @@ export async function listAssignmentPrescriptionRecipients(
       email: row.email,
       teamIds: [],
       teamNames: [],
+      isDirectTarget: row.isDirectTarget,
     };
     if (row.teamId) recipient.teamIds.push(row.teamId);
     if (row.teamName) recipient.teamNames.push(row.teamName);
@@ -304,4 +322,113 @@ export async function listAssignmentPrescriptionRecipients(
   }
 
   return [...recipients.values()];
+}
+
+export async function findPreparedRecipientRosterChanges(
+  database: Database,
+  input: { organizationId: string; assignmentId: string },
+): Promise<PreparedRecipientRosterChanges> {
+  const [preparedRows, targetRows] = await Promise.all([
+    database
+      .select({
+        athleteUserId: assignmentRecipients.athleteUserId,
+        organizationRole: organizationMemberships.role,
+      })
+      .from(assignmentRecipients)
+      .leftJoin(
+        organizationMemberships,
+        and(
+          eq(
+            organizationMemberships.organizationId,
+            assignmentRecipients.organizationId,
+          ),
+          eq(
+            organizationMemberships.userId,
+            assignmentRecipients.athleteUserId,
+          ),
+        ),
+      )
+      .where(
+        and(
+          eq(assignmentRecipients.organizationId, input.organizationId),
+          eq(assignmentRecipients.assignmentId, input.assignmentId),
+        ),
+      ),
+    database
+      .select({
+        targetType: assignmentTargets.targetType,
+        teamId: assignmentTargets.teamId,
+        athleteUserId: assignmentTargets.athleteUserId,
+      })
+      .from(assignmentTargets)
+      .where(
+        and(
+          eq(assignmentTargets.organizationId, input.organizationId),
+          eq(assignmentTargets.assignmentId, input.assignmentId),
+        ),
+      ),
+  ]);
+  const currentRecipientIds = new Set<string>();
+  const directAthleteIds = targetRows.flatMap((target) =>
+    target.targetType === "athlete" && target.athleteUserId
+      ? [target.athleteUserId]
+      : [],
+  );
+  const teamIds = targetRows.flatMap((target) =>
+    target.targetType === "team" && target.teamId ? [target.teamId] : [],
+  );
+  const [directAthletes, teamAthletes] = await Promise.all([
+    directAthleteIds.length === 0
+      ? []
+      : database
+          .select({ athleteUserId: organizationMemberships.userId })
+          .from(organizationMemberships)
+          .where(
+            and(
+              eq(organizationMemberships.organizationId, input.organizationId),
+              eq(organizationMemberships.role, "athlete"),
+              inArray(organizationMemberships.userId, directAthleteIds),
+            ),
+          ),
+    teamIds.length === 0
+      ? []
+      : database
+          .select({ athleteUserId: teamMemberships.userId })
+          .from(teamMemberships)
+          .innerJoin(
+            organizationMemberships,
+            and(
+              eq(
+                organizationMemberships.organizationId,
+                teamMemberships.organizationId,
+              ),
+              eq(organizationMemberships.userId, teamMemberships.userId),
+            ),
+          )
+          .where(
+            and(
+              eq(teamMemberships.organizationId, input.organizationId),
+              inArray(teamMemberships.teamId, teamIds),
+              eq(organizationMemberships.role, "athlete"),
+            ),
+          ),
+  ]);
+  for (const athlete of [...directAthletes, ...teamAthletes]) {
+    currentRecipientIds.add(athlete.athleteUserId);
+  }
+
+  const preparedRecipientIds = new Set(
+    preparedRows.map((row) => row.athleteUserId),
+  );
+  return {
+    addedAthleteUserIds: [...currentRecipientIds].filter(
+      (athleteUserId) => !preparedRecipientIds.has(athleteUserId),
+    ),
+    removedAthleteUserIds: [...preparedRecipientIds].filter(
+      (athleteUserId) => !currentRecipientIds.has(athleteUserId),
+    ),
+    ineligibleAthleteUserIds: preparedRows
+      .filter((row) => row.organizationRole !== "athlete")
+      .map((row) => row.athleteUserId),
+  };
 }
