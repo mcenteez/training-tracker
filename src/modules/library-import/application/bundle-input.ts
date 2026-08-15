@@ -6,8 +6,13 @@ import {
   planDaysOfWeek,
 } from "@/modules/plans/db/schema";
 import { workoutBlockTypes } from "@/modules/workouts/db/schema";
+import { resistanceSchema } from "@/modules/resistance/application/resistance";
 
-import { libraryImportFormatVersion, libraryImportLimits } from "./format";
+import {
+  libraryImportFormatVersion,
+  libraryImportLimits,
+  structuredResistanceImportFormatVersion,
+} from "./format";
 
 const optionalText = (maximumLength: number) =>
   z
@@ -56,6 +61,7 @@ export const importWorkoutItemSchema = z
     }),
     reps: optionalCount(10_000),
     load: optionalText(80),
+    resistance: resistanceSchema.nullable().optional(),
     durationSeconds: optionalCount(86_400),
     distanceMeters: optionalCount(1_000_000),
     restSeconds: optionalCount(86_400),
@@ -67,6 +73,7 @@ export const importWorkoutItemSchema = z
     (item) =>
       item.reps !== null ||
       Boolean(item.load) ||
+      item.resistance != null ||
       item.durationSeconds !== null ||
       item.distanceMeters !== null ||
       item.restSeconds !== null ||
@@ -146,7 +153,10 @@ export const libraryImportBundleSchema = z
     $schema: z.string().max(500).optional().meta({
       description: "Ignored. Present so editors can validate the file.",
     }),
-    formatVersion: z.literal(libraryImportFormatVersion),
+    formatVersion: z.union([
+      z.literal(libraryImportFormatVersion),
+      z.literal(structuredResistanceImportFormatVersion),
+    ]),
     exercises: z
       .array(importExerciseSchema)
       .max(libraryImportLimits.exercises)
@@ -158,13 +168,48 @@ export const libraryImportBundleSchema = z
     plans: z.array(importPlanSchema).max(libraryImportLimits.plans).default([]),
   })
   .strict()
-  .refine(
-    (bundle) =>
-      bundle.exercises.length > 0 ||
-      bundle.workouts.length > 0 ||
-      bundle.plans.length > 0,
-    { message: "Provide at least one exercise, workout, or plan." },
-  )
+  .superRefine((bundle, context) => {
+    if (
+      bundle.exercises.length === 0 &&
+      bundle.workouts.length === 0 &&
+      bundle.plans.length === 0
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Provide at least one exercise, workout, or plan.",
+      });
+    }
+
+    bundle.workouts.forEach((workout, workoutIndex) =>
+      workout.blocks.forEach((block, blockIndex) =>
+        block.items.forEach((item, itemIndex) => {
+          const path = [
+            "workouts",
+            workoutIndex,
+            "blocks",
+            blockIndex,
+            "items",
+            itemIndex,
+          ];
+          if (bundle.formatVersion === 1 && item.resistance != null) {
+            context.addIssue({
+              code: "custom",
+              path: [...path, "resistance"],
+              message:
+                "Format version 1 uses load; resistance requires version 2.",
+            });
+          }
+          if (bundle.formatVersion === 2 && item.load !== null) {
+            context.addIssue({
+              code: "custom",
+              path: [...path, "load"],
+              message: "Format version 2 uses resistance instead of load.",
+            });
+          }
+        }),
+      ),
+    );
+  })
   .meta({
     id: "LibraryImportBundle",
     title: "Training Tracker library import bundle",

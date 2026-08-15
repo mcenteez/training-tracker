@@ -7,7 +7,10 @@ import {
   libraryImportBundleSchema,
   type LibraryImportBundle,
 } from "./bundle-input";
-import { libraryImportFormatVersion, libraryImportLimits } from "./format";
+import {
+  libraryImportLimits,
+  supportedLibraryImportFormatVersions,
+} from "./format";
 
 export type ParseBundleResult =
   | { ok: true; bundle: LibraryImportBundle }
@@ -66,11 +69,13 @@ export function parseLibraryImportBundle(source: string): ParseBundleResult {
 
   if (
     typeof declaredVersion === "number" &&
-    declaredVersion !== libraryImportFormatVersion
+    !supportedLibraryImportFormatVersions.includes(
+      declaredVersion as (typeof supportedLibraryImportFormatVersions)[number],
+    )
   ) {
     return bundleError(
       "unsupported_format_version",
-      `Format version ${declaredVersion} is not supported. This app expects version ${libraryImportFormatVersion}.`,
+      `Format version ${declaredVersion} is not supported. This app supports versions ${supportedLibraryImportFormatVersions.join(" and ")}.`,
     );
   }
 

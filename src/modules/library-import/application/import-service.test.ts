@@ -105,6 +105,61 @@ const request = {
 };
 
 describe("library import service", () => {
+  it("passes v2 structured resistance to workout persistence", async () => {
+    const { transaction, unitOfWork } = createTestUnitOfWork();
+    const structuredBundle = bundle({
+      formatVersion: 2,
+      plans: [],
+      workouts: [
+        {
+          name: "Relative Strength",
+          description: null,
+          blocks: [
+            {
+              type: "straight",
+              label: null,
+              rounds: 1,
+              items: [
+                {
+                  exercise: "Back Squat",
+                  reps: 5,
+                  load: null,
+                  resistance: { type: "percent_1rm", percentage: 80 },
+                  durationSeconds: null,
+                  distanceMeters: null,
+                  restSeconds: 180,
+                  tempo: null,
+                  notes: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    await commitLibraryImport(unitOfWork, {
+      ...request,
+      bundle: structuredBundle,
+    });
+
+    expect(transaction.createWorkout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workout: expect.objectContaining({
+          blocks: [
+            expect.objectContaining({
+              items: [
+                expect.objectContaining({
+                  resistance: { type: "percent_1rm", percentage: 80 },
+                }),
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+  });
+
   it("allows an Organization Manager to import a full bundle", async () => {
     const { transaction, unitOfWork } = createTestUnitOfWork();
 

@@ -6,6 +6,7 @@ import type {
 } from "@/modules/access-control/roles";
 import type { PlanDayOfWeek } from "@/modules/plans/db/schema";
 import { workoutBlockTypes } from "@/modules/workouts/db/schema";
+import type { Resistance } from "@/modules/resistance/application/resistance";
 
 import type { LibraryImportBundle } from "./bundle-input";
 import {
@@ -40,6 +41,7 @@ export interface CreateWorkoutInput {
         exerciseId: string;
         reps: number | null;
         load: string | null;
+        resistance?: Resistance | null;
         durationSeconds: number | null;
         distanceMeters: number | null;
         restSeconds: number | null;
@@ -313,6 +315,7 @@ export async function commitLibraryImport(
               exerciseId: requireId(exerciseIds, item.exercise),
               reps: item.reps,
               load: item.load,
+              resistance: item.resistance ?? null,
               durationSeconds: item.durationSeconds,
               distanceMeters: item.distanceMeters,
               restSeconds: item.restSeconds,

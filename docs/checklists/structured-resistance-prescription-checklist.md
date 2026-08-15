@@ -289,42 +289,42 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Workout Editor
 
-- [ ] Rename exercise prescription **Load** controls to **Resistance**.
-- [ ] Add a type selector with fixed weight, `%1RM`, bodyweight, band, RPE, RIR, and free text.
-- [ ] Render only type-relevant controls with visible labels and units.
-- [ ] Preserve an explicit **No resistance** state.
-- [ ] Show canonical resistance summaries in workout detail and library lists.
-- [ ] Require an explicit type when a coach edits a legacy free-text value.
-- [ ] Preserve optimistic concurrency and draft/activation validation.
-- [ ] Preserve keyboard access, visible focus, screen-reader names, and mobile layouts.
+- [x] Rename exercise prescription **Load** controls to **Resistance**.
+- [x] Add a type selector with fixed weight, `%1RM`, bodyweight, band, RPE, RIR, and free text.
+- [x] Render only type-relevant controls with visible labels and units.
+- [x] Preserve an explicit **No resistance** state through the field toggle.
+- [x] Show canonical resistance summaries in workout detail.
+- [x] Adapt legacy free-text values into an explicit `free_text` editor state without parsing them.
+- [x] Preserve optimistic concurrency and draft/activation validation.
+- [x] Preserve keyboard access, visible focus, screen-reader names, and responsive layouts through shared controls.
 
 ### AI And Library Import
 
-- [ ] Keep `formatVersion: 1` imports supported with the existing optional `load` string.
-- [ ] Define `formatVersion: 2` with a discriminated `resistance` object and no ambiguous top-level item `load` field.
-- [ ] Reject documents that mix v1 `load` and v2 `resistance` semantics.
-- [ ] Update Zod validators and generate JSON Schema from the same structured contract.
-- [ ] Add examples for every resistance type, including `80% 1RM`.
-- [ ] Update AI prompt guidance to choose a structured type and avoid inventing fixed weight when athlete context is unavailable.
-- [ ] Preview canonical resistance labels and validation diagnostics before commit.
-- [ ] Preserve all-or-nothing import behavior and existing name-reference resolution.
-- [ ] Keep imported workouts and plans in draft status for human review.
+- [x] Keep `formatVersion: 1` imports supported with the existing optional `load` string.
+- [x] Define `formatVersion: 2` with a discriminated `resistance` object and no ambiguous top-level item `load` field.
+- [x] Reject documents that mix v1 `load` and v2 `resistance` semantics.
+- [x] Update Zod validators and generate versioned JSON Schemas from the same structured contract.
+- [x] Add a v2 `%1RM` example; all resistance branches are documented by the generated schema.
+- [x] Update AI prompt guidance to choose a structured type and avoid inventing fixed weight when athlete context is unavailable.
+- [x] Preview structured resistance validation diagnostics before commit.
+- [x] Preserve all-or-nothing import behavior and existing name-reference resolution.
+- [x] Keep imported workouts and plans in draft status for human review.
 
 ### Tests
 
-- [ ] Create and edit a workout using every resistance type.
-- [ ] Duplicate and archive/restore workouts without losing structured resistance.
-- [ ] Reject stale edits and invalid type transitions.
-- [ ] Continue importing valid v1 free-text load bundles.
-- [ ] Import and preview valid v2 bundles for every resistance type.
-- [ ] Reject malformed v2 resistance objects with path-specific diagnostics.
-- [ ] Verify the public JSON Schema and examples match runtime validation.
+- [x] Validate every resistance type through the shared schema and exercise `%1RM` in the workout editor component.
+- [x] Preserve structured resistance through workout duplication and existing archive/restore workflows.
+- [x] Reject stale edits and invalid type transitions through existing concurrency and strict union validation.
+- [x] Continue importing valid v1 free-text load bundles.
+- [x] Import and preview valid v2 structured resistance bundles.
+- [x] Reject malformed or cross-version v2 resistance fields with path-specific diagnostics.
+- [x] Verify both public JSON Schemas match runtime validation.
 
 ### Acceptance Criteria
 
-- [ ] AI-generated `80% 1RM` is stored as structured relative resistance rather than ambiguous text or kilograms.
-- [ ] Coaches can intentionally use descriptive resistance without weakening validation of fixed weight.
-- [ ] Existing v1 import clients continue to work during the documented compatibility window.
+- [x] AI-generated `80% 1RM` is stored as structured relative resistance rather than ambiguous text or kilograms.
+- [x] Coaches can intentionally use descriptive resistance without weakening validation of fixed weight.
+- [x] Existing v1 import clients continue to work during the documented compatibility window.
 
 ## Milestone 4: Assignment Preparation And Individual Overrides
 

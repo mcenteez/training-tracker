@@ -7,11 +7,19 @@ import type { WorkoutActionState } from "@/app/(app)/app/library/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { WorkoutGraphInput } from "@/modules/workouts/application/workout-input";
+import type { Resistance } from "@/modules/resistance/application/resistance";
 
 type MetricField =
   | "reps"
-  | "load"
+  | "resistance"
   | "durationSeconds"
   | "distanceMeters"
   | "restSeconds"
@@ -25,7 +33,12 @@ const metricOptions: {
   type: "number" | "text";
 }[] = [
   { field: "reps", label: "Reps", placeholder: "Reps", type: "number" },
-  { field: "load", label: "Load", placeholder: "Load", type: "text" },
+  {
+    field: "resistance",
+    label: "Resistance",
+    placeholder: "Resistance",
+    type: "text",
+  },
   {
     field: "durationSeconds",
     label: "Duration",
@@ -83,6 +96,7 @@ const emptyItem = (exerciseId = ""): BuilderItem => ({
   enabledMetrics: ["reps"],
   reps: null,
   load: null,
+  resistance: undefined,
   durationSeconds: null,
   distanceMeters: null,
   restSeconds: null,
@@ -94,6 +108,7 @@ function hasMetricValue(
   item: WorkoutGraphInput["blocks"][number]["items"][number],
   metric: MetricField,
 ): boolean {
+  if (metric === "resistance") return item.resistance != null;
   const value = item[metric];
   return typeof value === "string" ? value.trim().length > 0 : value !== null;
 }
@@ -141,6 +156,7 @@ export function WorkoutBuilder({
         exerciseId: item.exerciseId,
         reps: item.reps,
         load: item.load,
+        resistance: item.resistance ?? null,
         durationSeconds: item.durationSeconds,
         distanceMeters: item.distanceMeters,
         restSeconds: item.restSeconds,
@@ -390,7 +406,10 @@ export function WorkoutBuilder({
                                       current.enabledMetrics.filter(
                                         (field) => field !== metric.field,
                                       ),
-                                    [metric.field]: null,
+                                    [metric.field]:
+                                      metric.field === "resistance"
+                                        ? undefined
+                                        : null,
                                   };
                                 }
                                 return {
@@ -420,45 +439,68 @@ export function WorkoutBuilder({
                         .filter((metric) =>
                           item.enabledMetrics.includes(metric.field),
                         )
-                        .map((metric) => (
-                          <Input
-                            key={metric.field}
-                            aria-label={metric.label}
-                            type={metric.type}
-                            min={metric.type === "number" ? 0 : undefined}
-                            placeholder={metric.placeholder}
-                            className={
-                              metric.field === "notes"
-                                ? "md:col-span-3"
-                                : undefined
-                            }
-                            value={
-                              metric.type === "number"
-                                ? ((item[metric.field] as number | null) ?? "")
-                                : ((item[metric.field] as string | null) ?? "")
-                            }
-                            onChange={(event) =>
-                              updateBlock(blockIndex, {
-                                items: block.items.map((current, index) => {
-                                  if (index !== itemIndex) return current;
-                                  if (metric.type === "number") {
+                        .map((metric) =>
+                          metric.field === "resistance" ? (
+                            <ResistanceFields
+                              key={metric.field}
+                              resistance={item.resistance ?? null}
+                              onChange={(resistance) =>
+                                updateBlock(blockIndex, {
+                                  items: block.items.map((current, index) =>
+                                    index === itemIndex
+                                      ? {
+                                          ...current,
+                                          resistance,
+                                          load: null,
+                                        }
+                                      : current,
+                                  ),
+                                })
+                              }
+                            />
+                          ) : (
+                            <Input
+                              key={metric.field}
+                              aria-label={metric.label}
+                              type={metric.type}
+                              min={metric.type === "number" ? 0 : undefined}
+                              placeholder={metric.placeholder}
+                              className={
+                                metric.field === "notes"
+                                  ? "md:col-span-3"
+                                  : undefined
+                              }
+                              value={
+                                metric.type === "number"
+                                  ? ((item[metric.field] as number | null) ??
+                                    "")
+                                  : ((item[metric.field] as string | null) ??
+                                    "")
+                              }
+                              onChange={(event) =>
+                                updateBlock(blockIndex, {
+                                  items: block.items.map((current, index) => {
+                                    if (index !== itemIndex) return current;
+                                    if (metric.type === "number") {
+                                      return {
+                                        ...current,
+                                        [metric.field]:
+                                          event.target.value === ""
+                                            ? null
+                                            : Number(event.target.value),
+                                      };
+                                    }
                                     return {
                                       ...current,
                                       [metric.field]:
-                                        event.target.value === ""
-                                          ? null
-                                          : Number(event.target.value),
+                                        event.target.value || null,
                                     };
-                                  }
-                                  return {
-                                    ...current,
-                                    [metric.field]: event.target.value || null,
-                                  };
-                                }),
-                              })
-                            }
-                          />
-                        ))}
+                                  }),
+                                })
+                              }
+                            />
+                          ),
+                        )}
                     </div>
                   )}
                 </div>
@@ -495,5 +537,139 @@ export function WorkoutBuilder({
         </Button>
       </div>
     </form>
+  );
+}
+
+function ResistanceFields({
+  resistance,
+  onChange,
+}: {
+  resistance: Resistance | null;
+  onChange: (resistance: Resistance) => void;
+}) {
+  const type = resistance?.type ?? "fixed_weight";
+
+  function changeType(nextType: Resistance["type"]) {
+    const next: Record<Resistance["type"], Resistance> = {
+      fixed_weight: { type: "fixed_weight", value: 1, unit: "lb" },
+      percent_1rm: { type: "percent_1rm", percentage: 80 },
+      bodyweight: { type: "bodyweight" },
+      band: { type: "band", description: "Band" },
+      rpe: { type: "rpe", target: 8 },
+      rir: { type: "rir", target: 2 },
+      free_text: { type: "free_text", description: "Resistance" },
+    };
+    onChange(next[nextType]);
+  }
+
+  return (
+    <div className="grid gap-2 md:col-span-3 md:grid-cols-3">
+      <label className="grid gap-1 text-sm">
+        Resistance type
+        <Select value={type} onValueChange={changeType}>
+          <SelectTrigger className="w-full" aria-label="Resistance type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fixed_weight">Fixed weight</SelectItem>
+            <SelectItem value="percent_1rm">% 1RM</SelectItem>
+            <SelectItem value="bodyweight">Bodyweight</SelectItem>
+            <SelectItem value="band">Band</SelectItem>
+            <SelectItem value="rpe">Target RPE</SelectItem>
+            <SelectItem value="rir">Target RIR</SelectItem>
+            <SelectItem value="free_text">Free text</SelectItem>
+          </SelectContent>
+        </Select>
+      </label>
+      {type === "fixed_weight" ? (
+        <>
+          <label className="grid gap-1 text-sm">
+            Weight value
+            <Input
+              aria-label="Weight value"
+              type="number"
+              min="0.01"
+              step="any"
+              value={resistance?.type === type ? resistance.value : 1}
+              onChange={(event) =>
+                onChange({
+                  type,
+                  value: Number(event.target.value),
+                  unit: resistance?.type === type ? resistance.unit : "lb",
+                })
+              }
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            Weight unit
+            <Select
+              value={resistance?.type === type ? resistance.unit : "lb"}
+              onValueChange={(unit: "kg" | "lb") =>
+                onChange({
+                  type,
+                  value: resistance?.type === type ? resistance.value : 1,
+                  unit,
+                })
+              }
+            >
+              <SelectTrigger className="w-full" aria-label="Weight unit">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lb">lb</SelectItem>
+                <SelectItem value="kg">kg</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+        </>
+      ) : null}
+      {type === "percent_1rm" ? (
+        <label className="grid gap-1 text-sm">
+          Percentage of 1RM
+          <Input
+            aria-label="Percentage of 1RM"
+            type="number"
+            min="0.01"
+            max="200"
+            step="any"
+            value={resistance?.type === type ? resistance.percentage : 80}
+            onChange={(event) =>
+              onChange({ type, percentage: Number(event.target.value) })
+            }
+          />
+        </label>
+      ) : null}
+      {type === "band" || type === "free_text" ? (
+        <label className="grid gap-1 text-sm md:col-span-2">
+          {type === "band" ? "Band description" : "Resistance description"}
+          <Input
+            aria-label={
+              type === "band" ? "Band description" : "Resistance description"
+            }
+            maxLength={80}
+            value={resistance?.type === type ? resistance.description : ""}
+            onChange={(event) =>
+              onChange({ type, description: event.target.value })
+            }
+          />
+        </label>
+      ) : null}
+      {type === "rpe" || type === "rir" ? (
+        <label className="grid gap-1 text-sm">
+          {type === "rpe" ? "Target RPE" : "Target RIR"}
+          <Input
+            aria-label={type === "rpe" ? "Target RPE" : "Target RIR"}
+            type="number"
+            min={type === "rpe" ? 1 : 0}
+            max={10}
+            step={type === "rpe" ? 0.5 : 1}
+            value={resistance?.type === type ? resistance.target : 0}
+            onChange={(event) =>
+              onChange({ type, target: Number(event.target.value) })
+            }
+          />
+        </label>
+      ) : null}
+    </div>
   );
 }

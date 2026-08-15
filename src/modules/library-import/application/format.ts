@@ -1,4 +1,6 @@
 export const libraryImportFormatVersion = 1;
+export const structuredResistanceImportFormatVersion = 2;
+export const supportedLibraryImportFormatVersions = [1, 2] as const;
 
 export const libraryImportLimits = {
   fileBytes: 512 * 1024,
@@ -12,6 +14,8 @@ export const libraryImportLimits = {
 } as const;
 
 export const libraryImportSchemaPath = "/schemas/library-import/v1.json";
+export const structuredResistanceImportSchemaPath =
+  "/schemas/library-import/v2.json";
 
 export const libraryImportConflictStrategies = ["skip", "fail"] as const;
 

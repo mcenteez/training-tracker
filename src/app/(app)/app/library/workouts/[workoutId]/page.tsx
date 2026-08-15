@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { withDatabase } from "@/db/client";
 import { loadLibraryAppContext } from "@/lib/library-context";
 import { findWorkoutWithStructure } from "@/modules/workouts/db/queries";
+import {
+  formatResistance,
+  type Resistance,
+} from "@/modules/resistance/application/resistance";
 
 function prescription(item: {
   reps: number | null;
   load: string | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -18,7 +23,7 @@ function prescription(item: {
   return (
     [
       item.reps !== null ? `${item.reps} reps` : null,
-      item.load,
+      item.resistance ? formatResistance(item.resistance) : item.load,
       item.durationSeconds !== null ? `${item.durationSeconds}s` : null,
       item.distanceMeters !== null ? `${item.distanceMeters}m` : null,
       item.restSeconds !== null ? `${item.restSeconds}s rest` : null,

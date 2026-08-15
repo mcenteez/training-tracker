@@ -4,6 +4,7 @@ import { and, asc, eq, ne } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import { exercises } from "@/modules/exercises/db/schema";
+import { resistanceToPersistence } from "@/modules/resistance/application/resistance";
 import type {
   LibraryImportTransaction,
   LibraryImportUnitOfWork,
@@ -141,13 +142,17 @@ export function createLibraryImportUnitOfWork(
               if (!block.items.length) continue;
 
               await databaseTransaction.insert(workoutItems).values(
-                block.items.map((item, itemPosition) => ({
-                  organizationId: input.organizationId,
-                  workoutId: createdWorkout.id,
-                  blockId: createdBlock.id,
-                  position: itemPosition,
-                  ...item,
-                })),
+                block.items.map((item, itemPosition) => {
+                  const { resistance, ...legacyItem } = item;
+                  return {
+                    organizationId: input.organizationId,
+                    workoutId: createdWorkout.id,
+                    blockId: createdBlock.id,
+                    position: itemPosition,
+                    ...legacyItem,
+                    ...resistanceToPersistence(resistance ?? null),
+                  };
+                }),
               );
             }
 

@@ -97,7 +97,7 @@ export function LibraryImportForm() {
             rows={8}
             value={pasted}
             onChange={(event) => setPasted(event.target.value)}
-            placeholder='{ "formatVersion": 1, "exercises": [] }'
+            placeholder='{ "formatVersion": 2, "exercises": [] }'
             className="w-full border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
         </div>

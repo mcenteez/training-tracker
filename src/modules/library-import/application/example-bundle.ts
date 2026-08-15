@@ -1,9 +1,12 @@
 import type { LibraryImportBundle } from "./bundle-input";
-import { libraryImportFormatVersion, libraryImportLimits } from "./format";
+import {
+  libraryImportLimits,
+  structuredResistanceImportFormatVersion,
+} from "./format";
 
 export const libraryImportExample = {
-  $schema: "https://example.com/schemas/library-import/v1.json",
-  formatVersion: libraryImportFormatVersion,
+  $schema: "https://example.com/schemas/library-import/v2.json",
+  formatVersion: structuredResistanceImportFormatVersion,
   exercises: [
     {
       name: "Back Squat",
@@ -31,7 +34,7 @@ export const libraryImportExample = {
             {
               exercise: "Back Squat",
               reps: 5,
-              load: "75%",
+              resistance: { type: "percent_1rm", percentage: 75 },
               restSeconds: 180,
               tempo: "31X1",
             },
@@ -79,7 +82,9 @@ export function buildLibraryImportPrompt(schemaUrl: string): string {
     "Fetch the schema and validate your output against it before replying. Return only the JSON document, with no commentary or code fence.",
     "",
     "Rules the schema cannot express:",
-    "- Every workout item needs at least one of reps, load, durationSeconds, distanceMeters, restSeconds, tempo, or notes.",
+    "- Every workout item needs programming such as reps, structured resistance, durationSeconds, distanceMeters, restSeconds, tempo, or notes.",
+    "- Choose exactly one resistance type when resistance is prescribed: fixed_weight, percent_1rm, bodyweight, band, rpe, rir, or free_text.",
+    "- Do not invent a fixed weight when athlete-specific strength context is unavailable; use percent_1rm, rpe, rir, bodyweight, band, or free_text as appropriate.",
     "- Workout items reference an exercise by its exact name, and plan slots reference a workout by its exact name. Every referenced name must be defined in the same document.",
     "- Names are unique per type, ignoring case.",
     '- A plan slot uses either scheduleType "fixed_day" with dayOfWeek, or scheduleType "weekly_frequency" with targetSessionsPerWeek. Never both.',

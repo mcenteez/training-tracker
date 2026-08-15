@@ -6,7 +6,7 @@ import {
   buildLibraryImportPrompt,
   libraryImportExampleJson,
 } from "@/modules/library-import/application/example-bundle";
-import { libraryImportSchemaPath } from "@/modules/library-import/application/format";
+import { structuredResistanceImportSchemaPath } from "@/modules/library-import/application/format";
 
 import { CopyButton } from "./copy-button";
 import { LibraryImportForm } from "./import-form";
@@ -21,7 +21,7 @@ export default async function LibraryImportPage() {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = host.startsWith("localhost") ? "http" : "https";
-  const schemaUrl = `${protocol}://${host}${libraryImportSchemaPath}`;
+  const schemaUrl = `${protocol}://${host}${structuredResistanceImportSchemaPath}`;
   const prompt = buildLibraryImportPrompt(schemaUrl);
 
   return (
@@ -56,7 +56,7 @@ export default async function LibraryImportPage() {
             <p className="text-sm text-muted-foreground">
               The machine-readable contract lives at{" "}
               <a
-                href={libraryImportSchemaPath}
+                href={structuredResistanceImportSchemaPath}
                 className="underline underline-offset-4"
               >
                 {schemaUrl}

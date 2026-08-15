@@ -63,6 +63,7 @@ export default async function EditWorkoutPage({
         exerciseId: item.exerciseId,
         reps: item.reps,
         load: item.load,
+        resistance: item.resistance,
         durationSeconds: item.durationSeconds,
         distanceMeters: item.distanceMeters,
         restSeconds: item.restSeconds,

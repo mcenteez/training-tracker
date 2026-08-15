@@ -13,6 +13,10 @@ interface JsonSchemaNode {
 const schema = buildLibraryImportJsonSchema(
   "https://example.test",
 ) as JsonSchemaNode;
+const structuredSchema = buildLibraryImportJsonSchema(
+  "https://example.test",
+  2,
+) as JsonSchemaNode;
 
 function definition(name: string): JsonSchemaNode {
   const found = schema.$defs?.[name];
@@ -90,5 +94,19 @@ describe("buildLibraryImportJsonSchema", () => {
 
   it("documents the rules JSON Schema cannot express", () => {
     expect(String(schema.description)).toContain("enforced on import");
+  });
+
+  it("publishes structured resistance only in version 2", () => {
+    const item = schema.$defs?.ImportWorkoutItem;
+    const structuredItem = structuredSchema.$defs?.ImportWorkoutItem;
+
+    expect(item?.properties?.load).toBeDefined();
+    expect(item?.properties?.resistance).toBeUndefined();
+    expect(structuredSchema.$id).toBe(
+      "https://example.test/schemas/library-import/v2.json",
+    );
+    expect(structuredSchema.properties?.formatVersion?.const).toBe(2);
+    expect(structuredItem?.properties?.load).toBeUndefined();
+    expect(structuredItem?.properties?.resistance).toBeDefined();
   });
 });

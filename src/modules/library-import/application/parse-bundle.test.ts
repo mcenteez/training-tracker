@@ -16,6 +16,63 @@ function codes(result: ReturnType<typeof parseLibraryImportBundle>) {
 }
 
 describe("parseLibraryImportBundle", () => {
+  it("accepts structured resistance in format version 2", () => {
+    const result = parseLibraryImportBundle(
+      JSON.stringify({
+        formatVersion: 2,
+        exercises: [{ name: "Back Squat" }],
+        workouts: [
+          {
+            name: "Strength",
+            blocks: [
+              {
+                items: [
+                  {
+                    exercise: "Back Squat",
+                    reps: 5,
+                    resistance: { type: "percent_1rm", percentage: 80 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        result.bundle.workouts[0]?.blocks[0]?.items[0]?.resistance,
+      ).toEqual({ type: "percent_1rm", percentage: 80 });
+    }
+  });
+
+  it.each([
+    [1, { resistance: { type: "bodyweight" } }],
+    [2, { load: "80% 1RM" }],
+  ])(
+    "rejects version %s fields from the other contract",
+    (formatVersion, field) => {
+      const result = parseLibraryImportBundle(
+        JSON.stringify({
+          formatVersion,
+          workouts: [
+            {
+              name: "Strength",
+              blocks: [
+                {
+                  items: [{ exercise: "Back Squat", reps: 5, ...field }],
+                },
+              ],
+            },
+          ],
+        }),
+      );
+
+      expect(result.ok).toBe(false);
+    },
+  );
   it("accepts a minimal bundle and applies defaults", () => {
     const result = parseLibraryImportBundle(bundle());
 
@@ -58,7 +115,7 @@ describe("parseLibraryImportBundle", () => {
 
   it("rejects an unsupported format version with an explicit message", () => {
     const result = parseLibraryImportBundle(
-      JSON.stringify({ formatVersion: 2, exercises: [] }),
+      JSON.stringify({ formatVersion: 3, exercises: [] }),
     );
 
     expect(codes(result)).toEqual(["unsupported_format_version"]);
