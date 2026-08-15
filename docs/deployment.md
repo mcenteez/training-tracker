@@ -86,6 +86,21 @@ The prepared assignment lifecycle adds an enum value and nullable audit columns 
 
 If correction is required after release, ship a forward migration or application fix. Existing published and canceled assignments require no backfill, and preparation timestamps must not be fabricated.
 
+## Structured Resistance Rollout
+
+Structured resistance adds nullable discriminator and payload columns to workout items, assignment snapshots, athlete overrides, session-effective prescriptions, and results in `20260815162057_fluffy_slapstick`.
+
+1. Apply the additive migration before deploying application instances that write structured resistance.
+2. Deploy the application as one coordinated version. Compatibility reads preserve historical text and numeric `load` rows; new writes use structured resistance columns.
+3. Keep v1 imports available at `/schemas/library-import/v1.json`; direct new AI generation to `/schemas/library-import/v2.json`.
+4. Verify `80% 1RM` remains relative resistance with no normalized kilograms.
+5. Verify fixed weight preserves entered units and canonical normalized kilograms.
+6. Verify prepared overrides and session-start snapshots retain the complete resistance type and payload.
+7. Verify athlete results start unrecorded and descriptive resistance never contributes fabricated volume.
+8. Monitor structured type adoption, legacy fallback use, invalid input rates, and fixed-weight metric coverage separately.
+
+Do not parse or backfill historical `load` text. Do not drop compatibility columns in this release. If correction is required, ship a forward migration or application fix and keep reporting unavailable until raw facts reconcile.
+
 ## AI and MCP Usage
 
 Good candidates for AI/MCP:

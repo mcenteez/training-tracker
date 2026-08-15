@@ -406,14 +406,19 @@ test.describe("Training Tracker assignment and performance access", () => {
     await page.getByLabel("Duration (minutes)").fill("45");
     await page.getByLabel("Session RPE (1-10)").selectOption("8");
     await page.getByText("Actuals and notes", { exact: true }).click();
-    await page.getByLabel("Actual load value").fill("135");
-    await page.getByLabel("Actual load unit").selectOption("lb");
+    await page.getByLabel("Resistance used type").click();
+    await page.getByRole("option", { name: "Fixed weight" }).click();
+    await page.getByLabel("Resistance used weight value").fill("135");
+    await page.getByLabel("Resistance used weight unit").click();
+    await page.getByRole("option", { name: "lb" }).click();
     await page.getByRole("button", { name: "Complete", exact: true }).click();
     await page.getByRole("button", { name: "Save Progress" }).click();
     await expect(page.getByText("Progress saved.")).toBeVisible();
     await expect(page.getByLabel("Duration (minutes)")).toHaveValue("45");
     await expect(page.getByLabel("Session RPE (1-10)")).toHaveValue("8");
-    await expect(page.getByLabel("Actual load value")).toHaveValue("135");
+    await expect(page.getByLabel("Resistance used weight value")).toHaveValue(
+      "135",
+    );
 
     await page.getByRole("button", { name: "Complete Workout" }).click();
     await expect(page.getByText("Workout completed.")).toBeVisible();
@@ -421,17 +426,18 @@ test.describe("Training Tracker assignment and performance access", () => {
     expect(beforeEdit).toMatchObject({
       durationMinutes: 45,
       sessionRpe: 8,
-      load: "135 lb",
-      loadValue: "135",
-      loadUnit: "lb",
-      normalizedLoadKg: "61.23496995",
+      resistanceType: "fixed_weight",
+      resistanceValue: "135",
+      resistanceUnit: "lb",
+      normalizedResistanceKg: "61.23496995",
     });
 
     await page.getByRole("link", { name: "Edit results" }).click();
     await page.getByLabel("Duration (minutes)").fill("50");
     await page.getByLabel("Session RPE (1-10)").selectOption("9");
-    await page.getByLabel("Actual load value").fill("100");
-    await page.getByLabel("Actual load unit").selectOption("kg");
+    await page.getByLabel("Resistance used weight value").fill("100");
+    await page.getByLabel("Resistance used weight unit").click();
+    await page.getByRole("option", { name: "kg" }).click();
     await page.getByRole("button", { name: "Save Progress" }).click();
     await expect(page.getByText("Progress saved.")).toBeVisible();
     await expect(page.getByText("Session load", { exact: true })).toBeVisible();
@@ -448,10 +454,10 @@ test.describe("Training Tracker assignment and performance access", () => {
       sessionRpe: 9,
       submittedAt: beforeEdit?.submittedAt,
       dueAt: beforeEdit?.dueAt,
-      load: "100 kg",
-      loadValue: "100",
-      loadUnit: "kg",
-      normalizedLoadKg: "100",
+      resistanceType: "fixed_weight",
+      resistanceValue: "100",
+      resistanceUnit: "kg",
+      normalizedResistanceKg: "100",
     });
     await seedAssignmentBaselineSessions(assignmentId, scheduledDate);
 
@@ -519,8 +525,9 @@ test.describe("Training Tracker assignment and performance access", () => {
       .click();
     await page.getByRole("button", { name: "Start Workout" }).click();
     await page.getByText("Actuals and notes", { exact: true }).click();
-    await expect(page.getByLabel("Actual load")).toHaveValue("bodyweight");
-    await expect(page.getByLabel("Actual load unit")).toHaveCount(0);
+    await expect(page.getByLabel("Resistance used type")).toHaveText(
+      "Not recorded",
+    );
     await page.getByRole("button", { name: "Complete", exact: true }).click();
     await page.getByRole("button", { name: "Complete Workout" }).click();
     await expect(

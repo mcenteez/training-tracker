@@ -9,19 +9,19 @@ Importing requires library **manage** access: an organization owner or manager, 
 The machine-readable contract is served from the running app:
 
 ```
-GET /schemas/library-import/v1.json
+GET /schemas/library-import/v2.json
 ```
 
 It is public, cacheable, CORS-enabled, and generated at request time from the same Zod schema that validates uploads, so it can never drift from the validator. Point an AI agent or a JSON-aware editor at that URL.
 
-The version lives in the path. Additive changes stay on `v1`; a breaking change would ship as `v2.json` while `v1.json` continues to be served.
+Version 1 remains available at `/schemas/library-import/v1.json` for integrations using the optional workout-item `load` string. New documents should use version 2 structured resistance. A document cannot mix v1 `load` and v2 `resistance` semantics.
 
 ## Document shape
 
 ```json
 {
-  "$schema": "https://<host>/schemas/library-import/v1.json",
-  "formatVersion": 1,
+  "$schema": "https://<host>/schemas/library-import/v2.json",
+  "formatVersion": 2,
   "exercises": [
     {
       "name": "Back Squat",
@@ -44,7 +44,7 @@ The version lives in the path. Additive changes stay on `v1`; a breaking change 
             {
               "exercise": "Back Squat",
               "reps": 5,
-              "load": "75%",
+              "resistance": { "type": "percent_1rm", "percentage": 75 },
               "restSeconds": 180,
               "tempo": "31X1"
             }
@@ -75,7 +75,11 @@ The version lives in the path. Additive changes stay on `v1`; a breaking change 
 }
 ```
 
-- `formatVersion` is required and must be `1`.
+- `formatVersion` is required and must be `1` or `2`.
+- Version 1 items may use `load` and may not use `resistance`. Version 2 items may use `resistance` and may not use `load`.
+- Resistance types are `fixed_weight`, `percent_1rm`, `bodyweight`, `band`, `rpe`, `rir`, and `free_text`.
+- Fixed weight requires `value` and `unit` (`kg` or `lb`). Percentage of 1RM requires `percentage`. Band/free text require `description`. RPE/RIR require `target`.
+- AI-generated programming must not invent fixed weight without athlete-specific context.
 - `$schema` is optional and ignored.
 - `exercises`, `workouts`, and `plans` are each optional, but at least one must be non-empty.
 - Unknown keys are rejected, so a field an AI invents surfaces as an error instead of being silently dropped.
@@ -94,7 +98,7 @@ The version lives in the path. Additive changes stay on `v1`; a breaking change 
 
 Both are enforced on import and reported as errors:
 
-1. Every workout item needs at least one of `reps`, `load`, `durationSeconds`, `distanceMeters`, `restSeconds`, `tempo`, or `notes`.
+1. Every workout item needs programming such as `reps`, version-appropriate `load`/`resistance`, `durationSeconds`, `distanceMeters`, `restSeconds`, `tempo`, or `notes`.
 2. A plan slot uses either `scheduleType: "fixed_day"` with `dayOfWeek`, or `scheduleType: "weekly_frequency"` with `targetSessionsPerWeek`. Never both, and never neither.
 
 ## References

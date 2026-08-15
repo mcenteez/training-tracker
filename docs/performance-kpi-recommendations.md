@@ -262,7 +262,9 @@ Do not show these until collection and definitions exist:
 - On-time completion rate
 - Reliable trend/change flags
 
-The current `load` result is free-form text and cannot be safely summed. A submitted session proves logging completion, not prescribed-quality execution.
+Historical `load` results may be free-form text and cannot be safely summed. Structured resistance distinguishes fixed weight from relative and descriptive methods. A submitted session proves logging completion, not prescribed-quality execution.
+
+Only structured fixed weight, or a compatible historical numeric weight with normalized kilograms, contributes to strength volume. Percentage of 1RM is `relative_resistance`; bodyweight, band, RPE, RIR, and free text are `non_weight_resistance`; unresolved historical text is `legacy_resistance`. These states are unavailable context, never zero.
 
 ## Future Monitoring Roadmap
 

@@ -4,6 +4,8 @@
 
 Make individual prescription planning a normal part of assignment creation instead of a correction performed after publication. Coaches should be able to reuse one plan or workout as a shared training structure, review the resolved recipient list, individualize prescribed work for specific athletes, and verify the effective prescriptions before any athlete can see the assignment.
 
+Structured resistance was added later and is tracked in [structured-resistance-prescription-checklist.md](structured-resistance-prescription-checklist.md). This checklist remains the historical record for prepared assignments.
+
 This workflow must preserve immutable assignment history, tenant isolation, team-scoped authorization, and the existing separation between prescribed work and athlete-recorded results.
 
 The workflow must answer:

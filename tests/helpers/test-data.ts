@@ -108,6 +108,10 @@ export async function readAssignmentSessionCapture(assignmentId: string) {
       results.load_value,
       results.load_unit,
       results.normalized_load_kg
+      , results.resistance_type
+      , results.resistance_value
+      , results.resistance_unit
+      , results.normalized_resistance_kg
     FROM assignment_sessions sessions
     LEFT JOIN assignment_session_item_results results
       ON results.organization_id = sessions.organization_id
@@ -127,6 +131,10 @@ export async function readAssignmentSessionCapture(assignmentId: string) {
         loadValue: String(row.load_value),
         loadUnit: String(row.load_unit),
         normalizedLoadKg: String(row.normalized_load_kg),
+        resistanceType: String(row.resistance_type),
+        resistanceValue: String(row.resistance_value),
+        resistanceUnit: String(row.resistance_unit),
+        normalizedResistanceKg: String(row.normalized_resistance_kg),
       }
     : null;
 }

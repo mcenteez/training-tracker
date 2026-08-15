@@ -72,7 +72,8 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - Trainers create and manage reusable exercises at the organization level with a name, coaching instructions, category, equipment, and optional demonstration video URL.
 - An exercise can be reused across any number of workouts in that organization.
 - Trainers create and manage reusable workouts at the organization level.
-- A workout is composed of ordered straight-set, circuit, or superset blocks. Each block contains ordered exercises with programming such as rounds, reps, load, duration, distance, rest, tempo, and coaching notes.
+- A workout is composed of ordered straight-set, circuit, or superset blocks. Each block contains ordered exercises with programming such as rounds, reps, resistance, duration, distance, rest, tempo, and coaching notes.
+- Resistance is structured as fixed weight, percentage of 1RM, bodyweight, band, target RPE, target RIR, or explicit free text. Only fixed weight carries `kg`/`lb` values eligible for strength-volume calculations.
 - Incomplete workouts may be saved as drafts. Activation requires at least one populated block and valid active exercises from the same organization.
 - Exercises and workouts are archived and restored rather than hard-deleted through the application.
 - Workouts can be duplicated into independent drafts while retaining source-template provenance.
@@ -81,7 +82,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 ### 5.2) Library Import
 
 - Trainers with library manage access can bulk-create exercises, workouts, and plans from a single JSON document at `/app/library/import`, either by uploading a file or pasting JSON.
-- The intended workflow is generating programming with an AI assistant against a published JSON Schema, served at `/schemas/library-import/v1.json` and generated from the same validator that checks uploads.
+- The intended workflow is generating programming with an AI assistant against `/schemas/library-import/v2.json`. Version 1 remains available for legacy `load` documents.
 - The document references exercises and workouts by name rather than identifier. References resolve against the same document or the organization's existing library.
 - Submitting a document only previews it. The preview lists every entity that would be created, every name already in the library that will be skipped, and every problem to fix. Nothing is written until the trainer confirms.
 - A confirmed import runs in one transaction. Any failure imports nothing.
@@ -121,6 +122,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 
 - Athletes can record and update their own results.
 - Prescribed values are not athlete results. Athletes see their effective prescription and separately record what they completed.
+- Athletes optionally record **Resistance used** as fixed weight, bodyweight, band, or free text. The result starts empty and never confirms the prescription by default.
 - Team Performance summarizes assigned, in-progress, submitted, missed, and upcoming occurrences over 30-day, 90-day, or all-time windows.
 - Authorized staff can drill into a team assignment, recipient occurrences, and submitted exercise metrics in workout order.
 - Team Managers and organization-wide result managers can append operational comments to submitted athlete results. Team Viewers have read-only access.
