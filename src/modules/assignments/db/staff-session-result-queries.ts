@@ -16,6 +16,11 @@ import {
 } from "@/modules/assignments/db/schema";
 import { users } from "@/modules/users/db/schema";
 import {
+  adaptResistance,
+  resistanceFromPersistence,
+  type Resistance,
+} from "@/modules/resistance/application/resistance";
+import {
   findStaffSessionTrainingLoad,
   type SessionTrainingLoadDetail,
 } from "./training-load-queries";
@@ -33,6 +38,7 @@ export interface StaffSessionResultRow {
   loadValue: string | null;
   loadUnit: "kg" | "lb" | null;
   normalizedLoadKg: string | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   notes: string | null;
@@ -67,6 +73,7 @@ export interface StaffSessionResultDetail {
     loadValue: string | null;
     loadUnit: "kg" | "lb" | null;
     normalizedLoadKg: string | null;
+    resistance: Resistance | null;
     durationSeconds: number | null;
     distanceMeters: number | null;
     restSeconds: number | null;
@@ -176,6 +183,20 @@ export async function findStaffSessionResultDetail(
         loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
         normalizedLoadKg:
           assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+        resistanceType:
+          assignmentSessionEffectiveItemPrescriptions.resistanceType,
+        resistanceValue:
+          assignmentSessionEffectiveItemPrescriptions.resistanceValue,
+        resistanceUnit:
+          assignmentSessionEffectiveItemPrescriptions.resistanceUnit,
+        resistancePercentage:
+          assignmentSessionEffectiveItemPrescriptions.resistancePercentage,
+        resistanceTarget:
+          assignmentSessionEffectiveItemPrescriptions.resistanceTarget,
+        resistanceDescription:
+          assignmentSessionEffectiveItemPrescriptions.resistanceDescription,
+        normalizedResistanceKg:
+          assignmentSessionEffectiveItemPrescriptions.normalizedResistanceKg,
         durationSeconds:
           assignmentSessionEffectiveItemPrescriptions.durationSeconds,
         distanceMeters:
@@ -253,6 +274,15 @@ export async function findStaffSessionResultDetail(
         loadValue: assignmentSessionItemResults.loadValue,
         loadUnit: assignmentSessionItemResults.loadUnit,
         normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+        resistanceType: assignmentSessionItemResults.resistanceType,
+        resistanceValue: assignmentSessionItemResults.resistanceValue,
+        resistanceUnit: assignmentSessionItemResults.resistanceUnit,
+        resistancePercentage: assignmentSessionItemResults.resistancePercentage,
+        resistanceTarget: assignmentSessionItemResults.resistanceTarget,
+        resistanceDescription:
+          assignmentSessionItemResults.resistanceDescription,
+        normalizedResistanceKg:
+          assignmentSessionItemResults.normalizedResistanceKg,
         durationSeconds: assignmentSessionItemResults.durationSeconds,
         distanceMeters: assignmentSessionItemResults.distanceMeters,
         notes: assignmentSessionItemResults.notes,
@@ -349,8 +379,26 @@ export async function findStaffSessionResultDetail(
     submittedAt: session.submittedAt,
     durationMinutes: session.durationMinutes,
     sessionRpe: session.sessionRpe,
-    prescriptions,
-    results,
+    prescriptions: prescriptions.map((prescription) => ({
+      ...prescription,
+      resistance: adaptResistance({
+        resistance: resistanceFromPersistence(prescription),
+        legacyLoad: prescription.load,
+        legacyLoadValue: prescription.loadValue,
+        legacyLoadUnit: prescription.loadUnit,
+        legacyNormalizedLoadKg: prescription.normalizedLoadKg,
+      }).resistance,
+    })),
+    results: results.map((result) => ({
+      ...result,
+      resistance: adaptResistance({
+        resistance: resistanceFromPersistence(result),
+        legacyLoad: result.load,
+        legacyLoadValue: result.loadValue,
+        legacyLoadUnit: result.loadUnit,
+        legacyNormalizedLoadKg: result.normalizedLoadKg,
+      }).resistance,
+    })),
     trainingLoad,
     comments: comments.map((comment) => ({
       id: comment.id,

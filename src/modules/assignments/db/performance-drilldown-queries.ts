@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import {
   type PerformanceDrilldownMetric,
@@ -497,7 +497,13 @@ export async function listTeamTrainingLoadDrilldownFacts(
             load: assignmentSessionItemResults.load,
             loadValue: assignmentSessionItemResults.loadValue,
             loadUnit: assignmentSessionItemResults.loadUnit,
-            normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+            normalizedLoadKg: sql<string | null>`CASE
+              WHEN ${assignmentSessionItemResults.resistanceType} = 'fixed_weight'
+                THEN ${assignmentSessionItemResults.normalizedResistanceKg}
+              WHEN ${assignmentSessionItemResults.resistanceType} IS NULL
+                THEN ${assignmentSessionItemResults.normalizedLoadKg}
+              ELSE NULL
+            END`,
           })
           .from(assignmentSessionItemResults)
           .where(
@@ -518,8 +524,13 @@ export async function listTeamTrainingLoadDrilldownFacts(
             load: assignmentSessionEffectiveItemPrescriptions.load,
             loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
             loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
-            normalizedLoadKg:
-              assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+            normalizedLoadKg: sql<string | null>`CASE
+              WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} = 'fixed_weight'
+                THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedResistanceKg}
+              WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} IS NULL
+                THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg}
+              ELSE NULL
+            END`,
           })
           .from(assignmentSessionEffectiveItemPrescriptions)
           .where(
@@ -677,7 +688,13 @@ export async function listOrganizationTrainingLoadDrilldownFacts(
             load: assignmentSessionItemResults.load,
             loadValue: assignmentSessionItemResults.loadValue,
             loadUnit: assignmentSessionItemResults.loadUnit,
-            normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+            normalizedLoadKg: sql<string | null>`CASE
+              WHEN ${assignmentSessionItemResults.resistanceType} = 'fixed_weight'
+                THEN ${assignmentSessionItemResults.normalizedResistanceKg}
+              WHEN ${assignmentSessionItemResults.resistanceType} IS NULL
+                THEN ${assignmentSessionItemResults.normalizedLoadKg}
+              ELSE NULL
+            END`,
           })
           .from(assignmentSessionItemResults)
           .where(
@@ -698,8 +715,13 @@ export async function listOrganizationTrainingLoadDrilldownFacts(
             load: assignmentSessionEffectiveItemPrescriptions.load,
             loadValue: assignmentSessionEffectiveItemPrescriptions.loadValue,
             loadUnit: assignmentSessionEffectiveItemPrescriptions.loadUnit,
-            normalizedLoadKg:
-              assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+            normalizedLoadKg: sql<string | null>`CASE
+              WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} = 'fixed_weight'
+                THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedResistanceKg}
+              WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} IS NULL
+                THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg}
+              ELSE NULL
+            END`,
           })
           .from(assignmentSessionEffectiveItemPrescriptions)
           .where(

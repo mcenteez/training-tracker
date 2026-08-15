@@ -10,6 +10,23 @@ import {
 } from "./training-load";
 
 describe("training load", () => {
+  it.each([
+    ["relative_resistance", "relative_resistance"],
+    ["non_weight_resistance", "non_weight_resistance"],
+    ["legacy_resistance", "legacy_resistance"],
+  ] as const)(
+    "preserves %s as the external-work unavailable reason",
+    (reason, expected) => {
+      expect(
+        compareExternalWork({
+          prescribed: [
+            { reps: 5, normalizedLoadKg: null, unavailableReason: reason },
+          ],
+          completed: [{ reps: 5, normalizedLoadKg: 60 }],
+        }).unavailableReason,
+      ).toBe(expected);
+    },
+  );
   it("normalizes pound loads to kilograms", () => {
     expect(normalizeStrengthLoad({ value: 135, unit: "lb" })).toEqual({
       value: 135,

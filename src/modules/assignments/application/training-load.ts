@@ -21,7 +21,14 @@ export interface NormalizedStrengthLoad extends StructuredStrengthLoad {
 export interface VolumeInput {
   reps: number | null;
   normalizedLoadKg: number | null;
+  unavailableReason?: ExternalWorkUnavailableReason;
 }
+
+export type ExternalWorkUnavailableReason =
+  | "unmeasurable_external_work"
+  | "relative_resistance"
+  | "non_weight_resistance"
+  | "legacy_resistance";
 
 export interface ExternalWorkComparison {
   state:
@@ -35,7 +42,7 @@ export interface ExternalWorkComparison {
   prescribedMeasurableRowCount: number;
   completedRowCount: number;
   completedMeasurableRowCount: number;
-  unavailableReason: "unmeasurable_external_work" | null;
+  unavailableReason: ExternalWorkUnavailableReason | null;
 }
 
 export interface InternalLoadMetric {
@@ -138,6 +145,9 @@ function summarizeVolume(rows: readonly VolumeInput[]) {
             (total, row) => total + row.reps! * row.normalizedLoadKg!,
             0,
           ),
+    unavailableReasons: rows.flatMap((row) =>
+      row.unavailableReason ? [row.unavailableReason] : [],
+    ),
   };
 }
 
@@ -210,7 +220,10 @@ export function compareExternalWork(input: {
     prescribedMeasurableRowCount: prescribed.measurableRowCount,
     completedRowCount: completed.rowCount,
     completedMeasurableRowCount: completed.measurableRowCount,
-    unavailableReason: "unmeasurable_external_work",
+    unavailableReason:
+      prescribed.unavailableReasons[0] ??
+      completed.unavailableReasons[0] ??
+      "unmeasurable_external_work",
   };
 }
 

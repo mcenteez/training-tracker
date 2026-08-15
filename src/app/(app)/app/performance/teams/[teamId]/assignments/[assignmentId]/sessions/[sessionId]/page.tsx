@@ -12,6 +12,10 @@ import { withDatabase } from "@/db/client";
 import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { findStaffSessionResultDetail } from "@/modules/assignments/db/staff-session-result-queries";
+import {
+  formatResistance,
+  type Resistance,
+} from "@/modules/resistance/application/resistance";
 
 import { StaffSessionCommentForm } from "./comment-form";
 
@@ -29,12 +33,13 @@ function formatDateTime(value: Date): string {
 function formatMetric(result: {
   reps: number | null;
   load: string | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
 }): string {
   const metrics = [
     result.reps === null ? null : `${result.reps} reps`,
-    result.load,
+    result.resistance ? formatResistance(result.resistance) : result.load,
     result.durationSeconds === null ? null : `${result.durationSeconds}s`,
     result.distanceMeters === null ? null : `${result.distanceMeters}m`,
   ].filter(Boolean);
@@ -44,6 +49,7 @@ function formatMetric(result: {
 function formatPrescription(prescription: {
   reps: number | null;
   load: string | null;
+  resistance: Resistance | null;
   durationSeconds: number | null;
   distanceMeters: number | null;
   restSeconds: number | null;
@@ -52,7 +58,9 @@ function formatPrescription(prescription: {
   return (
     [
       prescription.reps === null ? null : `${prescription.reps} reps`,
-      prescription.load,
+      prescription.resistance
+        ? formatResistance(prescription.resistance)
+        : prescription.load,
       prescription.durationSeconds === null
         ? null
         : `${prescription.durationSeconds}s duration`,

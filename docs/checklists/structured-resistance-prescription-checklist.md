@@ -391,31 +391,31 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Implementation Checklist
 
-- [ ] Update strength-volume calculators to consume structured fixed-weight facts.
-- [ ] Preserve compatibility reads for historical normalized numeric loads.
-- [ ] Exclude relative, bodyweight, band, effort-target, free-text, and unresolved legacy values from fixed-weight volume.
-- [ ] Add structured unavailable reasons to assignment, team, organization, and athlete read models.
-- [ ] Update completed-versus-prescribed comparisons to require measurable fixed weight on both sides.
-- [ ] Display resistance type and canonical values in authorized session review.
-- [ ] Keep session RPE internal load separate from exercise-level RPE resistance targets.
-- [ ] Aggregate from raw eligible facts rather than averaging athlete percentages.
-- [ ] Preserve prepared-delivery team scope, direct-recipient rules, and organization isolation.
-- [ ] Avoid ranking athletes or labeling relative resistance as safe, unsafe, strong, or weak.
+- [x] Update strength-volume fact queries to consume structured fixed-weight values.
+- [x] Preserve compatibility reads for historical normalized numeric loads.
+- [x] Exclude relative, bodyweight, band, effort-target, free-text, and unresolved legacy values from fixed-weight volume.
+- [x] Add structured unavailable reasons to assignment, team, organization, and athlete training-load read models.
+- [x] Update completed-versus-prescribed comparisons to require measurable fixed weight on both sides.
+- [x] Display resistance type and canonical values in authorized session review.
+- [x] Keep session RPE internal load separate from exercise-level RPE resistance targets.
+- [x] Aggregate from raw eligible facts rather than averaging athlete percentages.
+- [x] Preserve prepared-delivery team scope, direct-recipient rules, and organization isolation.
+- [x] Avoid ranking athletes or labeling relative resistance as safe, unsafe, strong, or weak.
 
 ### Tests
 
-- [ ] Fixed-weight prescribed and completed values produce reproducible strength volume.
-- [ ] `%1RM` prescription plus fixed-weight result reports prescribed volume unavailable.
-- [ ] Bodyweight, band, RPE, RIR, free-text, and legacy values never contribute fabricated volume.
-- [ ] Mixed sessions aggregate only eligible fixed-weight rows and report partial coverage.
-- [ ] Team and organization totals reconcile with authorized raw facts.
-- [ ] Historical numeric-load metrics remain unchanged after compatibility mapping.
+- [x] Fixed-weight prescribed and completed values produce reproducible strength volume.
+- [x] `%1RM` prescription plus fixed-weight result reports prescribed volume unavailable with `relative_resistance`.
+- [x] Bodyweight, band, RPE, RIR, free-text, and legacy values never contribute fabricated volume.
+- [x] Mixed sessions aggregate only eligible fixed-weight rows and report partial coverage.
+- [x] Team and organization totals continue to reconcile from authorized raw facts.
+- [x] Historical numeric-load metrics remain unchanged after compatibility mapping.
 
 ### Acceptance Criteria
 
-- [ ] Every displayed volume can be traced to repetitions and normalized fixed weight.
-- [ ] Relative and descriptive resistance remains useful prescription context without becoming false quantitative data.
-- [ ] Existing compliance and timeliness metrics remain unchanged.
+- [x] Every displayed volume can be traced to repetitions and normalized fixed weight.
+- [x] Relative and descriptive resistance remains useful prescription context without becoming false quantitative data.
+- [x] Existing compliance and timeliness metrics remain unchanged.
 
 ## Milestone 7: Documentation, Rollout, And Cleanup
 

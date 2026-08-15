@@ -42,6 +42,7 @@ import {
 } from "@/modules/assignments/db/athlete-prescription-queries";
 import { createAssignmentSessionUnitOfWork } from "@/modules/assignments/db/session-unit-of-work";
 import { createAssignmentUnitOfWork } from "@/modules/assignments/db/unit-of-work";
+import { findStaffSessionTrainingLoad } from "@/modules/assignments/db/training-load-queries";
 
 const migrationsRootPath = resolve(process.cwd(), "drizzle");
 
@@ -451,6 +452,19 @@ describe("assignment unit of work", () => {
         resistance: { type: "band", description: "Heavy band" },
       }),
     ]);
+    const trainingLoad = await findStaffSessionTrainingLoad(database, {
+      organizationId: draft.organizationId,
+      teamId: "80000000-0000-4000-8000-000000000001",
+      assignmentId: draft.id,
+      sessionId: session.id,
+      asOf: new Date("2026-08-20T13:00:00.000Z"),
+    });
+    expect(trainingLoad?.externalWork).toMatchObject({
+      state: "externalWorkPartial",
+      prescribedVolumeKg: 306.17484975,
+      completedVolumeKg: null,
+      unavailableReason: "non_weight_resistance",
+    });
   });
 
   it("publishes plan snapshots preserving both scheduling modes", async () => {

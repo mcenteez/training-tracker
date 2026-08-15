@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, lte } from "drizzle-orm";
+import { and, eq, inArray, lte, sql } from "drizzle-orm";
 
 import type { Database } from "@/db/client";
 import {
@@ -186,8 +186,16 @@ async function buildSessionDetails(
       .select({
         sessionId: assignmentSessionEffectiveItemPrescriptions.sessionId,
         reps: assignmentSessionEffectiveItemPrescriptions.reps,
-        normalizedLoadKg:
-          assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg,
+        resistanceType:
+          assignmentSessionEffectiveItemPrescriptions.resistanceType,
+        load: assignmentSessionEffectiveItemPrescriptions.load,
+        normalizedLoadKg: sql<string | null>`CASE
+            WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} = 'fixed_weight'
+              THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedResistanceKg}
+            WHEN ${assignmentSessionEffectiveItemPrescriptions.resistanceType} IS NULL
+              THEN ${assignmentSessionEffectiveItemPrescriptions.normalizedLoadKg}
+            ELSE NULL
+          END`,
       })
       .from(assignmentSessionEffectiveItemPrescriptions)
       .where(
@@ -206,7 +214,15 @@ async function buildSessionDetails(
       .select({
         sessionId: assignmentSessionItemResults.sessionId,
         reps: assignmentSessionItemResults.reps,
-        normalizedLoadKg: assignmentSessionItemResults.normalizedLoadKg,
+        resistanceType: assignmentSessionItemResults.resistanceType,
+        load: assignmentSessionItemResults.load,
+        normalizedLoadKg: sql<string | null>`CASE
+          WHEN ${assignmentSessionItemResults.resistanceType} = 'fixed_weight'
+            THEN ${assignmentSessionItemResults.normalizedResistanceKg}
+          WHEN ${assignmentSessionItemResults.resistanceType} IS NULL
+            THEN ${assignmentSessionItemResults.normalizedLoadKg}
+          ELSE NULL
+        END`,
       })
       .from(assignmentSessionItemResults)
       .where(
@@ -225,6 +241,8 @@ async function buildSessionDetails(
       sessionId: string;
       reps: number | null;
       normalizedLoadKg: string | null;
+      resistanceType: string | null;
+      load: string | null;
     },
   >(
     rows: readonly Row[],
@@ -236,6 +254,16 @@ async function buildSessionDetails(
         reps: row.reps,
         normalizedLoadKg:
           row.normalizedLoadKg === null ? null : Number(row.normalizedLoadKg),
+        unavailableReason:
+          row.normalizedLoadKg !== null
+            ? undefined
+            : row.resistanceType === "percent_1rm"
+              ? "relative_resistance"
+              : row.resistanceType !== null
+                ? "non_weight_resistance"
+                : row.load
+                  ? "legacy_resistance"
+                  : "unmeasurable_external_work",
       }));
 
   return sessions.map((session) => {
