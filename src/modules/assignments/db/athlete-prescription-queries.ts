@@ -18,6 +18,7 @@ import { teams } from "@/modules/teams/db/schema";
 import { teamMemberships } from "@/modules/teams/db/schema";
 import { users } from "@/modules/users/db/schema";
 import {
+  adaptResistance,
   resistanceFromPersistence,
   type Resistance,
 } from "@/modules/resistance/application/resistance";
@@ -91,6 +92,7 @@ async function listAthletePrescriptionItems(
       load: assignmentWorkoutItemSnapshots.load,
       loadValue: assignmentWorkoutItemSnapshots.loadValue,
       loadUnit: assignmentWorkoutItemSnapshots.loadUnit,
+      normalizedLoadKg: assignmentWorkoutItemSnapshots.normalizedLoadKg,
       durationSeconds: assignmentWorkoutItemSnapshots.durationSeconds,
       distanceMeters: assignmentWorkoutItemSnapshots.distanceMeters,
       restSeconds: assignmentWorkoutItemSnapshots.restSeconds,
@@ -200,6 +202,7 @@ async function listAthletePrescriptionItems(
         load: assignmentAthleteItemOverrides.load,
         loadValue: assignmentAthleteItemOverrides.loadValue,
         loadUnit: assignmentAthleteItemOverrides.loadUnit,
+        normalizedLoadKg: assignmentAthleteItemOverrides.normalizedLoadKg,
         durationSeconds: assignmentAthleteItemOverrides.durationSeconds,
         distanceMeters: assignmentAthleteItemOverrides.distanceMeters,
         restSeconds: assignmentAthleteItemOverrides.restSeconds,
@@ -260,9 +263,21 @@ async function listAthletePrescriptionItems(
         overrideRestSeconds: override?.restSeconds ?? null,
         overrideTempo: override?.tempo ?? null,
         overrideNotes: override?.notes ?? null,
-        resistance: resistanceFromPersistence(item),
+        resistance: adaptResistance({
+          resistance: resistanceFromPersistence(item),
+          legacyLoad: item.load,
+          legacyLoadValue: item.loadValue,
+          legacyLoadUnit: item.loadUnit,
+          legacyNormalizedLoadKg: item.normalizedLoadKg,
+        }).resistance,
         overrideResistance: override
-          ? resistanceFromPersistence(override)
+          ? adaptResistance({
+              resistance: resistanceFromPersistence(override),
+              legacyLoad: override.load,
+              legacyLoadValue: override.loadValue,
+              legacyLoadUnit: override.loadUnit,
+              legacyNormalizedLoadKg: override.normalizedLoadKg,
+            }).resistance
           : null,
       };
     });

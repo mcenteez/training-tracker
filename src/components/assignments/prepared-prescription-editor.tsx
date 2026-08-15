@@ -1,6 +1,6 @@
 import { savePreparedPrescriptionAction } from "@/app/(app)/app/assignments/actions";
 import { ClearPreparedPrescriptionButton } from "@/components/assignments/clear-prepared-prescription-button";
-import { LoadUnitSelect } from "@/components/assignments/load-unit-select";
+import { ResistanceOverrideFields } from "@/components/assignments/resistance-override-fields";
 import { Button } from "@/components/ui/button";
 import type { TeamAthletePrescriptionItem } from "@/modules/assignments/db/athlete-prescription-queries";
 
@@ -66,36 +66,11 @@ export function PreparedPrescriptionEditor({
               overrideValue={item.overrideReps}
               checked={overridden.has("reps")}
             />
-            <label className="grid gap-1 text-xs">
-              <span>
-                <input
-                  type="checkbox"
-                  name="overriddenFields"
-                  value="load"
-                  defaultChecked={overridden.has("load")}
-                />{" "}
-                Load (base {item.load ?? "-"})
-              </span>
-              <span className="flex gap-2">
-                <input
-                  className="h-9 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
-                  name="loadValue"
-                  type="number"
-                  min="0"
-                  step="any"
-                  defaultValue={item.overrideLoadValue ?? ""}
-                />
-                <LoadUnitSelect
-                  defaultValue={item.overrideLoadUnit}
-                  triggerClassName="data-[size=default]:h-9"
-                />
-              </span>
-              <input
-                type="hidden"
-                name="load"
-                value={item.overrideLoad ?? ""}
-              />
-            </label>
+            <ResistanceOverrideFields
+              baseResistance={item.resistance}
+              overrideResistance={item.overrideResistance}
+              defaultChecked={overridden.has("resistance")}
+            />
             <PrescriptionNumberField
               name="durationSeconds"
               label="Duration seconds"

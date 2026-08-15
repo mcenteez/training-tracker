@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { prescriptionOverrideFields } from "./effective-prescription";
+import { resistanceSchema } from "@/modules/resistance/application/resistance";
 
 const optionalInteger = z.preprocess(
   (value) => (value === "" || value === null ? null : Number(value)),
@@ -30,6 +31,7 @@ export const athletePrescriptionOverrideFormSchema = z
       z.number().finite().positive().nullable(),
     ),
     loadUnit: z.enum(["kg", "lb"]).nullable(),
+    resistance: resistanceSchema.nullable(),
     durationSeconds: optionalInteger,
     distanceMeters: optionalInteger,
     restSeconds: optionalInteger,
@@ -60,6 +62,39 @@ export const clearAthletePrescriptionFormSchema = z.object({
 });
 
 export function athletePrescriptionFormData(formData: FormData) {
+  const resistanceType = String(formData.get("resistanceType") ?? "");
+  const resistance = (() => {
+    switch (resistanceType) {
+      case "fixed_weight":
+        return {
+          type: resistanceType,
+          value: Number(formData.get("resistanceValue")),
+          unit: formData.get("resistanceUnit"),
+        };
+      case "percent_1rm":
+        return {
+          type: resistanceType,
+          percentage: Number(formData.get("resistancePercentage")),
+        };
+      case "bodyweight":
+        return { type: resistanceType };
+      case "band":
+      case "free_text":
+        return {
+          type: resistanceType,
+          description: formData.get("resistanceDescription"),
+        };
+      case "rpe":
+      case "rir":
+        return {
+          type: resistanceType,
+          target: Number(formData.get("resistanceTarget")),
+        };
+      default:
+        return null;
+    }
+  })();
+
   return {
     assignmentId: formData.get("assignmentId"),
     recipientId: formData.get("recipientId"),
@@ -74,6 +109,7 @@ export function athletePrescriptionFormData(formData: FormData) {
     load: formData.get("load"),
     loadValue: formData.get("loadValue"),
     loadUnit: formData.get("loadUnit") || null,
+    resistance,
     durationSeconds: formData.get("durationSeconds"),
     distanceMeters: formData.get("distanceMeters"),
     restSeconds: formData.get("restSeconds"),

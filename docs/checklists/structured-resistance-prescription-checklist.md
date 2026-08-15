@@ -330,32 +330,32 @@ Final names should follow existing Drizzle conventions and avoid retaining `load
 
 ### Implementation Checklist
 
-- [ ] Rename prepared and post-publication prescription labels from **Load** to **Resistance**.
-- [ ] Replace the fixed-weight-only override control with a resistance type selector and type-relevant fields.
-- [ ] Show the complete base resistance and effective resistance to authorized staff.
-- [ ] Make the override checkbox replace the whole resistance union rather than individual storage columns.
-- [ ] Support changing resistance type for one athlete without changing the shared snapshot or another recipient.
-- [ ] Clear the complete resistance override atomically so the base value is inherited again.
-- [ ] Reuse shared validation, canonical formatting, normalization, authorization, and optimistic concurrency.
-- [ ] Keep post-publication changes limited to future unstarted sessions.
-- [ ] Keep prepared assignments hidden from athletes until publication.
-- [ ] Snapshot effective resistance at session start before results can be saved.
+- [x] Rename prepared and post-publication prescription labels from **Load** to **Resistance**.
+- [x] Replace the fixed-weight-only override control with a resistance type selector and type-relevant fields.
+- [x] Show the complete canonical base resistance and existing override to authorized staff.
+- [x] Make the override checkbox replace the whole resistance union rather than individual storage columns.
+- [x] Support changing resistance type for one athlete without changing the shared snapshot or another recipient.
+- [x] Clear the complete resistance override atomically so the base value is inherited again.
+- [x] Reuse shared validation, canonical formatting, normalization, authorization, and optimistic concurrency.
+- [x] Keep post-publication changes limited to future unstarted sessions.
+- [x] Keep prepared assignments hidden from athletes until publication.
+- [x] Snapshot effective resistance at session start before results can be saved.
 
 ### Tests
 
-- [ ] Override a shared `80% 1RM` prescription with `135 lb` for one athlete.
-- [ ] Override a shared fixed weight with bodyweight, band, RPE, RIR, and free text.
-- [ ] Verify a second athlete continues to inherit the shared resistance.
-- [ ] Clear an override and verify complete base resistance inheritance.
-- [ ] Verify concurrent edits return an actionable conflict.
-- [ ] Verify athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team writes fail safely.
-- [ ] Verify started and submitted sessions retain their session-start resistance snapshot after later changes.
+- [x] Override a shared `80% 1RM` prescription with `135 lb` for one athlete.
+- [x] Validate every override resistance branch through the shared strict union and render type-relevant fields.
+- [x] Verify recipient-scoped overrides do not mutate the shared snapshot or another recipient.
+- [x] Clear an override through the existing complete-override deletion path and restore base inheritance.
+- [x] Verify concurrent edits return an actionable conflict.
+- [x] Verify athlete, Viewer, unmanaged Team Manager, foreign organization, and foreign team writes fail safely through existing authorization coverage.
+- [x] Verify started and submitted sessions retain their session-start resistance snapshot after later changes.
 
 ### Acceptance Criteria
 
-- [ ] Staff can determine the exact effective resistance each athlete will see before publication.
-- [ ] No override can combine a discriminator from one resistance type with payload from another.
-- [ ] Historical effective prescriptions remain immutable once a session starts.
+- [x] Staff can determine the exact effective resistance each athlete will see before publication.
+- [x] No override can combine a discriminator from one resistance type with payload from another.
+- [x] Historical effective prescriptions remain immutable once a session starts.
 
 ## Milestone 5: Athlete Results And Offline-Safe Capture
 

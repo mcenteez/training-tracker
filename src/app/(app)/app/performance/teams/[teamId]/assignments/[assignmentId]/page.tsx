@@ -15,7 +15,7 @@ import { loadAuthorizedTeamContext } from "@/lib/team-context";
 import { hasPermission } from "@/modules/access-control/permissions";
 import { saveAthletePrescriptionOverrideAction } from "./prescription-actions";
 import { ClearOverrideButton } from "./clear-override-button";
-import { LoadUnitSelect } from "@/components/assignments/load-unit-select";
+import { ResistanceOverrideFields } from "@/components/assignments/resistance-override-fields";
 import { listTeamAthletePrescriptionItems } from "@/modules/assignments/db/athlete-prescription-queries";
 import { findTeamAssignmentCompliance } from "@/modules/assignments/db/team-compliance-queries";
 
@@ -328,35 +328,14 @@ export default async function TeamAssignmentPerformancePage({
                                   }
                                 />
                               </label>
-                              <label className="grid gap-1 text-xs">
-                                <span>
-                                  <input
-                                    type="checkbox"
-                                    name="overriddenFields"
-                                    value="load"
-                                    defaultChecked={overrideFields.has("load")}
-                                  />{" "}
-                                  Load (base {item.load ?? "-"})
-                                </span>
-                                <div className="flex gap-2">
-                                  <input
-                                    className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-sm"
-                                    name="loadValue"
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    defaultValue={item.overrideLoadValue ?? ""}
-                                  />
-                                  <LoadUnitSelect
-                                    defaultValue={item.overrideLoadUnit}
-                                  />
-                                </div>
-                                <input
-                                  type="hidden"
-                                  name="load"
-                                  value={item.overrideLoad ?? ""}
-                                />
-                              </label>
+                              <ResistanceOverrideFields
+                                baseResistance={item.resistance}
+                                overrideResistance={item.overrideResistance}
+                                defaultChecked={overrideFields.has(
+                                  "resistance",
+                                )}
+                                compact
+                              />
                               <label className="grid gap-1 text-xs sm:col-span-2">
                                 <span>
                                   <input

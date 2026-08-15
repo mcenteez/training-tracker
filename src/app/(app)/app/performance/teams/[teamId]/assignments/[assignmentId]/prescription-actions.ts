@@ -97,6 +97,7 @@ export async function saveAthletePrescriptionOverrideAction(
           loadValue: normalizedLoad?.value.toString() ?? null,
           loadUnit: normalizedLoad?.unit ?? null,
           normalizedLoadKg: normalizedLoad?.normalizedKg.toString() ?? null,
+          resistance: parsed.data.resistance,
           durationSeconds: parsed.data.durationSeconds,
           distanceMeters: parsed.data.distanceMeters,
           restSeconds: parsed.data.restSeconds,
