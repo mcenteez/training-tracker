@@ -72,6 +72,20 @@ Then copy IDs from `.vercel/project.json`:
 - Treat migration failures as release blockers.
 - For rollback, use a forward fix migration instead of destructive rollback.
 
+## Prepared Assignment Lifecycle Rollout
+
+The prepared assignment lifecycle adds an enum value and nullable audit columns in `20260815143619_elite_ricochet`.
+
+1. Apply the additive migration before deploying application instances that read or write `prepared` assignments.
+2. Deploy the application as one coordinated version. Do not keep old instances that publish directly from `draft` alongside new instances that require `prepared`.
+3. Verify assignment lists load for authorized staff before enabling assignment mutations.
+4. Prepare a draft and confirm it remains absent from athlete assignment lists and performance facts.
+5. Save an individual prescription, publish, and confirm the athlete sees the reviewed effective value.
+6. Verify a roster addition is reported but not silently added, and an ineligible prepared recipient blocks publication.
+7. Recover a failed publication by correcting eligibility or scope and retrying the prepared assignment. Return to draft only when source, schedule, targets, or the resolved audience must change; this discards prepared prescriptions.
+
+If correction is required after release, ship a forward migration or application fix. Existing published and canceled assignments require no backfill, and preparation timestamps must not be fabricated.
+
 ## AI and MCP Usage
 
 Good candidates for AI/MCP:

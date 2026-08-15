@@ -116,7 +116,12 @@ Library routes and every library mutation independently revalidate the active or
 - Team Managers may add, update, or remove Team Manager, Viewer, and Athlete memberships. These operations never change an existing organization role.
 - A Team Manager cannot demote or remove their own Manager membership; an Organization Owner or Manager may manage any team in the active organization.
 - `/app/performance/teams/[teamId]` and its assignment/session drill-downs require `results.read.all`. Team Athletes use their own athlete routes and cannot use staff result routes.
-- Published assignments persist every recipient's team scope. Historical compliance and result reads use that publish-time provenance rather than mutable current membership.
+- Assignment draft, prepare, return-to-draft, individual-prescription, publish, and cancel actions independently authorize the active organization and current assignment permissions on the server.
+- Organization Owners and Managers may perform assignment lifecycle and prescription actions across their organization. Team Managers may perform them only when every target and prepared recipient remains within currently managed-team scope.
+- Preparation persists every resolved recipient's team scope before athlete visibility. Historical compliance and result reads retain that prepared delivery provenance rather than mutable later membership.
+- Prepared assignments are visible only to authorized staff. Athlete routes and performance facts include published assignments, plus canceled assignments only where existing session history requires them.
+- Publication revalidates that every prepared recipient remains an Organization Athlete and that a Team Manager still has current scope. Later roster additions are never silently included.
+- Returning to draft atomically removes prepared recipients, scopes, snapshots, and individual prescriptions. Published assignments cannot return to draft.
 - Team Managers may append comments only to submitted sessions within a currently managed team. Team Viewers can read the same authorized submitted results and comments but cannot append comments.
 - Staff comments are append-only. Comment reads and writes verify organization, team, assignment, recipient, session, submitted status, and current actor access on the server.
 - Team settings, roster changes, invitation lifecycle changes, and result comments emit transactional audit events. Events contain identifiers and roles only; invitation secrets, result payloads, and comment bodies are never logged.

@@ -44,7 +44,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - `/app/performance/organization` is the read-focused organization Performance Dashboard for Owners, Managers, and Organization Viewers.
 - `/app/performance/teams` is a portfolio of managed teams, or viewed teams when the user manages none.
 - `/app/performance/teams/[teamId]` is the canonical staff Team Performance Dashboard and independently requires team-scoped result-read access.
-- Team assignment drill-downs show team recipients, occurrence status, and submitted-session review links using immutable publish-time team scope.
+- Team assignment drill-downs show team recipients, occurrence status, and submitted-session review links using immutable prepared delivery scope.
 - Dashboard compliance, timeliness, and training-load metrics link to bounded, authorized drill-down fact lists. Drill-down routes preserve the selected window, identify the metric and raw contributing facts, and lead back to existing assignment/session detail routes. Organization lists label direct-athlete assignment facts as organization-only; team lists use persisted publication-time team scope.
 - `/app/athlete` focuses athletes on their teams and assigned workouts.
 - `/app/organizations` lets multi-organization users choose an active organization; the saved preference is always revalidated against membership.
@@ -104,10 +104,15 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - A plan will be the default assignment target for recurring training schedules.
 - Workout-only assignment remains available for one-off sessions when a full multi-session schedule is unnecessary.
 - When assigning training, managers select existing library templates first (plans or workouts), then create new templates only when needed.
-- After assignment, coaches/trainers can customize by forking from existing library templates to preserve reuse.
+- Coaches prepare an assignment to freeze its source programming and resolved recipients before athlete visibility.
+- During prepared review, coaches can individualize prescribed fields for one athlete without changing the shared snapshot or creating an athlete-specific library copy.
+- Fork a library workout only when the variation should remain a reusable template for future assignments or cohorts.
 - Assignment workflows should preserve library reuse (reuse first, create when needed).
 - Control assignment visibility and availability windows.
 - Assignments must snapshot plan/workout programming so later library edits or archival cannot change historical or in-progress prescriptions.
+- Assignment delivery follows `draft → prepared → published`: drafts are editable, prepared assignments are frozen for recipient prescription review, and published assignments are athlete-visible according to availability rules.
+- Returning a prepared assignment to draft discards its prepared recipients, snapshots, and individual prescriptions.
+- Team roster additions after preparation never silently broaden the reviewed audience. Prepared recipients who remain organization athletes may be published, while actor scope and recipient eligibility are revalidated at publication.
 - Plan slots snapshot their scheduling rule (fixed weekday or weekly target) at publication; later plan edits never change published schedules.
 - Weeks run Monday through Sunday in the assignment timezone. Weekly targets do not prorate in partial first/last weeks and completed sessions never carry between weeks.
 - Fixed-day workouts produce one occurrence per matching weekday inside the assignment date range. Flexible workouts allow one occurrence per calendar date, up to the weekly target.
@@ -115,6 +120,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 ### 7) Results and Progress Tracking
 
 - Athletes can record and update their own results.
+- Prescribed values are not athlete results. Athletes see their effective prescription and separately record what they completed.
 - Team Performance summarizes assigned, in-progress, submitted, missed, and upcoming occurrences over 30-day, 90-day, or all-time windows.
 - Authorized staff can drill into a team assignment, recipient occurrences, and submitted exercise metrics in workout order.
 - Team Managers and organization-wide result managers can append operational comments to submitted athlete results. Team Viewers have read-only access.
@@ -139,7 +145,7 @@ KPI definitions and the recommended team-to-organization drill-down are document
 - Exercises are organization-scoped library entities and are reusable across workouts.
 - Workouts are organization-scoped library entities and are reusable across athlete assignments.
 - Workout assignment should use organization library workouts (existing or newly created) rather than one-off unmanaged definitions.
-- Workout customization follows a template-and-fork model: customizing from an existing library workout creates a new library workout.
+- Reusable workout customization follows a template-and-fork model. Recipient-specific prescription differences remain assignment overrides and do not create library workouts.
 - Removing organization membership removes dependent team memberships.
 - Ownership transfer must preserve exactly one owner.
 
@@ -151,9 +157,11 @@ KPI definitions and the recommended team-to-organization drill-down are document
 2. Create teams.
 3. Add athletes and staff memberships.
 4. Create and maintain exercise and workout libraries.
-5. Assign workouts to athletes by selecting an existing organization workout or creating a new one and assigning it.
-6. Customize assigned workouts when needed by forking from an existing library workout template and saving as a new library workout.
-7. Monitor team compliance, open submitted sessions, and append staff comments.
+5. Create an assignment from an existing plan or workout, choose targets and schedule, then prepare it.
+6. Review the frozen recipients and shared base prescription, individualizing only fields that differ for an athlete.
+7. Publish the reviewed effective prescriptions to athletes.
+8. Fork a workout only when creating a reusable template variation for future assignments or cohorts.
+9. Monitor team compliance, open submitted sessions, and append staff comments.
 
 ### Athlete Flow
 

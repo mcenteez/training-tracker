@@ -4,6 +4,8 @@
 
 Extend the compliance and timeliness foundation with trustworthy training-load capture and individual-context reporting. Phase 4 must help staff understand recorded work and athlete response without presenting training load as a diagnosis, readiness score, or universal injury-risk threshold.
 
+The later pre-publication authoring workflow is tracked in [assignment-prescription-workflow-checklist.md](assignment-prescription-workflow-checklist.md). This checklist remains the historical record for the original post-publication override implementation.
+
 Phase 4 must answer:
 
 1. What internal and external work did an athlete record for a completed session?

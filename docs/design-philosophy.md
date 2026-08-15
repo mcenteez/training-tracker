@@ -41,6 +41,14 @@ Training Tracker should feel:
 
 - Semantic HTML, visible focus states, keyboard support, and contrast compliance are non-negotiable.
 
+6. Shared structure, individual prescription
+
+- Reusable plans and workouts express shared training intent and session structure.
+- Athlete-specific prescribed values belong to assignment recipients, not duplicate athlete-named library templates.
+- Staff review the resolved audience, inherited values, and individualized values before athlete visibility.
+- Interfaces must distinguish base prescription, individual prescription, effective prescription, athlete result, and derived metric.
+- Destructive return-to-draft actions clearly explain that prepared prescriptions and frozen review data will be discarded.
+
 ## Tailwind-First System Strategy
 
 We will use Tailwind as a design system engine, not just a utility grab bag.

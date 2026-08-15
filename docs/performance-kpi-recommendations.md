@@ -4,6 +4,12 @@
 
 Define the team and organization performance metrics that Training Tracker should present to strength and conditioning coaches, directors, and athletic departments.
 
+Terminology in performance reporting is intentionally distinct:
+
+- A **prescription** is planned work. The effective prescription resolves a shared assignment snapshot plus any athlete-specific override.
+- A **result** is what an athlete records for completed work.
+- A **metric or KPI** is derived from prescriptions, results, session facts, or history. Editable prescribed fields must not be labeled as metrics.
+
 Implementation work is tracked in [performance-kpi-implementation-checklist.md](performance-kpi-implementation-checklist.md).
 
 The dashboard should answer three questions in order:

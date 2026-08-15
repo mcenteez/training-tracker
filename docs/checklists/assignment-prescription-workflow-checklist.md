@@ -279,32 +279,32 @@ Reference foundation:
 
 ### Documentation Updates
 
-- [ ] Update [app-functionality.md](../app-functionality.md) to describe `draft → prepared → published`, pre-publication individualization, and post-publication future-session changes.
-- [ ] Remove or revise the blanket template-and-fork customization guidance in [app-functionality.md](../app-functionality.md).
-- [ ] Document that forks are for reusable template variants while assignment overrides are for recipient-specific prescriptions.
-- [ ] Update [access-control.md](../access-control.md) with prepare, reset, individualize, and publish authorization rules.
-- [ ] Update [design-philosophy.md](../design-philosophy.md) with the shared-structure, individual-prescription principle and review-before-release expectation.
-- [ ] Update [performance-kpi-recommendations.md](../performance-kpi-recommendations.md) where needed to distinguish prescriptions, results, and derived metrics.
-- [ ] Update the completed Phase 4 checklist only with a short cross-reference or clarification; do not rewrite its historical implementation record.
-- [ ] Update route descriptions, empty states, confirmation copy, and staff-facing help text to use the approved terminology.
-- [ ] Add migration and deployment notes if the new status requires coordinated application/database rollout.
+- [x] Update [app-functionality.md](../app-functionality.md) to describe `draft → prepared → published`, pre-publication individualization, and post-publication future-session changes.
+- [x] Remove or revise the blanket template-and-fork customization guidance in [app-functionality.md](../app-functionality.md).
+- [x] Document that forks are for reusable template variants while assignment overrides are for recipient-specific prescriptions.
+- [x] Update [access-control.md](../access-control.md) with prepare, reset, individualize, and publish authorization rules.
+- [x] Update [design-philosophy.md](../design-philosophy.md) with the shared-structure, individual-prescription principle and review-before-release expectation.
+- [x] Update [performance-kpi-recommendations.md](../performance-kpi-recommendations.md) where needed to distinguish prescriptions, results, and derived metrics.
+- [x] Update the completed Phase 4 checklist only with a short cross-reference or clarification; do not rewrite its historical implementation record.
+- [x] Update route descriptions, empty states, confirmation copy, and staff-facing help text to use the approved terminology.
+- [x] Add migration and deployment notes for coordinated application/database rollout.
 
 ### Rollout Safety
 
-- [ ] Deploy the additive status and nullable audit fields before code paths can write `prepared`.
-- [ ] Ensure mixed-version application instances cannot publish a prepared assignment through the old draft-only path.
-- [ ] Verify no background process, query, or dashboard treats every non-draft assignment as athlete-visible.
-- [ ] Verify analytics and audit consumers handle the new status explicitly.
-- [ ] Add operational guidance for recovering a prepared assignment after a failed publication attempt.
+- [x] Document deployment of the additive status and nullable audit fields before code paths can write `prepared`.
+- [x] Document that mixed-version application instances must not run the old draft-publication path alongside the prepared lifecycle.
+- [x] Verify no query or dashboard treats every non-draft assignment as athlete-visible.
+- [x] Verify assignment status consumers handle the new status explicitly.
+- [x] Add operational guidance for recovering a prepared assignment after a failed publication attempt.
 
 ### Final Acceptance Criteria
 
-- [ ] Coaches reuse shared plans and workouts without creating athlete-named library duplicates for ordinary prescription differences.
-- [ ] Coaches can review and individualize every recipient's prescription before athlete visibility.
-- [ ] Athletes see effective prescriptions and record results through clearly separate workflows.
-- [ ] Assignment history remains immutable once sessions start.
-- [ ] Tenant isolation and staff scope are independently enforced for every lifecycle and prescription mutation.
-- [ ] Product documentation consistently distinguishes templates, prescriptions, results, and metrics.
+- [x] Coaches reuse shared plans and workouts without creating athlete-named library duplicates for ordinary prescription differences.
+- [x] Coaches can review and individualize every recipient's prescription before athlete visibility.
+- [x] Athletes see effective prescriptions and record results through clearly separate workflows.
+- [x] Assignment history remains immutable once sessions start.
+- [x] Tenant isolation and staff scope are independently enforced for every lifecycle and prescription mutation.
+- [x] Product documentation consistently distinguishes templates, prescriptions, results, and metrics.
 
 ## Open Product Decisions To Resolve Before Implementation
 
