@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AssignmentTargetFields } from "@/components/assignments/assignment-target-fields";
+import { buildAthleteTargetOptions } from "@/components/assignments/assignment-target-options";
 
 afterEach(cleanup);
 
@@ -64,6 +65,32 @@ describe("AssignmentTargetFields", () => {
 
     expect(data.getAll("teamIds")).toEqual(["team-1", "team-2"]);
     expect(data.getAll("athleteUserIds")).toEqual(["athlete-3"]);
+  });
+
+  it("filters non-athlete team members from the athlete selector", () => {
+    const options = buildAthleteTargetOptions({
+      members: [
+        {
+          userId: "manager-1",
+          email: "manager@local.test",
+          fullName: "Local Team Manager",
+          organizationRole: "athlete",
+        },
+        {
+          userId: "athlete-1",
+          email: "athlete@local.test",
+          fullName: "Local Athlete",
+          organizationRole: "athlete",
+        },
+      ],
+      teamMemberships: [
+        { userId: "manager-1", teamId: "team-1", teamRole: "manager" },
+        { userId: "athlete-1", teamId: "team-1", teamRole: "athlete" },
+      ],
+      teams: [{ id: "team-1", name: "Local Team" }],
+    });
+
+    expect(options.map((option) => option.id)).toEqual(["athlete-1"]);
   });
 
   it("marks athletes already included through a selected team", () => {

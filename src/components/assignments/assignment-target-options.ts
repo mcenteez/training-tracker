@@ -8,6 +8,7 @@ interface OrganizationMember {
 interface TeamMembership {
   userId: string;
   teamId: string;
+  teamRole?: "manager" | "viewer" | "athlete";
 }
 
 interface Team {
@@ -22,6 +23,11 @@ export function buildAthleteTargetOptions(input: {
 }) {
   const teamNameById = new Map(input.teams.map((team) => [team.id, team.name]));
   const teamIdsByUserId = new Map<string, string[]>();
+  const athleteUserIds = new Set(
+    input.teamMemberships
+      .filter((membership) => membership.teamRole === "athlete")
+      .map((membership) => membership.userId),
+  );
 
   for (const membership of input.teamMemberships) {
     const teamIds = teamIdsByUserId.get(membership.userId) ?? [];
@@ -30,7 +36,10 @@ export function buildAthleteTargetOptions(input: {
   }
 
   return input.members
-    .filter((member) => member.organizationRole === "athlete")
+    .filter(
+      (member) =>
+        member.organizationRole === "athlete" && athleteUserIds.has(member.userId),
+    )
     .map((member) => {
       const teamIds = teamIdsByUserId.get(member.userId) ?? [];
 
